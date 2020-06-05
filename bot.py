@@ -5,7 +5,6 @@ import os, sys
 from dotenv import load_dotenv
 from discord.ext import commands
 from discord import embeds
-import pymongo
 import mysql.connector
 from mysql.connector import Error
 from datetime import datetime

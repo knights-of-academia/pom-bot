@@ -6,28 +6,35 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from discord import embeds
 import pymongo
+import mysql.connector
+from mysql.connector import Error
 from datetime import datetime
 from collections import Counter
 import re
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-print(TOKEN)
-MONGO_IP = "mongodb://localhost:27017/"
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
-POM_CHANNEL_ID = 695007275995103332
+POM_CHANNEL_ID = #Pom Channel Here
 MULTILINE_DESCRIPTION_DISABLED = True
+MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
+MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
+MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
+MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
 bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
 
 '''
 Create connection to database
 '''
-dbo = pymongo.MongoClient(MONGO_IP)
-db = dbo["poms"]
-pomcollection = db["tracked"]
-
+db = mysql.connector.connect(
+    host="localhost",
+    user="admin",
+    database="pom_bot",
+    password="KoA1411!!"
+)
+cursor = db.cursor(buffered=True)
 """
 Tracks a new pom for the user.
 """
@@ -65,29 +72,20 @@ async def pom(ctx, *, description: str = None):
             return
 
         poms_to_add = []
+        currentDate = datetime.now()
+        formatted_date = currentDate.strftime('%Y-%m-%d %H:%M:%S')
         for _ in range(pom_count):
-            if description:
-                new_added_pom = {
-                    "user_id": ctx.message.author.id,
-                    "description": description,
-                    "timestamp": datetime.now(),
-                    "current_session": True
-                }
-            else:
-                new_added_pom = {
-                    "user_id": ctx.message.author.id,
-                    "timestamp": datetime.now(),
-                    "current_session": True
-                }
+            new_added_pom = (ctx.message.author.id, description, formatted_date, True)
             poms_to_add.append(new_added_pom)
 
-        pomcollection.insert_many(poms_to_add, ordered=False)
-    except Exception as e:
+        cursor.executemany(MYSQL_INSERT_QUERY, poms_to_add)
+        db.commit()
+    except mysql.connector.Error as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
         await ctx.message.add_reaction("🐛")
-        f = open('errors.log', 'a')
+        f = open('errors.txt', 'a')
         f.write(e)
         f.close()
         print(e)
@@ -100,11 +98,15 @@ property set to false.
 """
 
 
-@bot.command(name='newleaf', help='Turn over a new leaf and hide the details of your previously tracked poms. Starts '
-                                  'a new session.', pass_context=True)
+@bot.command(name='newleaf', 
+            help='Turn over a new leaf and hide the details of your previously tracked poms. Starts '
+                    'a new session.', 
+            pass_context=True)
 async def new_session(ctx):
-    document_count = pomcollection.count_documents({"user_id": ctx.message.author.id})
-
+    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
+    cursor.fetchall()
+    document_count = cursor.rowcount
+    
     # If the user tries to start a new session before doing anything
     if document_count == 0:
         await ctx.message.add_reaction("🍂")
@@ -112,9 +114,8 @@ async def new_session(ctx):
         return
 
     # Set all previous poms to not be in the current session
-    query = {"user_id": ctx.message.author.id, "current_session": True}
-    update = {"$set": {"current_session": False}}
-    pomcollection.update_many(query, update)
+    cursor.execute(MYSQL_UPDATE_SESSION, (ctx.message.author.id,))
+    db.commit()
     await ctx.message.add_reaction("🍃")
     await ctx.send("A new session will be started when you track your next pom, {}."
                    .format(ctx.message.author.display_name))
@@ -128,8 +129,8 @@ Gives the user an overview of how many poms they've been doing so far.
 @bot.command(name='poms', help='See details for your tracked poms and the current session.', pass_context=True)
 async def poms(ctx):
     # Fetch all poms for user based on their Discord ID
-    own_poms = list(pomcollection.find({"user_id": ctx.message.author.id}))
-
+    cursor.execute(MYSQL_SELECT_ALL_POMS, (ctx.message.author.id,))
+    own_poms = cursor.fetchall()
     # If the user has no tracked poms
     if len(own_poms) == 0 or own_poms is None:
         await ctx.message.add_reaction("⚠️")
@@ -137,13 +138,13 @@ async def poms(ctx):
         return
 
     # All poms tracked this session by user
-    session_poms = [x for x in own_poms if x["current_session"] is True]
-
+    session_poms = [x for x in own_poms if x[4] == 1]
+    
     # Add a timestamp for session start, if a pom is tracked in this session
     if len(session_poms) > 0:
         try:
             time_now = datetime.now()
-            time_then = session_poms[0]["timestamp"]
+            time_then = session_poms[0][3]
             duration_in_s = (time_now - time_then).total_seconds()
             days = int(duration_in_s // (24 * 3600))
 
@@ -166,10 +167,10 @@ async def poms(ctx):
     # Group poms by their description
     session_described_poms = []
     for p in session_poms:
-        if 'description' in p:
+        if p[2]:
             session_described_poms.append(p)
     described_poms_amount = len(session_described_poms)
-    session_described_poms = Counter(des_pom["description"].capitalize() for des_pom in session_described_poms)
+    session_described_poms = Counter(des_pom[2].capitalize() for des_pom in session_described_poms)
     # Set variable to see how many poms the user has.
     session_pom_amount = len(session_poms)
     total_pom_amount = len(own_poms)
@@ -213,10 +214,8 @@ async def howmany(ctx, *, description: str = None):
         return
 
     # Fetch all poms for user based on their Discord ID
-    own_poms = list(pomcollection.find({
-        "user_id": ctx.message.author.id,
-        "description": re.compile('^' + re.escape(description) + '$', re.IGNORECASE)
-    }))
+    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript= %s;', (ctx.message.author.id, description))
+    own_poms = cursor.fetchall()
 
     # If the user has no tracked poms
     if len(own_poms) == 0 or own_poms is None:
@@ -247,12 +246,14 @@ async def remove(ctx, *, count: str = None):
                 return
 
     try:
-        to_delete = pomcollection.find({"user_id": ctx.message.author.id}).limit(pom_count).sort("timestamp", -1)
+        cursor.execute(MYSQL_SELECT_ALL_POMS + ' ORDER BY time_set DESC LIMIT %s;', (ctx.message.author.id, pom_count))
+        to_delete = cursor.fetchall()
 
-        to_delete_ids = []
+        to_delete_id = []
         for pom_to_delete in to_delete:
-            to_delete_ids.append(pom_to_delete['_id'])
-        pomcollection.delete_many({"_id": {'$in': to_delete_ids}})
+            to_delete_id.append((ctx.message.author.id, pom_to_delete[0]))
+        cursor.executemany(MYSQL_DELETE_POMS + ' AND id=%s;', to_delete_id)
+        db.commit()
 
     except Exception as e:
         await ctx.message.add_reaction("🐛")
@@ -272,7 +273,8 @@ Remove your x latest poms. Default is 1 latest.
 @bot.command(name='reset', help="Permanently deletes all your poms. WARNING: There's no undoing this.")
 async def remove(ctx):
     try:
-        pomcollection.delete_many({"user_id": ctx.message.author.id})
+        cursor.execute(MYSQL_DELETE_POMS, (ctx.message.author.id,))
+        db.commit()
 
     except Exception as e:
         await ctx.message.add_reaction("🐛")
@@ -293,7 +295,8 @@ Allows guardians and helpers to see the total amount of poms completed by KOA us
 @bot.command(name='total', help='List total amount of poms.')
 @commands.has_any_role('Guardians', 'Helpers')
 async def total(ctx):
-    document_count = pomcollection.estimated_document_count()
+    cursor.execute('SELECT * FROM poms;')
+    document_count = cursor.rowcount
     await ctx.send("Total amount of poms: {}".format(document_count))
 
 

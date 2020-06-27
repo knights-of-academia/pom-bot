@@ -13,9 +13,10 @@ import re
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+print(TOKEN)
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
-POM_CHANNEL_ID = #Pom Channel Here
+POM_CHANNEL_ID = 662941079057989633
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
 MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
@@ -138,7 +139,7 @@ async def poms(ctx):
 
     # All poms tracked this session by user
     session_poms = [x for x in own_poms if x[4] == 1]
-    
+
     # Add a timestamp for session start, if a pom is tracked in this session
     if len(session_poms) > 0:
         try:
@@ -195,9 +196,10 @@ async def poms(ctx):
 
     # Generate embed message to send
     embedded_message = embeds.Embed(description=description_embed, colour=0xff6347) \
-        .set_author(name=title_embed, icon_url="https://i.imgur.com/qRoH5B5.png")
+        .set_author(name=title_embed, icon_url="https://i.imgur.com/qRoH5B5.png" )
 
-    await ctx.send(embed=embedded_message)
+    await ctx.author.send(embed=embedded_message)
+    await ctx.send("I've sent you a DM with your poms")
 
 
 """
@@ -213,7 +215,7 @@ async def howmany(ctx, *, description: str = None):
         return
 
     # Fetch all poms for user based on their Discord ID
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript= %s;', (ctx.message.author.id, description))
+    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript= %s;', (ctx.message.author.bid, description))
     own_poms = cursor.fetchall()
 
     # If the user has no tracked poms

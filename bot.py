@@ -16,7 +16,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 print(TOKEN)
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
-POM_CHANNEL_ID = 662941079057989633
+POM_CHANNEL_ID = 695007275995103332
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
 MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
@@ -28,13 +28,13 @@ bot = commands.Bot(command_prefix='!', case_insensitive=True)
 '''
 Create connection to database
 '''
-db = mysql.connector.connect(
-    host="localhost",
-    user="admin",
-    database="pom_bot",
-    password="KoA1411!!"
-)
-cursor = db.cursor(buffered=True)
+#db = mysql.connector.connect(
+#    host="localhost",
+#    user="admin",
+#   database="pom_bot",
+#    password="KoA1411!!"
+#)
+#cursor = db.cursor(buffered=True)
 """
 Tracks a new pom for the user.
 """
@@ -46,6 +46,14 @@ Tracks a new pom for the user.
              pass_context=True)
 async def pom(ctx, *, description: str = None):
     pom_count = 1
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
+
 
     try:
         if description:
@@ -90,6 +98,8 @@ async def pom(ctx, *, description: str = None):
         f.close()
         print(e)
     await ctx.message.add_reaction("🍅")
+    cursor.close()
+    db.close()
 
 
 """
@@ -103,6 +113,13 @@ property set to false.
                     'a new session.', 
             pass_context=True)
 async def new_session(ctx):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
     cursor.fetchall()
     document_count = cursor.rowcount
@@ -119,7 +136,8 @@ async def new_session(ctx):
     await ctx.message.add_reaction("🍃")
     await ctx.send("A new session will be started when you track your next pom, {}."
                    .format(ctx.message.author.display_name))
-
+    cursor.close()
+    db.close()
 
 """
 Gives the user an overview of how many poms they've been doing so far.
@@ -128,6 +146,13 @@ Gives the user an overview of how many poms they've been doing so far.
 
 @bot.command(name='poms', help='See details for your tracked poms and the current session.', pass_context=True)
 async def poms(ctx):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     # Fetch all poms for user based on their Discord ID
     cursor.execute(MYSQL_SELECT_ALL_POMS, (ctx.message.author.id,))
     own_poms = cursor.fetchall()
@@ -200,7 +225,8 @@ async def poms(ctx):
 
     await ctx.author.send(embed=embedded_message)
     await ctx.send("I've sent you a DM with your poms")
-
+    cursor.close()
+    db.close()
 
 """
 Gives the user an overview of how many poms they've been doing so far.
@@ -209,25 +235,30 @@ Gives the user an overview of how many poms they've been doing so far.
 
 @bot.command(name='howmany', help='List your poms with a given description.', pass_context=True)
 async def howmany(ctx, *, description: str = None):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     if description is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You must specify a description to search for.")
         return
-
     # Fetch all poms for user based on their Discord ID
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript= %s;', (ctx.message.author.bid, description))
+    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript=%s;', (ctx.message.author.id, description))
     own_poms = cursor.fetchall()
-
     # If the user has no tracked poms
     if len(own_poms) == 0 or own_poms is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You have no tracked poms with that description.")
         return
     total_pom_amount = len(own_poms)
-
     await ctx.message.add_reaction("🧮")
     await ctx.send("You have {} pom(s) with the description {}".format(total_pom_amount, description))
-
+    cursor.close()
+    db.close()
 
 """
 Undoes / removes your x latest poms. Default is 1 latest.
@@ -237,6 +268,13 @@ Undoes / removes your x latest poms. Default is 1 latest.
 @bot.command(name='undo', help="Undo/remove your x latest poms. If no number is specified, only the newest pom will "
                                "be undone.")
 async def remove(ctx, *, count: str = None):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     pom_count = 1
     if count:
         if count.split(' ', 1)[0].isdigit():
@@ -264,6 +302,9 @@ async def remove(ctx, *, count: str = None):
         print(e)
 
     await ctx.message.add_reaction("↩")
+    cursor.close()
+    db.close()
+
 
 
 """
@@ -273,6 +314,13 @@ Remove your x latest poms. Default is 1 latest.
 
 @bot.command(name='reset', help="Permanently deletes all your poms. WARNING: There's no undoing this.")
 async def remove(ctx):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     try:
         cursor.execute(MYSQL_DELETE_POMS, (ctx.message.author.id,))
         db.commit()
@@ -285,6 +333,8 @@ async def remove(ctx):
         print(e)
 
     await ctx.message.add_reaction("🗑️")
+    cursor.close()
+    db.close()
 
 
 """
@@ -296,9 +346,18 @@ Allows guardians and helpers to see the total amount of poms completed by KOA us
 @bot.command(name='total', help='List total amount of poms.')
 @commands.has_any_role('Guardians', 'Helpers')
 async def total(ctx):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
     cursor.execute('SELECT * FROM poms;')
     document_count = cursor.rowcount
     await ctx.send("Total amount of poms: {}".format(document_count))
+    cursor.close()
+    db.close()
 
 
 '''

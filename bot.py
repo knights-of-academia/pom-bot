@@ -12,6 +12,7 @@ from collections import Counter
 import re
 
 load_dotenv()
+goalReached = False
 TOKEN = os.getenv('DISCORD_TOKEN')
 print(TOKEN)
 POM_TRACK_LIMIT = 10
@@ -19,22 +20,14 @@ DESCRIPTION_LIMIT = 30
 POM_CHANNEL_ID = 662941079057989633
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
+MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
 MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
+MYSQL_SELECT_EVENT = """ SELECT * FROM events WHERE start_date <= %s AND end_date >= %s;"""
+MYSQL_EVENT_SELECT = """SELECT * FROM poms WHERE time_set >= %s AND time_set <= %s; """
 MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
 MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
 bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
-
-'''
-Create connection to database
-'''
-#db = mysql.connector.connect(
-#    host="localhost",
-#    user="admin",
-#   database="pom_bot",
-#    password="KoA1411!!"
-#)
-#cursor = db.cursor(buffered=True)
 """
 Tracks a new pom for the user.
 """
@@ -98,8 +91,30 @@ async def pom(ctx, *, description: str = None):
         f.close()
         print(e)
     await ctx.message.add_reaction("🍅")
+
+    cursor.execute(MYSQL_SELECT_EVENT, (currentDate, currentDate))
+    event_info = cursor.fetchall()
+    event = cursor.rowcount
+
+    if event != 0:
+        
+        cursor.execute(MYSQL_EVENT_SELECT, (event_info[0][3], event_info[0][4]))
+        cursor.fetchall()
+        poms = cursor.rowcount
+        pom_goal = event_info[0][2]
+        
+        if poms >= event_info[0][2] and goalReached == False:
+            await ctx.send("We've reached our goal of %s pom! Well done <@&727974953894543462>!", str(pom_goal))
+            goalReached == True
+        elif goalReached == True:
+            pass
+        else:
+            toSend = "The community has reached " + str(poms) + "/" + str(pom_goal) + " poms. Keep up the good work!"
+            await ctx.send(toSend)
+
     cursor.close()
     db.close()
+    
 
 
 """
@@ -358,6 +373,40 @@ async def total(ctx):
     await ctx.send("Total amount of poms: {}".format(document_count))
     cursor.close()
     db.close()
+
+
+"""
+ADMIN COMMAND:
+Allows guardians and helpers to start an event.
+"""
+
+
+@bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
+@commands.has_any_role('Guardians', 'Helpers')
+async def start_event(ctx, event_name, event_goal, event_start, event_end):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
+    
+    year = str(datetime.today().year)
+    start_date = event_start + ' 01, ' + year + ', 00:00:00'
+    end_date = event_end + ' 01, ' + year + ', 00:00:00'
+
+    start_date = datetime.strptime(start_date, '%B %d, %Y, %H:%M:%S')
+    end_date = datetime.strptime(end_date, '%B %d, %Y, %H:%M:%S')
+
+    event = (event_name, event_goal, start_date, end_date)
+
+    cursor.execute(MYSQL_EVENT_ADD, event)
+    db.commit()
+
+    cursor.close()
+    db.close()
+    goalReached = False
 
 
 '''

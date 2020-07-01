@@ -19,6 +19,7 @@ DESCRIPTION_LIMIT = 30
 POM_CHANNEL_ID = 695007275995103332
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
+MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
 MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
 MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
 MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
@@ -366,9 +367,9 @@ Allows guardians and helpers to start an event.
 """
 
 
-@bot.command(name='start')
+@bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
 @commands.has_any_role('Guardians', 'Helpers')
-async def start_event(ctx, event_name, event_goal, event_start, event_name):
+async def start_event(ctx, event_name, event_goal, event_start, event_end):
     db = mysql.connector.connect(
         host="localhost",
         user="admin",
@@ -376,12 +377,18 @@ async def start_event(ctx, event_name, event_goal, event_start, event_name):
         password="KoA1411!!"
     )
     cursor = db.cursor(buffered=True)
+    
+    year = str(datetime.today().year)
+    start_date = event_start + ' 01, ' + year + ', 00:00:00'
+    end_date = event_end + ' 01, ' + year + ', 00:00:00'
 
-    # parse arguments
+    start_date = datetime.strptime(start_date, '%B %d, %Y, %H:%M:%S')
+    end_date = datetime.strptime(end_date, '%B %d, %Y, %H:%M:%S')
 
-    # add event to database
-        # once the event is in the database, poms will be counted towards the event if
-        # they are within the start and end times
+    event = (event_name, event_goal, start_date, end_date)
+
+    cursor.execute(MYSQL_EVENT_ADD, event)
+    db.commit()
 
     # send confirmation message
 

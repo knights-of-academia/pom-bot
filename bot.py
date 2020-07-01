@@ -105,6 +105,7 @@ async def pom(ctx, *, description: str = None):
         
         if poms >= event_info[0][2] and goalReached == False:
             await ctx.send("We've reached our goal of %s pom! Well done <@&727974953894543462>!", str(pom_goal))
+            goalReached == True
         elif goalReached == True:
             pass
         else:

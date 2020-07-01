@@ -17,7 +17,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 print(TOKEN)
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
-POM_CHANNEL_ID = 695007275995103332
+POM_CHANNEL_ID = 662941079057989633
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
 MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
@@ -109,7 +109,6 @@ async def pom(ctx, *, description: str = None):
             pass
         else:
             toSend = "The community has reached " + str(poms) + "/" + str(pom_goal) + " poms. Keep up the good work!"
-            print(toSend)
             await ctx.send(toSend)
 
     cursor.close()

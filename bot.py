@@ -360,6 +360,35 @@ async def total(ctx):
     db.close()
 
 
+"""
+ADMIN COMMAND:
+Allows guardians and helpers to start an event.
+"""
+
+
+@bot.command(name='start')
+@commands.has_any_role('Guardians', 'Helpers')
+async def start_event(ctx, event_name, event_goal, event_start, event_name):
+    db = mysql.connector.connect(
+        host="localhost",
+        user="admin",
+        database="pom_bot",
+        password="KoA1411!!"
+    )
+    cursor = db.cursor(buffered=True)
+
+    # parse arguments
+
+    # add event to database
+        # once the event is in the database, poms will be counted towards the event if
+        # they are within the start and end times
+
+    # send confirmation message
+
+    cursor.close()
+    db.close()
+
+
 '''
 If user tries to use a command that they do not have access to
 '''

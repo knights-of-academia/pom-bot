@@ -14,10 +14,11 @@ import re
 load_dotenv()
 goalReached = False
 TOKEN = os.getenv('DISCORD_TOKEN')
+POM_CHANNEL_ID = int(os.getenv('POM_CHANNEL_ID'))
 print(TOKEN)
+print(POM_CHANNEL_ID)
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
-POM_CHANNEL_ID = 662941079057989633
 MULTILINE_DESCRIPTION_DISABLED = True
 MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
 MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
@@ -97,15 +98,16 @@ async def pom(ctx, *, description: str = None):
     event = cursor.rowcount
 
     if event != 0:
-        
+
+        global goalReached
         cursor.execute(MYSQL_EVENT_SELECT, (event_info[0][3], event_info[0][4]))
         cursor.fetchall()
         poms = cursor.rowcount
         pom_goal = event_info[0][2]
         
         if poms >= event_info[0][2] and goalReached == False:
-            await ctx.send("We've reached our goal of %s pom! Well done <@&727974953894543462>!", str(pom_goal))
-            goalReached == True
+            await ctx.send("We've reached our goal of {} poms! Well done <@&727974953894543462>!".format(pom_goal))
+            goalReached = True
         elif goalReached == True:
             pass
         else:
@@ -384,6 +386,11 @@ Allows guardians and helpers to start an event.
 @bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
 @commands.has_any_role('Guardians', 'Helpers')
 async def start_event(ctx, event_name, event_goal, event_start, event_end):
+    # validate arguments
+    if not str.isdigit(event_goal):
+        await ctx.send('{} is not a valid number for a pom goal!'.format(event_goal))
+        return
+
     db = mysql.connector.connect(
         host="localhost",
         user="admin",

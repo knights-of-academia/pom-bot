@@ -415,6 +415,7 @@ async def start_event(ctx, event_name, event_goal, event_start, event_end):
     db.close()
     goalReached = False
 
+    await ctx.send(f"Created event '{event_name}' with a goal of {event_goal} poms.")
 
 '''
 If user tries to use a command that they do not have access to

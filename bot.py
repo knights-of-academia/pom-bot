@@ -29,6 +29,11 @@ MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s A
 MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
 bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
+@bot.event
+async def on_ready():
+    print(f'{bot.user} is ready on Discord')
+
+
 """
 Tracks a new pom for the user.
 """

@@ -104,7 +104,7 @@ async def pom(ctx, *, description: str = None):
         cursor.fetchall()
         poms = cursor.rowcount
         pom_goal = event_info[0][2]
-        
+
         if poms >= event_info[0][2] and goalReached == False:
             await ctx.send("We've reached our goal of {} poms! Well done <@&727974953894543462>!".format(pom_goal))
             goalReached = True
@@ -116,18 +116,18 @@ async def pom(ctx, *, description: str = None):
 
     cursor.close()
     db.close()
-    
+
 
 
 """
 Starts a new session for the user, meaning that all the poms in their current session will have their current_session
-property set to false. 
+property set to false.
 """
 
 
-@bot.command(name='newleaf', 
+@bot.command(name='newleaf',
             help='Turn over a new leaf and hide the details of your previously tracked poms. Starts '
-                    'a new session.', 
+                    'a new session.',
             pass_context=True)
 async def new_session(ctx):
     db = mysql.connector.connect(
@@ -140,7 +140,7 @@ async def new_session(ctx):
     cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
     cursor.fetchall()
     document_count = cursor.rowcount
-    
+
     # If the user tries to start a new session before doing anything
     if document_count == 0:
         await ctx.message.add_reaction("🍂")
@@ -385,10 +385,41 @@ Allows guardians and helpers to start an event.
 
 @bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
 @commands.has_any_role('Guardians', 'Helper')
-async def start_event(ctx, event_name, event_goal, event_start, event_end):
+async def start_event(ctx, event_name, event_goal, start_month, start_day, end_month, end_day):
     # validate arguments
     if not str.isdigit(event_goal):
-        await ctx.send('{} is not a valid number for a pom goal!'.format(event_goal))
+        await ctx.send(f'{event_goal} is not a valid number for a pom goal.')
+        return
+    if not str.isdigit(start_day):
+        await ctx.send(f'{start_day} is not a valid start day.')
+        return
+    if not str.isdigit(end_day):
+        await ctx.send(f'{end_day} is not a valid end day.')
+        return
+
+    dateformat = '%B %d %Y %H:%M:%S'
+    year = str(datetime.today().year)
+
+    start_date_string = f'{start_month} {start_day} {year} 00:00:00'
+    end_date_string = f'{end_month} {end_day} {year} 11:59:59'
+
+    # validate start date after putting month and day together
+    try:
+        start_date = datetime.strptime(start_date_string, dateformat)
+    except ValueError:
+        await ctx.send(f'{start_month} {start_day} is not a valid start date.')
+        return
+
+    # validate end date after putting month and day together
+    try:
+        end_date = datetime.strptime(end_date_string, dateformat)
+    except ValueError:
+        await ctx.send(f'{end_month} {end_day} is not a valid end date.')
+        return
+
+    # make sure the start date is before the end date
+    if not start_date < end_date:
+        await ctx.send(f'Invalid dates: the start date must be before the end date.')
         return
 
     db = mysql.connector.connect(
@@ -398,13 +429,6 @@ async def start_event(ctx, event_name, event_goal, event_start, event_end):
         password="KoA1411!!"
     )
     cursor = db.cursor(buffered=True)
-    
-    year = str(datetime.today().year)
-    start_date = event_start + ' 01, ' + year + ', 00:00:00'
-    end_date = event_end + ' 01, ' + year + ', 00:00:00'
-
-    start_date = datetime.strptime(start_date, '%B %d, %Y, %H:%M:%S')
-    end_date = datetime.strptime(end_date, '%B %d, %Y, %H:%M:%S')
 
     event = (event_name, event_goal, start_date, end_date)
 
@@ -415,7 +439,8 @@ async def start_event(ctx, event_name, event_goal, event_start, event_end):
     db.close()
     goalReached = False
 
-    await ctx.send(f"Created event '{event_name}' with a goal of {event_goal} poms.")
+    await ctx.send(f"Successfully created event '{event_name}' with a goal of {event_goal} poms, "
+                   f"starting on {start_date.month}/{start_date.day} and ending on {end_date.month}/{end_date.day}.")
 
 '''
 If user tries to use a command that they do not have access to

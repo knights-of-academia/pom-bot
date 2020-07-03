@@ -366,7 +366,7 @@ Allows guardians and helpers to see the total amount of poms completed by KOA us
 
 
 @bot.command(name='total', help='List total amount of poms.')
-@commands.has_any_role('Guardians', 'Helper')
+@commands.has_any_role('Guardian', 'Helper')
 async def total(ctx):
     db = mysql.connector.connect(
         host="localhost",
@@ -389,7 +389,7 @@ Allows guardians and helpers to start an event.
 
 
 @bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
-@commands.has_any_role('Guardians', 'Helper')
+@commands.has_any_role('Guardian', 'Helper')
 async def start_event(ctx, event_name, event_goal, start_month, start_day, end_month, end_day):
     # validate arguments
     if not str.isdigit(event_goal):

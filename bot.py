@@ -406,7 +406,7 @@ async def start_event(ctx, event_name, event_goal, start_month, start_day, end_m
     year = str(datetime.today().year)
 
     start_date_string = f'{start_month} {start_day} {year} 00:00:00'
-    end_date_string = f'{end_month} {end_day} {year} 11:59:59'
+    end_date_string = f'{end_month} {end_day} {year} 23:59:59'
 
     # validate start date after putting month and day together
     try:

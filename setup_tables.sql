@@ -1,0 +1,22 @@
+CREATE DATABASE IF NOT EXISTS pom_bot;
+USE pom_bot;
+
+DROP TABLE IF EXISTS poms;
+CREATE TABLE poms (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    userID BIGINT(20),
+    descript VARCHAR(30),
+    time_set TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    current_session TINYINT(1),
+    PRIMARY KEY(id)
+);
+
+DROP TABLE IF EXISTS events;
+CREATE TABLE events (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    event_name VARCHAR(100) NOT NULL,
+    pom_goal INT(11),
+    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMP NOT NULL DEFAULT 0,
+    PRIMARY KEY(id)
+);

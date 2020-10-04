@@ -1,10 +1,15 @@
+# Editors
+**/*.idea/
+**/*.vscode/
+**/*~
+**/*.swp
 
-.env
+# Environment
+**/.env
 
-*.xml
+# Other
+**/*.xml
+**/errors.*
 
-.idea/
-
-.vscode/
-
-errors.*
+# Runtimes
+**/package-lock.json

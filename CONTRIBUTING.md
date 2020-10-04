@@ -27,4 +27,6 @@ reports, features, etc.
    your pull request, in case other changes have been made
 7. Make sure that your new feature is properly tested, and that it can pass
    all tests before submitting the pull request.
-8. Send your pull request to the develop branch.
+8. Send your pull request to the master branch of [pom-bot][upstream].
+
+[upstream]: https://github.com/knights-of-academia/pom-bot

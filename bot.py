@@ -1,22 +1,25 @@
-#!/usr/bin/env python3
-# bot.py
-
-import os, sys
-from dotenv import load_dotenv
-from discord.ext import commands
-from discord import embeds
-import mysql.connector
-from mysql.connector import Error
-from datetime import datetime
-from collections import Counter
+import os
 import re
+import sys
+from collections import Counter
+from datetime import datetime
 
-load_dotenv()
-goalReached = False
+import dotenv
+import mysql.connector
+from discord.embeds import Embed
+from discord.ext import commands as discord_commands
+
+dotenv.load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-POM_CHANNEL_ID = int(os.getenv('POM_CHANNEL_ID'))
-print(TOKEN)
-print(POM_CHANNEL_ID)
+POM_CHANNEL_NAME = os.getenv('POM_CHANNEL_NAME')
+MYSQL_HOST = os.getenv('MYSQL_HOST')
+MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
+MYSQL_USER = os.getenv('MYSQL_USER')
+MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
+print(f"TOKEN {TOKEN}")
+print(f"POM_CHANNEL_NAME {POM_CHANNEL_NAME}")
+print(f"MYSQL_DATABASE {MYSQL_DATABASE}")
+
 POM_TRACK_LIMIT = 10
 DESCRIPTION_LIMIT = 30
 MULTILINE_DESCRIPTION_DISABLED = True
@@ -27,7 +30,9 @@ MYSQL_SELECT_EVENT = """ SELECT * FROM events WHERE start_date <= %s AND end_dat
 MYSQL_EVENT_SELECT = """SELECT * FROM poms WHERE time_set >= %s AND time_set <= %s; """
 MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
 MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
-bot = commands.Bot(command_prefix='!', case_insensitive=True)
+
+bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
+goalReached = False
 
 @bot.event
 async def on_ready():
@@ -46,10 +51,10 @@ Tracks a new pom for the user.
 async def pom(ctx, *, description: str = None):
     pom_count = 1
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
 
@@ -70,7 +75,7 @@ async def pom(ctx, *, description: str = None):
         # Check if the description is too long
         if description is not None and len(description) > DESCRIPTION_LIMIT:
             await ctx.message.add_reaction("⚠️")
-            await ctx.send('Your pom description must be less than 30 characters.')
+            await ctx.send('Your pom description must be fewer than 30 characters.')
             return
 
         if description is not None and "\n" in description and MULTILINE_DESCRIPTION_DISABLED:
@@ -136,10 +141,10 @@ property set to false.
             pass_context=True)
 async def new_session(ctx):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
@@ -169,10 +174,10 @@ Gives the user an overview of how many poms they've been doing so far.
 @bot.command(name='poms', help='See details for your tracked poms and the current session.', pass_context=True)
 async def poms(ctx):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     # Fetch all poms for user based on their Discord ID
@@ -242,7 +247,7 @@ async def poms(ctx):
         description_embed += "*Undesignated poms: {}*".format(undesignated_pom_count)
 
     # Generate embed message to send
-    embedded_message = embeds.Embed(description=description_embed, colour=0xff6347) \
+    embedded_message = Embed(description=description_embed, colour=0xff6347) \
         .set_author(name=title_embed, icon_url="https://i.imgur.com/qRoH5B5.png" )
 
     await ctx.author.send(embed=embedded_message)
@@ -258,10 +263,10 @@ Gives the user an overview of how many poms they've been doing so far.
 @bot.command(name='howmany', help='List your poms with a given description.', pass_context=True)
 async def howmany(ctx, *, description: str = None):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     if description is None:
@@ -291,10 +296,10 @@ Undoes / removes your x latest poms. Default is 1 latest.
                                "be undone.")
 async def remove(ctx, *, count: str = None):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     pom_count = 1
@@ -337,10 +342,10 @@ Remove your x latest poms. Default is 1 latest.
 @bot.command(name='reset', help="Permanently deletes all your poms. WARNING: There's no undoing this.")
 async def remove(ctx):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     try:
@@ -366,13 +371,13 @@ Allows guardians and helpers to see the total amount of poms completed by KOA us
 
 
 @bot.command(name='total', help='List total amount of poms.')
-@commands.has_any_role('Guardian', 'Helper')
+@discord_commands.has_any_role('Guardian', 'Helper')
 async def total(ctx):
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
     cursor.execute('SELECT * FROM poms;')
@@ -389,7 +394,7 @@ Allows guardians and helpers to start an event.
 
 
 @bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
-@commands.has_any_role('Guardian', 'Helper')
+@discord_commands.has_any_role('Guardian', 'Helper')
 async def start_event(ctx, event_name, event_goal, start_month, start_day, end_month, end_day):
     # validate arguments
     if not str.isdigit(event_goal):
@@ -428,10 +433,10 @@ async def start_event(ctx, event_name, event_goal, start_month, start_day, end_m
         return
 
     db = mysql.connector.connect(
-        host="localhost",
-        user="admin",
-        database="pom_bot",
-        password="KoA1411!!"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        database=MYSQL_DATABASE,
+        password=MYSQL_PASSWORD,
     )
     cursor = db.cursor(buffered=True)
 
@@ -454,7 +459,7 @@ If user tries to use a command that they do not have access to
 
 @bot.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.errors.CheckFailure):
+    if isinstance(error, discord_commands.errors.CheckFailure):
         await ctx.message.add_reaction("⚠️")
         await ctx.send('You do not have the correct role for this command.')
 
@@ -467,8 +472,10 @@ or they'll stop working.
 
 @bot.event
 async def on_message(message):
-    if message.channel.id != POM_CHANNEL_ID:
+    if ("private" in message.channel.type
+            or message.channel.name != POM_CHANNEL_NAME):
         return
+
     await bot.process_commands(message)
 
 

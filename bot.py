@@ -1,170 +1,36 @@
-import os
-import re
-import sys
 from collections import Counter
 from datetime import datetime
 
-import dotenv
 import mysql.connector
 from discord.embeds import Embed
 from discord.ext import commands as discord_commands
 
-dotenv.load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-POM_CHANNEL_NAME = os.getenv('POM_CHANNEL_NAME')
-MYSQL_HOST = os.getenv('MYSQL_HOST')
-MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
-MYSQL_USER = os.getenv('MYSQL_USER')
-MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
-print(f"TOKEN {TOKEN}")
-print(f"POM_CHANNEL_NAME {POM_CHANNEL_NAME}")
-print(f"MYSQL_DATABASE {MYSQL_DATABASE}")
+from pombot.commands.newleaf import newleaf_handler
+from pombot.commands.pom import pom_handler
+from pombot.config import Config, Secrets
 
-POM_TRACK_LIMIT = 10
-DESCRIPTION_LIMIT = 30
-MULTILINE_DESCRIPTION_DISABLED = True
-MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
-MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
-MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
-MYSQL_SELECT_EVENT = """ SELECT * FROM events WHERE start_date <= %s AND end_date >= %s;"""
-MYSQL_EVENT_SELECT = """SELECT * FROM poms WHERE time_set >= %s AND time_set <= %s; """
-MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
-MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
 
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
-goalReached = False
 
 @bot.event
 async def on_ready():
     print(f'{bot.user} is ready on Discord')
 
 
-"""
-Tracks a new pom for the user.
-"""
-
-
-@bot.command(name='pom',
-             help='Adds a new pom, if the first word in the description is a number (1-10), multiple poms will be '
-                  'added with the given description.',
-             pass_context=True)
+@bot.command()
 async def pom(ctx, *, description: str = None):
-    pom_count = 1
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
+    """Adds a new pom, if the first word in the description is a number
+    (1-10), multiple poms will be added with the given description.
+    """
+    await pom_handler(ctx, description=description)
 
 
-    try:
-        if description:
-            # If there is a description, check if the first word is a digit
-            # And if it is, split the string to remove the digits length plus 1 for space.
-            if description.split(' ', 1)[0].isdigit():
-                pom_count = int(description.split(' ', 1)[0])
-                if pom_count > POM_TRACK_LIMIT or pom_count < 1:
-                    await ctx.message.add_reaction("⚠️")
-                    await ctx.send('You can only add between 1 and 10 poms at once.')
-                    return
-
-                description = description[(len(str(pom_count)) + 1):]
-
-        # Check if the description is too long
-        if description is not None and len(description) > DESCRIPTION_LIMIT:
-            await ctx.message.add_reaction("⚠️")
-            await ctx.send('Your pom description must be fewer than 30 characters.')
-            return
-
-        if description is not None and "\n" in description and MULTILINE_DESCRIPTION_DISABLED:
-            await ctx.message.add_reaction("⚠️")
-            await ctx.send('Multi line pom descriptions are disabled.')
-            return
-
-        poms_to_add = []
-        currentDate = datetime.now()
-        formatted_date = currentDate.strftime('%Y-%m-%d %H:%M:%S')
-        for _ in range(pom_count):
-            new_added_pom = (ctx.message.author.id, description, formatted_date, True)
-            poms_to_add.append(new_added_pom)
-
-        cursor.executemany(MYSQL_INSERT_QUERY, poms_to_add)
-        db.commit()
-    except mysql.connector.Error as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.txt', 'a')
-        f.write(e)
-        f.close()
-        print(e)
-    await ctx.message.add_reaction("🍅")
-
-    cursor.execute(MYSQL_SELECT_EVENT, (currentDate, currentDate))
-    event_info = cursor.fetchall()
-    event = cursor.rowcount
-
-    if event != 0:
-
-        global goalReached
-        cursor.execute(MYSQL_EVENT_SELECT, (event_info[0][3], event_info[0][4]))
-        cursor.fetchall()
-        poms = cursor.rowcount
-        pom_goal = event_info[0][2]
-
-        if poms >= event_info[0][2] and goalReached == False:
-            await ctx.send("We've reached our goal of {} poms! Well done <@&727974953894543462>!".format(pom_goal))
-            goalReached = True
-        elif goalReached == True:
-            pass
-        else:
-            toSend = "The community has reached " + str(poms) + "/" + str(pom_goal) + " poms. Keep up the good work!"
-            await ctx.send(toSend)
-
-    cursor.close()
-    db.close()
-
-
-
-"""
-Starts a new session for the user, meaning that all the poms in their current session will have their current_session
-property set to false.
-"""
-
-
-@bot.command(name='newleaf',
-            help='Turn over a new leaf and hide the details of your previously tracked poms. Starts '
-                    'a new session.',
-            pass_context=True)
-async def new_session(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
-    cursor.fetchall()
-    document_count = cursor.rowcount
-
-    # If the user tries to start a new session before doing anything
-    if document_count == 0:
-        await ctx.message.add_reaction("🍂")
-        await ctx.send("A new session will be started when you track your first pom.")
-        return
-
-    # Set all previous poms to not be in the current session
-    cursor.execute(MYSQL_UPDATE_SESSION, (ctx.message.author.id,))
-    db.commit()
-    await ctx.message.add_reaction("🍃")
-    await ctx.send("A new session will be started when you track your next pom, {}."
-                   .format(ctx.message.author.display_name))
-    cursor.close()
-    db.close()
+@bot.command()
+async def newleaf(ctx):
+    """Turn over a new leaf and hide the details of your previously tracked
+    poms. Starts a new session.
+    """
+    await newleaf_handler(ctx)
 
 """
 Gives the user an overview of how many poms they've been doing so far.
@@ -473,10 +339,10 @@ or they'll stop working.
 @bot.event
 async def on_message(message):
     if ("private" in message.channel.type
-            or message.channel.name != POM_CHANNEL_NAME):
+            or message.channel.name != Config.POM_CHANNEL_NAME):
         return
 
     await bot.process_commands(message)
 
 
-bot.run(TOKEN)
+bot.run(Secrets.TOKEN)

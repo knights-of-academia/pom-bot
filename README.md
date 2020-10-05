@@ -8,6 +8,6 @@ The default pom bot with simple features.
 
 2. The Python dependencies (`pip install -r requirements.txt`).
 
-3. MongoDB running on the default port (27017/tcp).
+3. MySQL database running on the default port (3306/tcp).
 
 After this has been set up, it should be plug and play! Enjoy!

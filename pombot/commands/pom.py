@@ -3,13 +3,14 @@ import sys
 from datetime import datetime
 
 import mysql.connector
+from discord.ext.commands import Context
 
 from pombot.config import Config, Reactions, Secrets
 from pombot.state import State
 from pombot.storage import EventSql, PomSql
 
 
-async def pom_handler(ctx, *, description: str = None):
+async def pom_handler(ctx: Context, *, description: str = None):
     """Tracks a new pom for the user."""
     pom_count = 1
     current_date = datetime.now()
@@ -57,15 +58,15 @@ async def pom_handler(ctx, *, description: str = None):
         cursor.executemany(PomSql.INSERT_QUERY, poms)
 
         db.commit()
-    except mysql.connector.Error as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
+    except mysql.connector.Error as exc:
+        exc_type, _exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
         await ctx.message.add_reaction(Reactions.ERROR)
         f = open('errors.txt', 'a')
-        f.write(e)
+        f.write(exc)
         f.close()
-        print(e)
+        print(exc)
 
     await ctx.message.add_reaction(Reactions.TOMATO)
 

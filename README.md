@@ -4,7 +4,7 @@ The default pom bot with simple features, based on the work of @moesgaarda found
 ## Changes to original software
 The original version of the software used MongoDB, this fork makes use of MySQL instead.
 
-# Installation
+## Installation
 
 1. Python 3.5.3 or newer.
 2. The Python dependencies (`pip install -r requirements.txt`).

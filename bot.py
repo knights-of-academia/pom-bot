@@ -68,6 +68,8 @@ async def pom(ctx, *, description: str = None):
                 if pom_count > POM_TRACK_LIMIT or pom_count < 1:
                     await ctx.message.add_reaction("⚠️")
                     await ctx.send('You can only add between 1 and 10 poms at once.')
+                    cursor.close()
+                    db.close()
                     return
 
                 description = description[(len(str(pom_count)) + 1):]
@@ -76,11 +78,15 @@ async def pom(ctx, *, description: str = None):
         if description is not None and len(description) > DESCRIPTION_LIMIT:
             await ctx.message.add_reaction("⚠️")
             await ctx.send('Your pom description must be fewer than 30 characters.')
+            cursor.close()
+            db.close()
             return
 
         if description is not None and "\n" in description and MULTILINE_DESCRIPTION_DISABLED:
             await ctx.message.add_reaction("⚠️")
             await ctx.send('Multi line pom descriptions are disabled.')
+            cursor.close()
+            db.close()
             return
 
         poms_to_add = []
@@ -155,6 +161,8 @@ async def new_session(ctx):
     if document_count == 0:
         await ctx.message.add_reaction("🍂")
         await ctx.send("A new session will be started when you track your first pom.")
+        cursor.close()
+        db.close()
         return
 
     # Set all previous poms to not be in the current session
@@ -187,6 +195,8 @@ async def poms(ctx):
     if len(own_poms) == 0 or own_poms is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You have no tracked poms.")
+        cursor.close()
+        db.close()
         return
 
     # All poms tracked this session by user
@@ -272,6 +282,8 @@ async def howmany(ctx, *, description: str = None):
     if description is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You must specify a description to search for.")
+        cursor.close()
+        db.close()
         return
     # Fetch all poms for user based on their Discord ID
     cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript=%s;', (ctx.message.author.id, description))
@@ -280,6 +292,8 @@ async def howmany(ctx, *, description: str = None):
     if len(own_poms) == 0 or own_poms is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You have no tracked poms with that description.")
+        cursor.close()
+        db.close()
         return
     total_pom_amount = len(own_poms)
     await ctx.message.add_reaction("🧮")
@@ -309,6 +323,8 @@ async def remove(ctx, *, count: str = None):
             if pom_count > POM_TRACK_LIMIT:
                 await ctx.message.add_reaction("⚠️")
                 await ctx.send('You can only undo up to 10 poms at once.')
+                cursor.close()
+                db.close()
                 return
 
     try:

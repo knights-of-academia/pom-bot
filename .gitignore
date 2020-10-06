@@ -13,3 +13,4 @@
 
 # Runtimes
 **/package-lock.json
+**/__pycache__

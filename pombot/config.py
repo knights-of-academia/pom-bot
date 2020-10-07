@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 import dotenv
 
@@ -26,11 +26,12 @@ class Config:
 
 
 class Reactions:
+    ABACUS = "🧮"
     ERROR = "🐛"
-    TOMATO = "🍅"
-    WARNING = "⚠️"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"
+    TOMATO = "🍅"
+    WARNING = "⚠️"
 
 
 class Secrets:

@@ -7,6 +7,7 @@ import mysql.connector
 from discord.ext import commands as discord_commands
 from discord.ext.commands import Context
 
+from pombot.commands.howmany import howmany_handler
 from pombot.commands.newleaf import newleaf_handler
 from pombot.commands.pom import pom_handler
 from pombot.commands.poms import poms_handler
@@ -15,15 +16,17 @@ from pombot.config import Config, Reactions, Secrets
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
 
 _log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 @bot.event
 async def on_ready():
-    _log.info(f"%s is ready on Discord", bot.user)
+    """Startup procedure after bot has logged into Discord."""
+    _log.info("%s is ready on Discord", bot.user)
 
 
 @bot.command()
-async def pom(ctx, *, description: str = None):
+async def pom(ctx: Context, *, description: str = None):
     """Adds a new pom, if the first word in the description is a number
     (1-10), multiple poms will be added with the given description.
     """
@@ -31,58 +34,28 @@ async def pom(ctx, *, description: str = None):
 
 
 @bot.command()
-async def newleaf(ctx):
+async def poms(ctx: Context):
+    """See details for your tracked poms and the current session."""
+    await poms_handler(ctx)
+
+
+@bot.command()
+async def howmany(ctx, *, description: str = None):
+    """List your poms with a given description."""
+    await howmany_handler(ctx, description=description)
+
+
+@bot.command()
+async def newleaf(ctx: Context):
     """Turn over a new leaf and hide the details of your previously tracked
     poms. Starts a new session.
     """
     await newleaf_handler(ctx)
 
 
-@bot.command()
-async def poms(ctx):
-    """See details for your tracked poms and the current session."""
-    await poms_handler(ctx)
-
-
-"""
-Gives the user an overview of how many poms they've been doing so far.
-"""
-@bot.command(name='howmany', help='List your poms with a given description.', pass_context=True)
-async def howmany(ctx, *, description: str = None):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    if description is None:
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send("You must specify a description to search for.")
-        cursor.close()
-        db.close()
-        return
-    # Fetch all poms for user based on their Discord ID
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript=%s;', (ctx.message.author.id, description))
-    own_poms = cursor.fetchall()
-    # If the user has no tracked poms
-    if len(own_poms) == 0 or own_poms is None:
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send("You have no tracked poms with that description.")
-        cursor.close()
-        db.close()
-        return
-    total_pom_amount = len(own_poms)
-    await ctx.message.add_reaction("🧮")
-    await ctx.send("You have {} pom(s) with the description {}".format(total_pom_amount, description))
-    cursor.close()
-    db.close()
-
 """
 Undoes / removes your x latest poms. Default is 1 latest.
 """
-
-
 @bot.command(name='undo', help="Undo/remove your x latest poms. If no number is specified, only the newest pom will "
                                "be undone.")
 async def remove(ctx, *, count: str = None):

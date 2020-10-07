@@ -14,30 +14,33 @@ class PomSql:
         VALUES (%s, %s, %s, %s);
     """)
 
-    # FIXME: note missing ";"
-    # SELECT_ALL_POMS = textwrap.dedent(f"""\
-    #     SELECT * FROM {Config.POMS_TABLE} WHERE userID=%s
-    # """)
+    SELECT_ALL_POMS = textwrap.dedent(f"""\
+        SELECT * FROM {Config.POMS_TABLE}
+        WHERE userID=%s;
+    """)
 
     SELECT_ALL_POMS_CURRENT_SESSION = textwrap.dedent(f"""\
         SELECT * FROM {Config.POMS_TABLE}
-        WHERE userID=%s
+        WHERE userID = %s
         AND current_session = 1;
     """)
 
     EVENT_SELECT = textwrap.dedent(f"""\
         SELECT * FROM {Config.POMS_TABLE}
-        WHERE time_set >= %s AND time_set <= %s;
+        WHERE time_set >= %s
+        AND time_set <= %s;
     """)
 
     UPDATE_SESSION = textwrap.dedent(f"""\
         UPDATE  {Config.POMS_TABLE}
         SET current_session = 0
-        WHERE current_session = 1 AND userID=%s;
+        WHERE userID = %s
+        AND current_session = 1;
     """)
 
     DELETE_POMS = textwrap.dedent(f"""\
-        DELETE FROM {Config.POMS_TABLE} WHERE userID=%s;
+        DELETE FROM {Config.POMS_TABLE}
+        WHERE userID=%s;
     """)
 
 
@@ -54,5 +57,6 @@ class EventSql:
 
     SELECT_EVENT = textwrap.dedent(f"""\
         SELECT * FROM {Config.EVENTS_TABLE}
-        WHERE start_date <= %s AND end_date >= %s;
+        WHERE start_date <= %s
+        AND end_date >= %s;
     """)

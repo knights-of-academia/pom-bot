@@ -33,6 +33,8 @@ async def pom_handler(ctx: Context, *, description: str = None):
                 if pom_count > Config.POM_TRACK_LIMIT or pom_count < 1:
                     await ctx.message.add_reaction(Reactions.WARNING)
                     await ctx.send('You can only add between 1 and 10 poms at once.')
+                    cursor.close()
+                    db.close()
                     return
 
                 description = description[(len(str(pom_count)) + 1):]
@@ -43,7 +45,9 @@ async def pom_handler(ctx: Context, *, description: str = None):
             await ctx.send('Your pom description must be fewer than 30 characters.')
             return
 
-        if description is not None and "\n" in description and Config.MULTILINE_DESCRIPTION_DISABLED:
+        has_multiline_description = description is not None and "\n" in description
+
+        if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
             await ctx.message.add_reaction(Reactions.WARNING)
             await ctx.send('Multi line pom descriptions are disabled.')
             return
@@ -67,6 +71,7 @@ async def pom_handler(ctx: Context, *, description: str = None):
         f.write(exc)
         f.close()
         print(exc)
+        raise
 
     await ctx.message.add_reaction(Reactions.TOMATO)
 
@@ -79,14 +84,19 @@ async def pom_handler(ctx: Context, *, description: str = None):
         poms = cursor.rowcount
         pom_goal = event_info[0][2]
 
-        if poms >= event_info[0][2] and State.goal_reached == False:
-            await ctx.send("We've reached our goal of {} poms! Well done <@&727974953894543462>!".format(pom_goal))
+        if poms >= event_info[0][2] and State.goal_reached:
             State.goal_reached = True
-        elif State.goal_reached == True:
+            await ctx.send(
+                f"We've reached our goal of {pom_goal} poms! Well done "
+                "<@&727974953894543462>!"
+            )
+        elif State.goal_reached:
             pass
         else:
-            toSend = "The community has reached " + str(poms) + "/" + str(pom_goal) + " poms. Keep up the good work!"
-            await ctx.send(toSend)
+            await ctx.send(
+                f"The community has reached {poms}/{pom_goal} poms. Keep up "
+                "the good work!"
+            )
 
     cursor.close()
     db.close()

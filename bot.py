@@ -1,19 +1,25 @@
+import logging
+import random
 from datetime import datetime
+from typing import Any
 
 import mysql.connector
 from discord.ext import commands as discord_commands
+from discord.ext.commands import Context
 
 from pombot.commands.newleaf import newleaf_handler
 from pombot.commands.pom import pom_handler
 from pombot.commands.poms import poms_handler
-from pombot.config import Config, Secrets
+from pombot.config import Config, Reactions, Secrets
 
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
+
+_log = logging.getLogger(__name__)
 
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} is ready on Discord')
+    _log.info(f"%s is ready on Discord", bot.user)
 
 
 @bot.command()
@@ -53,6 +59,8 @@ async def howmany(ctx, *, description: str = None):
     if description is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You must specify a description to search for.")
+        cursor.close()
+        db.close()
         return
     # Fetch all poms for user based on their Discord ID
     cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript=%s;', (ctx.message.author.id, description))
@@ -61,6 +69,8 @@ async def howmany(ctx, *, description: str = None):
     if len(own_poms) == 0 or own_poms is None:
         await ctx.message.add_reaction("⚠️")
         await ctx.send("You have no tracked poms with that description.")
+        cursor.close()
+        db.close()
         return
     total_pom_amount = len(own_poms)
     await ctx.message.add_reaction("🧮")
@@ -90,6 +100,8 @@ async def remove(ctx, *, count: str = None):
             if pom_count > POM_TRACK_LIMIT:
                 await ctx.message.add_reaction("⚠️")
                 await ctx.send('You can only undo up to 10 poms at once.')
+                cursor.close()
+                db.close()
                 return
 
     try:
@@ -233,16 +245,39 @@ async def start_event(ctx, event_name, event_goal, start_month, start_day, end_m
     await ctx.send(f"Successfully created event '{event_name}' with a goal of {event_goal} poms, "
                    f"starting on {start_date.month}/{start_date.day} and ending on {end_date.month}/{end_date.day}.")
 
-'''
-If user tries to use a command that they do not have access to
-'''
 
 
 @bot.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx: Context, error: Any):
+    """Alert users when using commands to which they have no access. In all
+    other cases, log the error and mark it in discord.
+    """
     if isinstance(error, discord_commands.errors.CheckFailure):
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send('You do not have the correct role for this command.')
+        message, *_ = random.choices([
+            "You do not have access to this command.",
+            "Sorry, that command is out-of-order.",
+            "!!! ACCESS DENIED !!! \\**whale noises\\**",
+            "Wir konnten die Smaragde nicht finden!",
+            "Do you smell that?",
+            "\\**(Windows XP startup sound)\\**",
+            "This is not the command you're looking for. \\**waves hand\\**",
+            "*noop*",
+        ])
+
+        await ctx.message.add_reaction(Reactions.WARNING)
+        await ctx.send(message)
+        return
+
+    for message in error.args:
+        _log.error(
+            'error: user %s (%s) running "%s" hit: %s',
+            ctx.author.display_name,
+            ctx.author.name + "#" +ctx.author.discriminator,
+            ctx.message.content,
+            message,
+        )
+
+    await ctx.message.add_reaction(Reactions.ERROR)
 
 
 '''

@@ -7,7 +7,7 @@ from pombot.config import Config, Reactions, Secrets
 
 async def undo_handler(ctx: Context, *, description: str = None):
     """Removes the user's x latest poms. Default is 1 (the latest)."""
-    pom_count = 1
+    count = 1
 
     db = mysql.connector.connect(
         host=Secrets.MYSQL_HOST,
@@ -34,10 +34,9 @@ async def undo_handler(ctx: Context, *, description: str = None):
             db.close()
             return
 
-    cursor.execute(PomSql.SELECT_ALL_POMS_LIMIT, (ctx.message.author.id, pom_count))
-    to_delete = [(ctx.message.author.id, pom[0]) for pom in cursor.fetchall()]
-
-    cursor.executemany(PomSql.DELETE_POMS, to_delete)
+    cursor.execute(PomSql.SELECT_ALL_POMS_LIMIT, (ctx.message.author.id, count))
+    cursor.executemany(PomSql.DELETE_POMS, [(ctx.message.author.id, pom[0])
+                                            for pom in cursor.fetchall()])
     db.commit()
 
     await ctx.message.add_reaction(Reactions.UNDO)

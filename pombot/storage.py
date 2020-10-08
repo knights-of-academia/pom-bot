@@ -17,6 +17,13 @@ class PomSql:
         WHERE userID=%s;
     """
 
+    SELECT_ALL_POMS_LIMIT = f"""
+        SELECT * FROM {Config.POMS_TABLE}
+        WHERE userID=%s
+        ORDER BY time_set DESC
+        LIMIT %s;
+    """
+
     SELECT_ALL_POMS_CURRENT_SESSION = f"""
         SELECT * FROM {Config.POMS_TABLE}
         WHERE userID = %s
@@ -44,7 +51,8 @@ class PomSql:
 
     DELETE_POMS = f"""
         DELETE FROM {Config.POMS_TABLE}
-        WHERE userID=%s;
+        WHERE userID=%s
+        AND id=%s;
     """
 
 

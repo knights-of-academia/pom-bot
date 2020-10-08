@@ -6,11 +6,13 @@ from typing import Any
 import mysql.connector
 from discord.ext import commands as discord_commands
 from discord.ext.commands import Context
+from discord.message import Message
 
 from pombot.commands.howmany import howmany_handler
 from pombot.commands.newleaf import newleaf_handler
 from pombot.commands.pom import pom_handler
 from pombot.commands.poms import poms_handler
+from pombot.commands.undo import undo_handler
 from pombot.config import Config, Reactions, Secrets
 
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
@@ -53,51 +55,12 @@ async def newleaf(ctx: Context):
     await newleaf_handler(ctx)
 
 
-"""
-Undoes / removes your x latest poms. Default is 1 latest.
-"""
-@bot.command(name='undo', help="Undo/remove your x latest poms. If no number is specified, only the newest pom will "
-                               "be undone.")
-async def remove(ctx, *, count: str = None):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    pom_count = 1
-    if count:
-        if count.split(' ', 1)[0].isdigit():
-            pom_count = int(count.split(' ', 1)[0])
-            if pom_count > POM_TRACK_LIMIT:
-                await ctx.message.add_reaction("⚠️")
-                await ctx.send('You can only undo up to 10 poms at once.')
-                cursor.close()
-                db.close()
-                return
-
-    try:
-        cursor.execute(MYSQL_SELECT_ALL_POMS + ' ORDER BY time_set DESC LIMIT %s;', (ctx.message.author.id, pom_count))
-        to_delete = cursor.fetchall()
-
-        to_delete_id = []
-        for pom_to_delete in to_delete:
-            to_delete_id.append((ctx.message.author.id, pom_to_delete[0]))
-        cursor.executemany(MYSQL_DELETE_POMS + ' AND id=%s;', to_delete_id)
-        db.commit()
-
-    except Exception as e:
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.log', 'a')
-        f.write(e)
-        f.close()
-        print(e)
-
-    await ctx.message.add_reaction("↩")
-    cursor.close()
-    db.close()
-
+@bot.command()
+async def undo(ctx, *, description: str = None):
+    """Undo/remove your x latest poms. If no number is specified, only the
+    newest pom will be undone.
+    """
+    await undo_handler(ctx, description=description)
 
 
 """
@@ -118,12 +81,12 @@ async def remove(ctx):
         cursor.execute(MYSQL_DELETE_POMS, (ctx.message.author.id,))
         db.commit()
 
-    except Exception as e:
+    except Exception as exc:
         await ctx.message.add_reaction("🐛")
         f = open('errors.log', 'a')
-        f.write(e)
+        f.write(exc)
         f.close()
-        print(e)
+        print(exc)
 
     await ctx.message.add_reaction("🗑️")
     cursor.close()
@@ -260,7 +223,7 @@ or they'll stop working.
 
 
 @bot.event
-async def on_message(message):
+async def on_message(message: Message):
     if ("private" in message.channel.type
             or message.channel.name != Config.POM_CHANNEL_NAME):
         return
@@ -268,4 +231,5 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-bot.run(Secrets.TOKEN)
+if __name__ == "__main__":
+    bot.run(Secrets.TOKEN)

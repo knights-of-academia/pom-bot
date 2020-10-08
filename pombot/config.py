@@ -31,6 +31,7 @@ class Reactions:
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"
     TOMATO = "🍅"
+    UNDO = "↩"
     WARNING = "⚠️"
 
 

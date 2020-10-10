@@ -30,4 +30,4 @@ async def reset_handler(ctx: Context):
         cursor.close()
         db.close()
 
-    await ctx.message.add_reaction(Reactions.RESET)
+    await ctx.message.add_reaction(Reactions.WASTEBASKET)

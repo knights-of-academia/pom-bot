@@ -18,7 +18,7 @@ async def undo_handler(ctx: Context, *, description: str = None):
     cursor = db.cursor(buffered=True)
 
     if description:
-        first_word, *_ = description.split(' ', 1)[0]
+        first_word, *_ = description.split(' ', 1)
 
         try:
             count = int(first_word)

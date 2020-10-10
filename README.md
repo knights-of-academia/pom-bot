@@ -4,7 +4,7 @@ The default pom bot with simple features.
 
 ## Installation
 
-1. Python 3.5.3 or newer.
+1. Python 3.6 or newer.
 
 2. The Python dependencies (`pip install -r requirements.txt`).
 

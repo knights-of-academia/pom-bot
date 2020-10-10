@@ -13,6 +13,7 @@ from pombot.commands.newleaf import newleaf_handler
 from pombot.commands.pom import pom_handler
 from pombot.commands.poms import poms_handler
 from pombot.commands.undo import undo_handler
+from pombot.commands.reset import reset_handler
 from pombot.config import Config, Reactions, Secrets
 
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
@@ -63,41 +64,16 @@ async def undo(ctx, *, description: str = None):
     await undo_handler(ctx, description=description)
 
 
-"""
-Remove your x latest poms. Default is 1 latest.
-"""
-
-
-@bot.command(name='reset', help="Permanently deletes all your poms. WARNING: There's no undoing this.")
-async def remove(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    try:
-        cursor.execute(MYSQL_DELETE_POMS, (ctx.message.author.id,))
-        db.commit()
-
-    except Exception as exc:
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.log', 'a')
-        f.write(exc)
-        f.close()
-        print(exc)
-
-    await ctx.message.add_reaction("🗑️")
-    cursor.close()
-    db.close()
+@bot.command()
+async def reset(ctx: Context):
+    """Permanently deletes all your poms. WARNING: There's no undoing this!"""
+    await reset_handler(ctx)
 
 
 """
 ADMIN COMMAND:
 Allows guardians and helpers to see the total amount of poms completed by KOA users since ever.
 """
-
 
 @bot.command(name='total', help='List total amount of poms.')
 @discord_commands.has_any_role('Guardian', 'Helper')

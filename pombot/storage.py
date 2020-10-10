@@ -49,6 +49,11 @@ class PomSql:
         AND current_session = 1;
     """
 
+    DELETE_POMS = f"""
+        DELETE FROM {Config.POMS_TABLE}
+        WHERE userID=%s;
+    """
+
     DELETE_POMS_WITH_ID = f"""
         DELETE FROM {Config.POMS_TABLE}
         WHERE userID=%s

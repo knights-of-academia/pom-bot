@@ -5,7 +5,7 @@
 **/*.swp
 
 # Environment
-**/.env
+**/*.env
 
 # Other
 **/*.xml

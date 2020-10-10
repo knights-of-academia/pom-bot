@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 import mysql.connector
+from discord.channel import DMChannel
 from discord.ext import commands as discord_commands
 from discord.ext.commands import Context
 from discord.message import Message
@@ -12,8 +13,8 @@ from pombot.commands.howmany import howmany_handler
 from pombot.commands.newleaf import newleaf_handler
 from pombot.commands.pom import pom_handler
 from pombot.commands.poms import poms_handler
-from pombot.commands.undo import undo_handler
 from pombot.commands.reset import reset_handler
+from pombot.commands.undo import undo_handler
 from pombot.config import Config, Reactions, Secrets
 
 bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
@@ -25,6 +26,11 @@ logging.basicConfig(level=logging.INFO)
 @bot.event
 async def on_ready():
     """Startup procedure after bot has logged into Discord."""
+    _log.info("LOADED POM-BOT CONFIGURATION")
+    _log.info("MYSQL_DATABASE: %s", Secrets.MYSQL_DATABASE)
+    _log.info("POM_CHANNEL_NAMES: %s",
+              ", ".join(f"#{channel}" for channel in Config.POM_CHANNEL_NAMES))
+
     _log.info("%s is ready on Discord", bot.user)
 
 
@@ -192,16 +198,13 @@ async def on_command_error(ctx: Context, error: Any):
     await ctx.message.add_reaction(Reactions.ERROR)
 
 
-'''
-Limit to certain channels, must process commands afterwards,
-or they'll stop working.
-'''
-
-
 @bot.event
 async def on_message(message: Message):
-    if ("private" in message.channel.type
-            or message.channel.name != Config.POM_CHANNEL_NAME):
+    """Limit commands to certain channels."""
+    is_restricted = (Config.POM_CHANNEL_NAMES
+                     and message.channel.name not in Config.POM_CHANNEL_NAMES)
+
+    if isinstance(message.channel, DMChannel) or is_restricted:
         return
 
     await bot.process_commands(message)

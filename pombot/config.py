@@ -1,11 +1,8 @@
-import logging
 import os
 
 import dotenv
 
 dotenv.load_dotenv()
-
-_log = logging.getLogger(__name__)
 
 
 class Config:
@@ -22,7 +19,10 @@ class Config:
     EVENTS_TABLE = "events"
 
     # Restrictions
-    POM_CHANNEL_NAME = os.getenv('POM_CHANNEL_NAME')
+    POM_CHANNEL_NAMES = [
+        channel.lstrip("#")
+        for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
+    ]
 
 
 class Reactions:
@@ -36,13 +36,8 @@ class Reactions:
 
 
 class Secrets:
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    MYSQL_HOST = os.getenv('MYSQL_HOST')
-    MYSQL_USER = os.getenv('MYSQL_USER')
-    MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
-    MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
-
-
-_log.info("LOADED POM-BOT CONFIGURATION")
-_log.info("POM_CHANNEL_NAME: %s", Config.POM_CHANNEL_NAME)
-_log.info("MYSQL_DATABASE: %s", Secrets.MYSQL_DATABASE)
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    MYSQL_HOST = os.getenv("MYSQL_HOST")
+    MYSQL_USER = os.getenv("MYSQL_USER")
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")

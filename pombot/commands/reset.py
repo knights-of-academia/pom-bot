@@ -26,6 +26,8 @@ async def reset_handler(ctx: Context):
         f.close()
         print(exc)
 
-    await ctx.message.add_reaction("🗑️")
-    cursor.close()
-    db.close()
+    finally:
+        cursor.close()
+        db.close()
+
+    await ctx.message.add_reaction(Reactions.RESET)

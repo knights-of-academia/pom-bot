@@ -30,6 +30,7 @@ class Reactions:
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"
+    RESET = "🗑️"
     TOMATO = "🍅"
     UNDO = "↩"
     WARNING = "⚠️"

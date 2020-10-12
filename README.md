@@ -1,8 +1,6 @@
 # Pom Bot
-The default pom bot with simple features, based on the work of @moesgaarda found here: https://github.com/Moesgaarda/python-pom-bot
 
-## Changes to original software
-The original version of the software used MongoDB, this fork makes use of MySQL instead.
+The default pom bot.
 
 ## Installation
 
@@ -12,4 +10,13 @@ The original version of the software used MongoDB, this fork makes use of MySQL 
 
 3. MySQL database running on the default port (3306/tcp).
 
+4. Copy `/.env.example` to `/.env` and customize to match your system.
+
 After this has been set up, it should be plug and play! Enjoy!
+
+## Related Projects
+
+* Originally inspired by [Python Pom Bot][python-pom-bot] and the amazing KOA
+  community.
+
+[python-pom-bot]: https://github.com/Moesgaarda/python-pom-bot

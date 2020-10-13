@@ -18,6 +18,10 @@ class Config:
     DESCRIPTION_LIMIT = 30
     MULTILINE_DESCRIPTION_DISABLED = True
 
+    # Embeds
+    EMBED_COLOUR = 0xff6347
+    EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
+
     # Logging
     LOGFILE = "./errors.txt"
 

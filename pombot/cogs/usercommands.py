@@ -1,5 +1,4 @@
 import os
-import sys
 import textwrap
 from collections import Counter
 from dataclasses import dataclass
@@ -48,10 +47,6 @@ def _get_duration_message(poms: List[_Pom]) -> str:
 
 class UserCommands(commands.Cog):
     """Handlers for user-level pom commands."""
-
-    EMBED_COLOUR = 0xff6347
-    EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
-
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -73,54 +68,47 @@ class UserCommands(commands.Cog):
         )
         cursor = db.cursor(buffered=True)
 
-        try:
-            if description:
-                # If there is a description, check if the first word is a digit. If
-                # it is, split the string to remove the digits length plus 1 for
-                # space.
-                if description.split(' ', 1)[0].isdigit():
-                    pom_count = int(description.split(' ', 1)[0])
-                    if pom_count > Config.POM_TRACK_LIMIT or pom_count < 1:
-                        await ctx.message.add_reaction(Reactions.WARNING)
-                        await ctx.send('You can only add between 1 and 10 poms at once.')
-                        cursor.close()
-                        db.close()
-                        return
+        if description:
+            # If there is a description, check if the first word is a digit. If
+            # it is, split the string to remove the digits length plus 1 for
+            # space.
+            if description.split(' ', 1)[0].isdigit():
+                pom_count = int(description.split(' ', 1)[0])
+                if pom_count > Config.POM_TRACK_LIMIT or pom_count < 1:
+                    await ctx.message.add_reaction(Reactions.WARNING)
+                    await ctx.send('You can only add between 1 and 10 poms at once.')
+                    cursor.close()
+                    db.close()
+                    return
 
-                    description = description[(len(str(pom_count)) + 1):]
+                description = description[(len(str(pom_count)) + 1):]
 
-            if description is not None and len(description) > Config.DESCRIPTION_LIMIT:
-                await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send('Your pom description must be fewer than 30 characters.')
-                return
+        if description is not None and len(description) > Config.DESCRIPTION_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send('Your pom description must be fewer than 30 characters.')
+            cursor.close()
+            db.close()
+            return
 
-            has_multiline_description = description is not None and "\n" in description
+        has_multiline_description = description is not None and "\n" in description
 
-            if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
-                await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send('Multi line pom descriptions are disabled.')
-                return
+        if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send('Multi line pom descriptions are disabled.')
+            cursor.close()
+            db.close()
+            return
 
-            poms = [(
-                ctx.message.author.id,
-                description,
-                current_date.strftime('%Y-%m-%d) %H:%M:%S'),
-                True,
-            ) for _ in range(pom_count)]
+        poms = [(
+            ctx.message.author.id,
+            description,
+            current_date.strftime('%Y-%m-%d) %H:%M:%S'),
+            True,
+        ) for _ in range(pom_count)]
 
-            cursor.executemany(PomSql.INSERT_QUERY, poms)
+        cursor.executemany(PomSql.INSERT_QUERY, poms)
 
-            db.commit()
-        except mysql.connector.Error as exc:
-            exc_type, _exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-            await ctx.message.add_reaction(Reactions.ERROR)
-            f = open('errors.txt', 'a')
-            f.write(exc)
-            f.close()
-            print(exc)
-            raise
+        db.commit()
 
         await ctx.message.add_reaction(Reactions.TOMATO)
 
@@ -128,9 +116,9 @@ class UserCommands(commands.Cog):
         event_info = cursor.fetchall()
 
         try:
-            *_, event_goal, event_start, event_end = event_info[0]
-        except IndexError as exc:
-            # No current event, so skip the rest.
+            _, event_name, event_goal, event_start, event_end = event_info[0]
+        except IndexError:
+            # No event for current_date.
             cursor.close()
             db.close()
             return
@@ -142,19 +130,26 @@ class UserCommands(commands.Cog):
             cursor.close()
             db.close()
 
-            if poms >= event_goal and not State.goal_reached:
+            if State.goal_reached:
+                return
+
+            if event_goal <= poms:
                 State.goal_reached = True
-                await ctx.send(
-                    f"We've reached our goal of {event_goal} poms! Well done "
-                    "<@&727974953894543462>!"
-                )
-            elif State.goal_reached:
-                pass
-            else:
-                await ctx.send(
-                    f"The community has reached {poms}/{event_goal} poms. Keep "
-                    "up the good work!"
-                )
+
+                embed_kwargs = {
+                    "colour": Config.EMBED_COLOUR,
+                    "description":
+                        (f"We've reached our goal of {event_goal} "
+                         "poms! Well done and keep up the good work!"),
+                }
+
+                author_kwargs = {
+                    "name": event_name,
+                    "icon_url": Config.EMBED_IMAGE_URL,
+                }
+
+                message = Embed(**embed_kwargs).set_author(**author_kwargs)
+                await ctx.send(embed=message)
 
     @commands.command()
     async def poms(self, ctx: Context):
@@ -187,7 +182,7 @@ class UserCommands(commands.Cog):
             des_pom.descript
             for des_pom in [pom for pom in session_poms if pom.descript])
 
-        message = Embed(colour=self.EMBED_COLOUR,
+        message = Embed(colour=Config.EMBED_COLOUR,
                         description=textwrap.dedent(f"""\
             **Pom statistics**
             Session started: *{_get_duration_message(session_poms)}*
@@ -201,7 +196,7 @@ class UserCommands(commands.Cog):
             Undesignated poms: {len(session_poms) - sum(
                 n for n in session_described_poms.values())}
         """)).set_author(name=f"Pom statistics for {ctx.author.display_name}",
-                         icon_url=self.EMBED_IMAGE_URL)
+                         icon_url=Config.EMBED_IMAGE_URL)
 
         await ctx.author.send(embed=message)
         await ctx.send("I've sent you a DM with your poms")
@@ -342,20 +337,11 @@ class UserCommands(commands.Cog):
         )
         cursor = db.cursor(buffered=True)
 
-        try:
-            cursor.execute(PomSql.DELETE_POMS, (ctx.message.author.id,))
-            db.commit()
+        cursor.execute(PomSql.DELETE_POMS, (ctx.message.author.id,))
 
-        except mysql.connector.Error as exc:
-            await ctx.message.add_reaction(Reactions.ERROR)
-            f = open('errors.log', 'a')
-            f.write(exc)
-            f.close()
-            print(exc)
-
-        finally:
-            cursor.close()
-            db.close()
+        db.commit()
+        cursor.close()
+        db.close()
 
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
 

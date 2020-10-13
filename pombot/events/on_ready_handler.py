@@ -47,7 +47,7 @@ def on_ready_handler(bot: Bot):
     _log.info("POM_CHANNEL_NAMES: %s",
               ", ".join(f"#{channel}" for channel in Config.POM_CHANNEL_NAMES))
 
-    debug_options_enabled = ", ".join([k for k, v in vars(Debug).items() if isinstance(v, bool)])
+    debug_options_enabled = ", ".join([k for k, v in vars(Debug).items() if v is True])
     if debug_options_enabled:
         debug_enabled_message = textwrap.dedent(f"""
             ************************************************************

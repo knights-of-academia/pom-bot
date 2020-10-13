@@ -2,19 +2,18 @@ import textwrap
 from datetime import datetime
 
 import mysql.connector
+from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-from pombot.config import Reactions, Secrets
+from pombot.config import Config, Reactions, Secrets
 from pombot.state import State
 from pombot.storage import EventSql
 
 
 class AdminCommands(commands.Cog):
-    """Handlers for user-level pom commands."""
-
-    EMBED_COLOUR = 0xff6347
+    """Handlers for admin-level pom commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -50,6 +49,7 @@ class AdminCommands(commands.Cog):
         """
         def _usage(header: str = None):
             cmd = ctx.prefix + ctx.invoked_with
+
             header = (header
                       or f"Your command `{cmd}` does not meet the usage "
                       "requirements for this command.")
@@ -68,16 +68,19 @@ class AdminCommands(commands.Cog):
                     <end_day>      Event ending day.
 
                 Example:
-                    {cmd} MyEvent 100 June 10 July 4
+                    {cmd} The Best Event 100 June 10 July 4
                 ```
             """)
 
         try:
-            event_name, event_goal, start_month, start_day, end_month, end_day = args
+            (*event_name, event_goal, start_month, start_day, end_month,
+             end_day) = args
         except ValueError:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage())
             return
+
+        event_name = " ".join(event_name)
 
         dateformat = "%B %d %Y %H:%M:%S"
         year = datetime.today().year
@@ -124,11 +127,24 @@ class AdminCommands(commands.Cog):
 
         State.goal_reached = False
 
-        await ctx.send(
-            textwrap.dedent(f"""\
-            Successfully created event "{event_name}" with a goal of {event_goal} poms,
-            starting on {start_date.strftime("%B %d, %Y")} and ending on {end_date.strftime("%B %d, %Y")}.
-        """))
+        embed_kwargs = {
+            "colour": Config.EMBED_COLOUR,
+            "description": textwrap.dedent(f"""\
+                    Event name: **{event_name}**
+                    Poms goal:  **{event_goal}**
+
+                    Starts: *{start_date.strftime("%B %d, %Y")}*
+                    Ends:   *{end_date.strftime("%B %d, %Y")}*
+                """)
+        }
+
+        author_kwargs = {
+            "name": "New Event!",
+            "icon_url": Config.EMBED_IMAGE_URL,
+        }
+
+        message = Embed(**embed_kwargs).set_author(**author_kwargs)
+        await ctx.send(embed=message)
 
 
 def setup(bot: Bot):

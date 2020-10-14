@@ -2,12 +2,12 @@ import textwrap
 from datetime import datetime
 
 import mysql.connector
-from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-from pombot.config import Config, Reactions, Secrets
+from pombot.config import Reactions, Secrets
+from pombot.lib.embeds import send_embed_message
 from pombot.state import State
 from pombot.storage import EventSql
 
@@ -127,24 +127,17 @@ class AdminCommands(commands.Cog):
 
         State.goal_reached = False
 
-        embed_kwargs = {
-            "colour": Config.EMBED_COLOUR,
-            "description": textwrap.dedent(f"""\
-                    Event name: **{event_name}**
-                    Poms goal:  **{event_goal}**
+        await send_embed_message(
+            ctx,
+            title="New Event!",
+            description=textwrap.dedent(f"""\
+                Event name: **{event_name}**
+                Poms goal:  **{event_goal}**
 
-                    Starts: *{start_date.strftime("%B %d, %Y")}*
-                    Ends:   *{end_date.strftime("%B %d, %Y")}*
-                """)
-        }
-
-        author_kwargs = {
-            "name": "New Event!",
-            "icon_url": Config.EMBED_IMAGE_URL,
-        }
-
-        message = Embed(**embed_kwargs).set_author(**author_kwargs)
-        await ctx.send(embed=message)
+                Starts: *{start_date.strftime("%B %d, %Y")}*
+                Ends:   *{end_date.strftime("%B %d, %Y")}*
+            """),
+        )
 
 
 def setup(bot: Bot):

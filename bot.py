@@ -1,498 +1,55 @@
-import os
-import re
-import sys
-from collections import Counter
-from datetime import datetime
+import logging
+from typing import Any
 
-import dotenv
-import mysql.connector
-from discord.embeds import Embed
 from discord.ext import commands as discord_commands
+from discord.ext.commands import Context
+from discord.message import Message
 
-dotenv.load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-POM_CHANNEL_NAME = os.getenv('POM_CHANNEL_NAME')
-MYSQL_HOST = os.getenv('MYSQL_HOST')
-MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
-MYSQL_USER = os.getenv('MYSQL_USER')
-MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
-print(f"TOKEN {TOKEN}")
-print(f"POM_CHANNEL_NAME {POM_CHANNEL_NAME}")
-print(f"MYSQL_DATABASE {MYSQL_DATABASE}")
+from pombot.config import Config, Secrets
+from pombot.events.on_command_error_handler import on_command_error_handler
+from pombot.events.on_message_handler import on_message_handler
+from pombot.events.on_ready_handler import on_ready_handler
 
-POM_TRACK_LIMIT = 10
-DESCRIPTION_LIMIT = 30
-MULTILINE_DESCRIPTION_DISABLED = True
-MYSQL_INSERT_QUERY = """INSERT INTO poms (userID, descript, time_set, current_session) VALUES (%s, %s, %s, %s);"""
-MYSQL_EVENT_ADD = """INSERT INTO events (event_name, pom_goal, start_date, end_date) VALUES(%s, %s, %s, %s); """
-MYSQL_SELECT_ALL_POMS = """SELECT * FROM poms WHERE userID= %s"""
-MYSQL_SELECT_EVENT = """ SELECT * FROM events WHERE start_date <= %s AND end_date >= %s;"""
-MYSQL_EVENT_SELECT = """SELECT * FROM poms WHERE time_set >= %s AND time_set <= %s; """
-MYSQL_UPDATE_SESSION = """UPDATE poms SET current_session = 0 WHERE userID= %s AND current_session = 1;"""
-MYSQL_DELETE_POMS = """DELETE FROM poms WHERE userID= %s"""
+_log = logging.getLogger(__name__)
 
-bot = discord_commands.Bot(command_prefix='!', case_insensitive=True)
-goalReached = False
+bot = discord_commands.Bot(command_prefix=Config.PREFIX, case_insensitive=True)
+
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} is ready on Discord')
-
-
-"""
-Tracks a new pom for the user.
-"""
-
-
-@bot.command(name='pom',
-             help='Adds a new pom, if the first word in the description is a number (1-10), multiple poms will be '
-                  'added with the given description.',
-             pass_context=True)
-async def pom(ctx, *, description: str = None):
-    pom_count = 1
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-
-
-    try:
-        if description:
-            # If there is a description, check if the first word is a digit
-            # And if it is, split the string to remove the digits length plus 1 for space.
-            if description.split(' ', 1)[0].isdigit():
-                pom_count = int(description.split(' ', 1)[0])
-                if pom_count > POM_TRACK_LIMIT or pom_count < 1:
-                    await ctx.message.add_reaction("⚠️")
-                    await ctx.send('You can only add between 1 and 10 poms at once.')
-                    cursor.close()
-                    db.close()
-                    return
-
-                description = description[(len(str(pom_count)) + 1):]
-
-        # Check if the description is too long
-        if description is not None and len(description) > DESCRIPTION_LIMIT:
-            await ctx.message.add_reaction("⚠️")
-            await ctx.send('Your pom description must be fewer than 30 characters.')
-            cursor.close()
-            db.close()
-            return
-
-        if description is not None and "\n" in description and MULTILINE_DESCRIPTION_DISABLED:
-            await ctx.message.add_reaction("⚠️")
-            await ctx.send('Multi line pom descriptions are disabled.')
-            cursor.close()
-            db.close()
-            return
-
-        poms_to_add = []
-        currentDate = datetime.now()
-        formatted_date = currentDate.strftime('%Y-%m-%d %H:%M:%S')
-        for _ in range(pom_count):
-            new_added_pom = (ctx.message.author.id, description, formatted_date, True)
-            poms_to_add.append(new_added_pom)
-
-        cursor.executemany(MYSQL_INSERT_QUERY, poms_to_add)
-        db.commit()
-    except mysql.connector.Error as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.txt', 'a')
-        f.write(e)
-        f.close()
-        print(e)
-    await ctx.message.add_reaction("🍅")
-
-    cursor.execute(MYSQL_SELECT_EVENT, (currentDate, currentDate))
-    event_info = cursor.fetchall()
-    event = cursor.rowcount
-
-    if event != 0:
-
-        global goalReached
-        cursor.execute(MYSQL_EVENT_SELECT, (event_info[0][3], event_info[0][4]))
-        cursor.fetchall()
-        poms = cursor.rowcount
-        pom_goal = event_info[0][2]
-
-        if poms >= event_info[0][2] and goalReached == False:
-            await ctx.send("We've reached our goal of {} poms! Well done <@&727974953894543462>!".format(pom_goal))
-            goalReached = True
-        elif goalReached == True:
-            pass
-        else:
-            toSend = "The community has reached " + str(poms) + "/" + str(pom_goal) + " poms. Keep up the good work!"
-            await ctx.send(toSend)
-
-    cursor.close()
-    db.close()
-
-
-
-"""
-Starts a new session for the user, meaning that all the poms in their current session will have their current_session
-property set to false.
-"""
-
-
-@bot.command(name='newleaf',
-            help='Turn over a new leaf and hide the details of your previously tracked poms. Starts '
-                    'a new session.',
-            pass_context=True)
-async def new_session(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND current_session = 1;', (ctx.message.author.id,))
-    cursor.fetchall()
-    document_count = cursor.rowcount
-
-    # If the user tries to start a new session before doing anything
-    if document_count == 0:
-        await ctx.message.add_reaction("🍂")
-        await ctx.send("A new session will be started when you track your first pom.")
-        cursor.close()
-        db.close()
-        return
-
-    # Set all previous poms to not be in the current session
-    cursor.execute(MYSQL_UPDATE_SESSION, (ctx.message.author.id,))
-    db.commit()
-    await ctx.message.add_reaction("🍃")
-    await ctx.send("A new session will be started when you track your next pom, {}."
-                   .format(ctx.message.author.display_name))
-    cursor.close()
-    db.close()
-
-"""
-Gives the user an overview of how many poms they've been doing so far.
-"""
-
-
-@bot.command(name='poms', help='See details for your tracked poms and the current session.', pass_context=True)
-async def poms(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    # Fetch all poms for user based on their Discord ID
-    cursor.execute(MYSQL_SELECT_ALL_POMS, (ctx.message.author.id,))
-    own_poms = cursor.fetchall()
-    # If the user has no tracked poms
-    if len(own_poms) == 0 or own_poms is None:
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send("You have no tracked poms.")
-        cursor.close()
-        db.close()
-        return
-
-    # All poms tracked this session by user
-    session_poms = [x for x in own_poms if x[4] == 1]
-
-    # Add a timestamp for session start, if a pom is tracked in this session
-    if len(session_poms) > 0:
-        try:
-            time_now = datetime.now()
-            time_then = session_poms[0][3]
-            duration_in_s = (time_now - time_then).total_seconds()
-            days = int(duration_in_s // (24 * 3600))
-
-            duration_in_s = duration_in_s % (24 * 3600)
-            hours = int(duration_in_s // 3600)
-
-            duration_in_s %= 3600
-            minutes = int(duration_in_s // 60)
-
-            session_start = "{} days, {} hours, {} minutes".format(days, hours, minutes)
-        except Exception as e:
-            await ctx.message.add_reaction("🐛")
-            f = open('errors.log', 'a')
-            f.write(e)
-            f.close()
-            print(e)
-    else:
-        session_start = "Not started yet"
-
-    # Group poms by their description
-    session_described_poms = []
-    for p in session_poms:
-        if p[2]:
-            session_described_poms.append(p)
-    described_poms_amount = len(session_described_poms)
-    session_described_poms = Counter(des_pom[2].capitalize() for des_pom in session_described_poms)
-    # Set variable to see how many poms the user has.
-    session_pom_amount = len(session_poms)
-    total_pom_amount = len(own_poms)
-
-    # Generate the embed for sending to the user
-    title_embed = "Pom statistics for {}".format(ctx.message.author.display_name)
-    description_embed = "**Pom statistics**\n" \
-                        "Session started: *{}*\n" \
-                        "Total poms this session: *{}*\n" \
-                        "Accumulated poms: *{}*\n" \
-                        "\n" \
-                        "**Poms this session**\n" \
-        .format(session_start, session_pom_amount, total_pom_amount)
-
-    # Added description poms, sorted by how common they are
-    for p in session_described_poms.most_common():
-        description_embed += "{}: {}\n".format(p[0], p[1])
-
-    # Add non-described count, if applicable
-    undesignated_pom_count = session_pom_amount - described_poms_amount
-    if undesignated_pom_count > 0:
-        description_embed += "*Undesignated poms: {}*".format(undesignated_pom_count)
-
-    # Generate embed message to send
-    embedded_message = Embed(description=description_embed, colour=0xff6347) \
-        .set_author(name=title_embed, icon_url="https://i.imgur.com/qRoH5B5.png" )
-
-    await ctx.author.send(embed=embedded_message)
-    await ctx.send("I've sent you a DM with your poms")
-    cursor.close()
-    db.close()
-
-"""
-Gives the user an overview of how many poms they've been doing so far.
-"""
-
-
-@bot.command(name='howmany', help='List your poms with a given description.', pass_context=True)
-async def howmany(ctx, *, description: str = None):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    if description is None:
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send("You must specify a description to search for.")
-        cursor.close()
-        db.close()
-        return
-    # Fetch all poms for user based on their Discord ID
-    cursor.execute(MYSQL_SELECT_ALL_POMS + ' AND descript=%s;', (ctx.message.author.id, description))
-    own_poms = cursor.fetchall()
-    # If the user has no tracked poms
-    if len(own_poms) == 0 or own_poms is None:
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send("You have no tracked poms with that description.")
-        cursor.close()
-        db.close()
-        return
-    total_pom_amount = len(own_poms)
-    await ctx.message.add_reaction("🧮")
-    await ctx.send("You have {} pom(s) with the description {}".format(total_pom_amount, description))
-    cursor.close()
-    db.close()
-
-"""
-Undoes / removes your x latest poms. Default is 1 latest.
-"""
-
-
-@bot.command(name='undo', help="Undo/remove your x latest poms. If no number is specified, only the newest pom will "
-                               "be undone.")
-async def remove(ctx, *, count: str = None):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    pom_count = 1
-    if count:
-        if count.split(' ', 1)[0].isdigit():
-            pom_count = int(count.split(' ', 1)[0])
-            if pom_count > POM_TRACK_LIMIT:
-                await ctx.message.add_reaction("⚠️")
-                await ctx.send('You can only undo up to 10 poms at once.')
-                cursor.close()
-                db.close()
-                return
-
-    try:
-        cursor.execute(MYSQL_SELECT_ALL_POMS + ' ORDER BY time_set DESC LIMIT %s;', (ctx.message.author.id, pom_count))
-        to_delete = cursor.fetchall()
-
-        to_delete_id = []
-        for pom_to_delete in to_delete:
-            to_delete_id.append((ctx.message.author.id, pom_to_delete[0]))
-        cursor.executemany(MYSQL_DELETE_POMS + ' AND id=%s;', to_delete_id)
-        db.commit()
-
-    except Exception as e:
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.log', 'a')
-        f.write(e)
-        f.close()
-        print(e)
-
-    await ctx.message.add_reaction("↩")
-    cursor.close()
-    db.close()
-
-
-
-"""
-Remove your x latest poms. Default is 1 latest.
-"""
-
-
-@bot.command(name='reset', help="Permanently deletes all your poms. WARNING: There's no undoing this.")
-async def remove(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    try:
-        cursor.execute(MYSQL_DELETE_POMS, (ctx.message.author.id,))
-        db.commit()
-
-    except Exception as e:
-        await ctx.message.add_reaction("🐛")
-        f = open('errors.log', 'a')
-        f.write(e)
-        f.close()
-        print(e)
-
-    await ctx.message.add_reaction("🗑️")
-    cursor.close()
-    db.close()
-
-
-"""
-ADMIN COMMAND:
-Allows guardians and helpers to see the total amount of poms completed by KOA users since ever.
-"""
-
-
-@bot.command(name='total', help='List total amount of poms.')
-@discord_commands.has_any_role('Guardian', 'Helper')
-async def total(ctx):
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-    cursor.execute('SELECT * FROM poms;')
-    document_count = cursor.rowcount
-    await ctx.send("Total amount of poms: {}".format(document_count))
-    cursor.close()
-    db.close()
-
-
-"""
-ADMIN COMMAND:
-Allows guardians and helpers to start an event.
-"""
-
-
-@bot.command(name='start', help='A command that allows Helpers or Guardians to create community pom events!')
-@discord_commands.has_any_role('Guardian', 'Helper')
-async def start_event(ctx, event_name, event_goal, start_month, start_day, end_month, end_day):
-    # validate arguments
-    if not str.isdigit(event_goal):
-        await ctx.send(f'{event_goal} is not a valid number for a pom goal.')
-        return
-    if not str.isdigit(start_day):
-        await ctx.send(f'{start_day} is not a valid start day.')
-        return
-    if not str.isdigit(end_day):
-        await ctx.send(f'{end_day} is not a valid end day.')
-        return
-
-    dateformat = '%B %d %Y %H:%M:%S'
-    year = str(datetime.today().year)
-
-    start_date_string = f'{start_month} {start_day} {year} 00:00:00'
-    end_date_string = f'{end_month} {end_day} {year} 23:59:59'
-
-    # validate start date after putting month and day together
-    try:
-        start_date = datetime.strptime(start_date_string, dateformat)
-    except ValueError:
-        await ctx.send(f'{start_month} {start_day} is not a valid start date.')
-        return
-
-    # validate end date after putting month and day together
-    try:
-        end_date = datetime.strptime(end_date_string, dateformat)
-    except ValueError:
-        await ctx.send(f'{end_month} {end_day} is not a valid end date.')
-        return
-
-    # make sure the start date is before the end date
-    if not start_date < end_date:
-        await ctx.send(f'Invalid dates: the start date must be before the end date.')
-        return
-
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        database=MYSQL_DATABASE,
-        password=MYSQL_PASSWORD,
-    )
-    cursor = db.cursor(buffered=True)
-
-    event = (event_name, event_goal, start_date, end_date)
-
-    cursor.execute(MYSQL_EVENT_ADD, event)
-    db.commit()
-
-    cursor.close()
-    db.close()
-    goalReached = False
-
-    await ctx.send(f"Successfully created event '{event_name}' with a goal of {event_goal} poms, "
-                   f"starting on {start_date.month}/{start_date.day} and ending on {end_date.month}/{end_date.day}.")
-
-'''
-If user tries to use a command that they do not have access to
-'''
+    """Startup procedure after bot has logged into Discord."""
+    on_ready_handler(bot)
 
 
 @bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, discord_commands.errors.CheckFailure):
-        await ctx.message.add_reaction("⚠️")
-        await ctx.send('You do not have the correct role for this command.')
-
-
-'''
-Limit to certain channels, must process commands afterwards,
-or they'll stop working.
-'''
+async def on_command_error(ctx: Context, error: Any):
+    """Alert users when using commands to which they have no access. In all
+    other cases, log the error and mark it in discord.
+    """
+    await on_command_error_handler(ctx, error)
 
 
 @bot.event
-async def on_message(message):
-    if ("private" in message.channel.type
-            or message.channel.name != POM_CHANNEL_NAME):
-        return
-
-    await bot.process_commands(message)
+async def on_message(message: Message):
+    """Limit commands to certain channels."""
+    await on_message_handler(bot, message)
 
 
-bot.run(TOKEN)
+def main():
+    """Load cogs and start bot."""
+    # Set log level asap to record discord.py messages.
+    logging.basicConfig(level=logging.INFO)
+
+    extentions = [
+        "pombot.cogs.usercommands",
+        "pombot.cogs.admincommands",
+    ]
+
+    for extention in extentions:
+        bot.load_extension(extention)
+
+    bot.run(Secrets.TOKEN)
+
+
+if __name__ == "__main__":
+    main()

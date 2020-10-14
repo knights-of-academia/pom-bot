@@ -22,6 +22,13 @@ class Config:
     EMBED_COLOUR = 0xff6347
     EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
 
+    # Extensions
+    EXTENSIONS = [
+        "pombot.cogs.usercommands",
+        "pombot.cogs.admincommands",
+        "pombot.cogs.eventlisteners",
+    ]
+
     # Logging
     LOGFILE = "./errors.txt"
 

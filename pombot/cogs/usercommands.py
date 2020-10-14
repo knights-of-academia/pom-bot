@@ -123,33 +123,31 @@ class UserCommands(commands.Cog):
             db.close()
             return
 
-        if cursor.rowcount > 0:
-            cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
-            cursor.fetchall()
-            poms = cursor.rowcount
-            cursor.close()
-            db.close()
+        cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
+        cursor.fetchall()
+        poms = cursor.rowcount
+        cursor.close()
+        db.close()
 
-            if State.goal_reached:
-                return
+        if State.goal_reached:
+            return
 
-            if event_goal <= poms:
-                State.goal_reached = True
+        if event_goal <= poms:
+            State.goal_reached = True
 
-                embed_kwargs = {
-                    "colour": Config.EMBED_COLOUR,
-                    "description":
-                        (f"We've reached our goal of {event_goal} "
-                         "poms! Well done and keep up the good work!"),
-                }
+            embed_kwargs = {
+                "colour": Config.EMBED_COLOUR,
+                "description": (f"We've reached our goal of {event_goal} "
+                                "poms! Well done and keep up the good work!"),
+            }
 
-                author_kwargs = {
-                    "name": event_name,
-                    "icon_url": Config.EMBED_IMAGE_URL,
-                }
+            author_kwargs = {
+                "name": event_name,
+                "icon_url": Config.EMBED_IMAGE_URL,
+            }
 
-                message = Embed(**embed_kwargs).set_author(**author_kwargs)
-                await ctx.send(embed=message)
+            message = Embed(**embed_kwargs).set_author(**author_kwargs)
+            await ctx.send(embed=message)
 
     @commands.command()
     async def poms(self, ctx: Context):

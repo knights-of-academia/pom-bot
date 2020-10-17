@@ -24,9 +24,9 @@ class Config:
 
     # Extensions
     EXTENSIONS = [
-        "pombot.cogs.eventlisteners",
-        "pombot.cogs.usercommands",
-        "pombot.cogs.admincommands",
+        "pombot.cogs.event_listeners",
+        "pombot.cogs.user_commands",
+        "pombot.cogs.admin_commands",
     ]
 
     # Logging

@@ -5,7 +5,6 @@ from typing import Any
 
 import mysql.connector
 from discord.ext.commands import Bot, Cog, Context, errors
-from discord.message import Message
 
 from pombot.config import Config, Debug, Reactions, Secrets
 from pombot.storage import EventSql, PomSql
@@ -72,17 +71,6 @@ class EventListeners(Cog):
         _setup_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)
-
-    @Cog.listener()
-    async def on_message(self, message: Message):
-        """Limit commands to channels defined in the Config."""
-        try:
-            if Config.POM_CHANNEL_NAMES:
-                if message.channel.name not in Config.POM_CHANNEL_NAMES:
-                    return
-        except AttributeError:
-            if message.guild is None and not Debug.RESPOND_TO_DM:
-                return
 
     @Cog.listener()
     async def on_command_error(self, ctx: Context, error: Any):

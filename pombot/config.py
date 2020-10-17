@@ -2,7 +2,7 @@ import os
 
 import dotenv
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(override=True)
 
 
 def _str2bool(value: str) -> bool:
@@ -24,9 +24,9 @@ class Config:
 
     # Extensions
     EXTENSIONS = [
+        "pombot.cogs.eventlisteners",
         "pombot.cogs.usercommands",
         "pombot.cogs.admincommands",
-        "pombot.cogs.eventlisteners",
     ]
 
     # Logging

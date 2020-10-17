@@ -173,7 +173,6 @@ class UserCommands(commands.Cog):
             des_pom.descript
             for des_pom in [pom for pom in session_poms if pom.descript])
 
-
         await send_embed_message(
             ctx,
             private_message=True,

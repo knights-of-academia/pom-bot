@@ -14,17 +14,13 @@ async def send_embed_message(
         private_message: bool = False,
 ):
     """Send an embedded message using the context."""
-    embed_kwargs = {
-        "colour": colour,
-        "description": description,
-    }
+    message = Embed(
+        description=description,
+        colour=colour,
+    ).set_author(
+        name=title,
+        icon_url=icon_url,
+    )
 
-    author_kwargs = {
-        "name": title,
-        "icon_url": icon_url,
-    }
-
-    message = Embed(**embed_kwargs).set_author(**author_kwargs)
-
-    send_coro = ctx.author.send if private_message else ctx.send
-    await send_coro(embed=message)
+    coro = ctx.author.send if private_message else ctx.send
+    await coro(embed=message)

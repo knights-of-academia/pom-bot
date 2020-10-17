@@ -6,12 +6,12 @@ from datetime import datetime
 from typing import List
 
 import mysql.connector
-from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
 from pombot.config import Config, Reactions, Secrets
+from pombot.lib.embeds import send_embed_message
 from pombot.state import State
 from pombot.storage import EventSql, PomSql
 
@@ -123,33 +123,24 @@ class UserCommands(commands.Cog):
             db.close()
             return
 
-        if cursor.rowcount > 0:
-            cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
-            cursor.fetchall()
-            poms = cursor.rowcount
-            cursor.close()
-            db.close()
+        cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
+        cursor.fetchall()
+        poms = cursor.rowcount
+        cursor.close()
+        db.close()
 
-            if State.goal_reached:
-                return
+        if State.goal_reached:
+            return
 
-            if event_goal <= poms:
-                State.goal_reached = True
+        if event_goal <= poms:
+            State.goal_reached = True
 
-                embed_kwargs = {
-                    "colour": Config.EMBED_COLOUR,
-                    "description":
-                        (f"We've reached our goal of {event_goal} "
-                         "poms! Well done and keep up the good work!"),
-                }
-
-                author_kwargs = {
-                    "name": event_name,
-                    "icon_url": Config.EMBED_IMAGE_URL,
-                }
-
-                message = Embed(**embed_kwargs).set_author(**author_kwargs)
-                await ctx.send(embed=message)
+            await send_embed_message(
+                ctx,
+                title=event_name,
+                description=(f"We've reached our goal of {event_goal} "
+                             "poms! Well done and keep up the good work!"),
+            )
 
     @commands.command()
     async def poms(self, ctx: Context):
@@ -182,23 +173,25 @@ class UserCommands(commands.Cog):
             des_pom.descript
             for des_pom in [pom for pom in session_poms if pom.descript])
 
-        message = Embed(colour=Config.EMBED_COLOUR,
-                        description=textwrap.dedent(f"""\
-            **Pom statistics**
-            Session started: *{_get_duration_message(session_poms)}*
-            Total poms this session: *{len(session_poms)}*
-            Accumulated poms: *{len(poms)}*
+        await send_embed_message(
+            ctx,
+            private_message=True,
+            title=f"Pom statistics for {ctx.author.display_name}",
+            description=textwrap.dedent(f"""\
+                **Pom statistics**
+                Session started: *{_get_duration_message(session_poms)}*
+                Total poms this session: *{len(session_poms)}*
+                Accumulated poms: *{len(poms)}*
 
-            **Poms this session**
-            {os.linesep.join(f"{desc}: {num}"
-                for desc, num in session_described_poms.most_common())
-                or "*No designated poms*"}
-            Undesignated poms: {len(session_poms) - sum(
-                n for n in session_described_poms.values())}
-        """)).set_author(name=f"Pom statistics for {ctx.author.display_name}",
-                         icon_url=Config.EMBED_IMAGE_URL)
+                **Poms this session**
+                {os.linesep.join(f"{desc}: {num}"
+                    for desc, num in session_described_poms.most_common())
+                    or "*No designated poms*"}
+                Undesignated poms: {len(session_poms) - sum(
+                    n for n in session_described_poms.values())}
+            """),
+        )
 
-        await ctx.author.send(embed=message)
         await ctx.send("I've sent you a DM with your poms")
 
     @commands.command()

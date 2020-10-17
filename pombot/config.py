@@ -2,7 +2,7 @@ import os
 
 import dotenv
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(override=True)
 
 
 def _str2bool(value: str) -> bool:
@@ -21,6 +21,16 @@ class Config:
     # Embeds
     EMBED_COLOUR = 0xff6347
     EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
+
+    # Errors
+    ERRORS_CHANNEL_NAME = os.getenv("ERRORS_CHANNEL_NAME")
+
+    # Extensions
+    EXTENSIONS = [
+        "pombot.cogs.event_listeners",
+        "pombot.cogs.user_commands",
+        "pombot.cogs.admin_commands",
+    ]
 
     # Logging
     LOGFILE = "./errors.txt"

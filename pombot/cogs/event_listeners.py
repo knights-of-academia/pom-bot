@@ -42,6 +42,19 @@ def _setup_tables():
     db.close()
 
 
+async def _send_to_errors_channel(ctx: Context, message: str):
+    if not Config.ERRORS_CHANNEL_NAME:
+        _log.info("ERRORS_CHANNEL_NAME not configured")
+        return
+
+    for channel in ctx.guild.channels:
+        if channel.name == Config.ERRORS_CHANNEL_NAME:
+            await channel.send("```\n" + message + "```")
+            break
+    else:
+        _log.info("ERRORS_CHANNEL_NAME not found on context guild")
+
+
 class EventListeners(Cog):
     """Handle global events for the bot."""
 
@@ -103,13 +116,15 @@ class EventListeners(Cog):
             return
 
         for message in error.args:
-            _log.error(
-                'error: user %s (%s) running "%s" hit: %s',
+            error_message = 'User {} ({}) running "{}" hit: {}'.format(
                 ctx.author.display_name,
                 ctx.author.name + "#" + ctx.author.discriminator,
                 ctx.message.content,
                 message,
             )
+
+            _log.error("%s", error_message)
+            await _send_to_errors_channel(ctx, error_message)
 
         await ctx.message.add_reaction(Reactions.ERROR)
 

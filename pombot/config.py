@@ -22,6 +22,9 @@ class Config:
     EMBED_COLOUR = 0xff6347
     EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
 
+    # Errors
+    ERRORS_CHANNEL_NAME = os.getenv("ERRORS_CHANNEL_NAME")
+
     # Extensions
     EXTENSIONS = [
         "pombot.cogs.event_listeners",

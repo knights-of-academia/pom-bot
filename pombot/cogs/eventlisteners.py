@@ -75,12 +75,7 @@ class EventListeners(Cog):
 
     @Cog.listener()
     async def on_message(self, message: Message):
-        """Limit commands to certain channels or DMs according to the Config.
-
-        This also checks for a single space after the prefix and removes it in
-        an attempt to support autocorrect inserting a space after completing a
-        word for mobile users.
-        """
+        """Limit commands to channels defined in the Config."""
         try:
             if Config.POM_CHANNEL_NAMES:
                 if message.channel.name not in Config.POM_CHANNEL_NAMES:
@@ -88,9 +83,6 @@ class EventListeners(Cog):
         except AttributeError:
             if message.guild is None and not Debug.RESPOND_TO_DM:
                 return
-
-        if message.content.startswith(f"{Config.PREFIX} "):
-            message.content = "".join(message.content.split(" ", 1))
 
     @Cog.listener()
     async def on_command_error(self, ctx: Context, error: Any):

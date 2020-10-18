@@ -141,5 +141,5 @@ class AdminCommands(commands.Cog):
 
 
 def setup(bot: Bot):
-    """Required to load extention."""
+    """Required to load extension."""
     bot.add_cog(AdminCommands(bot))

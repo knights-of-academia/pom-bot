@@ -47,6 +47,9 @@ async def _send_to_errors_channel(ctx: Context, message: str):
         _log.info("ERRORS_CHANNEL_NAME not configured")
         return
 
+    if ctx.guild is None:
+        return
+
     for channel in ctx.guild.channels:
         if channel.name == Config.ERRORS_CHANNEL_NAME:
             await channel.send("```\n" + message + "```")
@@ -130,5 +133,5 @@ class EventListeners(Cog):
 
 
 def setup(bot: Bot):
-    """Required to load extention."""
+    """Required to load extension."""
     bot.add_cog(EventListeners(bot))

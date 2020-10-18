@@ -1,4 +1,26 @@
-from pombot.config import Config
+from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List
+
+import mysql.connector
+from discord.user import User
+
+from pombot.config import Config, Secrets
+
+
+@dataclass
+class Pom:
+    """A pom, as described in order from the database."""
+    pom_id: int
+    user_id: int
+    descript: str
+    time_set: datetime
+    session: int
+
+    def is_current_session(self) -> bool:
+        """Return whether this pom is in the user's current session."""
+        return bool(self.session)
 
 
 class PomSql:
@@ -25,7 +47,7 @@ class PomSql:
         VALUES (%s, %s, %s, %s);
     """
 
-    SELECT_ALL_POMS = f"""
+    SELECT_ALL_POMS_BY_USERID = f"""
         SELECT * FROM {Config.POMS_TABLE}
         WHERE userID=%s;
     """
@@ -41,12 +63,6 @@ class PomSql:
         SELECT * FROM {Config.POMS_TABLE}
         WHERE userID = %s
         AND current_session = 1;
-    """
-
-    SELECT_ALL_POMS_WITH_DESCRIPT = f"""
-        SELECT * FROM {Config.POMS_TABLE}
-        WHERE userID = %s
-        AND descript = %s;
     """
 
     EVENT_SELECT = f"""
@@ -103,3 +119,55 @@ class EventSql:
         WHERE start_date <= %s
         AND end_date >= %s;
     """
+
+@contextmanager
+def mysql_database_cursor():
+    db_config = {
+        "host": Secrets.MYSQL_HOST,
+        "user": Secrets.MYSQL_USER,
+        "password": Secrets.MYSQL_PASSWORD,
+        "database": Secrets.MYSQL_DATABASE,
+    }
+
+    if Config.USE_CONNECTION_POOL:
+        db_config.update({"pool_size": Config.CONNECTION_POOL_SIZE})
+
+    db_connection = mysql.connector.connect(**db_config)
+    cursor = db_connection.cursor(buffered=True)
+
+    yield cursor
+
+    db_connection.commit()
+    cursor.close()
+    db_connection.close()
+
+class Storage:
+
+    @classmethod
+    def get_all_poms_for_user(cls, user: User) -> List[Pom]:
+        with mysql_database_cursor() as cursor:
+            cursor.execute(PomSql.SELECT_ALL_POMS_BY_USERID, (user.id, ))
+            rows = cursor.fetchall()
+
+        return [Pom(*row) for row in rows]
+
+    @classmethod
+    def clear_user_session_poms(cls, user: User):
+        with mysql_database_cursor() as cursor:
+            cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION,
+                           (user.id, ))
+
+    @classmethod
+    def delete_all_user_poms(cls, user: User):
+        with mysql_database_cursor() as cursor:
+            cursor.execute(PomSql.DELETE_POMS,
+                           (user.id, ))
+
+    @classmethod
+    def delete_most_recent_user_poms(cls, user: User, count: int):
+        with mysql_database_cursor() as cursor:
+            cursor.execute(PomSql.SELECT_ALL_POMS_WITH_LIMIT, (user.id, count))
+
+            cursor.executemany(PomSql.DELETE_POMS_WITH_ID,
+                               [(user.id, pom_id)
+                                for pom_id, *_ in cursor.fetchall()])

@@ -4,12 +4,11 @@ from collections import Counter
 from datetime import datetime
 from typing import List
 
-import mysql.connector
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-from pombot.config import Config, Reactions, Secrets
+from pombot.config import Config, Reactions
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
 from pombot.storage import EventSql, PomSql, Storage, Pom
@@ -42,60 +41,38 @@ class UserCommands(commands.Cog):
         If the first word in the description is a number (1-10), multiple
         poms will be added with the given description.
         """
-        #FIXME you are here
-        pom_count = 1
-        current_date = datetime.now()
-
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
+        count = 1
 
         if description:
-            # If there is a description, check if the first word is a digit. If
-            # it is, split the string to remove the digits length plus 1 for
-            # space.
-            if description.split(' ', 1)[0].isdigit():
-                pom_count = int(description.split(' ', 1)[0])
-                if pom_count > Config.POM_TRACK_LIMIT or pom_count < 1:
+            head, *tail = description.split(" ", 1)
+
+            try:
+                count = int(head)
+            except ValueError:
+                pass
+            else:
+                if not 0 < count <= Config.POM_TRACK_LIMIT:
                     await ctx.message.add_reaction(Reactions.WARNING)
-                    await ctx.send('You can only add between 1 and 10 poms at once.')
-                    cursor.close()
-                    db.close()
+                    await ctx.send("You can only add between 1 and "
+                                   f"{Config.POM_TRACK_LIMIT} poms at once.")
                     return
 
-                description = description[(len(str(pom_count)) + 1):]
+                description = " ".join(tail)
 
-        if description is not None and len(description) > Config.DESCRIPTION_LIMIT:
-            await ctx.message.add_reaction(Reactions.WARNING)
-            await ctx.send('Your pom description must be fewer than 30 characters.')
-            cursor.close()
-            db.close()
-            return
+            if len(description) > Config.DESCRIPTION_LIMIT:
+                await ctx.message.add_reaction(Reactions.WARNING)
+                await ctx.send("Your pom description must be fewer than "
+                               f"{Config.DESCRIPTION_LIMIT} characters.")
+                return
 
         has_multiline_description = description is not None and "\n" in description
 
         if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
             await ctx.message.add_reaction(Reactions.WARNING)
-            await ctx.send('Multi line pom descriptions are disabled.')
-            cursor.close()
-            db.close()
+            await ctx.send("Multi-line pom descriptions are disabled.")
             return
 
-        poms = [(
-            ctx.message.author.id,
-            description,
-            current_date.strftime('%Y-%m-%d) %H:%M:%S'),
-            True,
-        ) for _ in range(pom_count)]
-
-        cursor.executemany(PomSql.INSERT_QUERY, poms)
-
-        db.commit()
-
+        Storage.add_poms_to_user_session(ctx.author, description, count)
         await ctx.message.add_reaction(Reactions.TOMATO)
 
         cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
@@ -105,15 +82,11 @@ class UserCommands(commands.Cog):
             _, event_name, event_goal, event_start, event_end = event_info[0]
         except IndexError:
             # No event for current_date.
-            cursor.close()
-            db.close()
             return
 
         cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
         cursor.fetchall()
         poms = cursor.rowcount
-        cursor.close()
-        db.close()
 
         if State.goal_reached:
             return

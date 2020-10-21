@@ -146,6 +146,15 @@ class Storage:
         return [Pom(*row) for row in rows]
 
     @classmethod
+    def add_poms_to_user_session(cls, user: User, descript: str, count: int):
+        descript = descript or None
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        poms = [(user.id, descript, now, True) for _ in range(count)]
+
+        with mysql_database_cursor() as cursor:
+            cursor.executemany(PomSql.INSERT_QUERY, poms)
+
+    @classmethod
     def clear_user_session_poms(cls, user: User):
         with mysql_database_cursor() as cursor:
             cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION, (user.id, ))

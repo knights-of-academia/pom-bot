@@ -42,6 +42,7 @@ class UserCommands(commands.Cog):
         If the first word in the description is a number (1-10), multiple
         poms will be added with the given description.
         """
+        #FIXME you are here
         pom_count = 1
         current_date = datetime.now()
 
@@ -147,9 +148,8 @@ class UserCommands(commands.Cog):
 
         session_poms = [pom for pom in poms if pom.is_current_session()]
 
-        session_poms_with_description = Counter(
-            des_pom.descript
-            for des_pom in [pom for pom in session_poms if pom.descript])
+        descriptions = [pom.descript for pom in session_poms if pom.descript]
+        session_poms_with_description = Counter(descriptions)
 
         num_session_poms_without_description = len(session_poms) - sum(
             n for n in session_poms_with_description.values())
@@ -198,30 +198,30 @@ class UserCommands(commands.Cog):
         ))
 
     @commands.command()
-    async def undo(self, ctx: Context, *, description: str = None):
+    async def undo(self, ctx: Context, *, count: str = None):
         """Undo/remove your latest poms.
 
         Optionally specify a number to undo that many poms.
         """
-        count = 1
+        _count = 1
 
-        if description:
-            first_word, *_ = description.split(" ", 1)
+        if count:
+            first_word, *_ = count.split(" ", 1)
 
             try:
-                count = int(first_word)
+                _count = int(first_word)
             except ValueError:
                 await ctx.message.add_reaction(Reactions.WARNING)
                 await ctx.send(f"Please specify a number of poms to undo.")
                 return
 
-            if count > Config.POM_TRACK_LIMIT:
+            if not 0 < _count <= Config.POM_TRACK_LIMIT:
                 await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send("You can only undo up to "
+                await ctx.send("You can only undo between 1 and "
                                f"{Config.POM_TRACK_LIMIT} poms at once.")
                 return
 
-        Storage.delete_most_recent_user_poms(ctx.author, count)
+        Storage.delete_most_recent_user_poms(ctx.author, _count)
         await ctx.message.add_reaction(Reactions.UNDO)
 
     @commands.command()

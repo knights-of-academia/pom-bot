@@ -52,13 +52,6 @@ class PomSql:
         WHERE userID=%s;
     """
 
-    SELECT_ALL_POMS_WITH_LIMIT = f"""
-        SELECT * FROM {Config.POMS_TABLE}
-        WHERE userID=%s
-        ORDER BY time_set DESC
-        LIMIT %s;
-    """
-
     SELECT_ALL_POMS_CURRENT_SESSION = f"""
         SELECT * FROM {Config.POMS_TABLE}
         WHERE userID = %s
@@ -78,15 +71,16 @@ class PomSql:
         AND current_session = 1;
     """
 
-    DELETE_POMS = f"""
+    DELETE_ALL_POMS_FOR_USER = f"""
         DELETE FROM {Config.POMS_TABLE}
         WHERE userID=%s;
     """
 
-    DELETE_POMS_WITH_ID = f"""
+    DELETE_RECENT_POMS_FOR_USER = f"""
         DELETE FROM {Config.POMS_TABLE}
         WHERE userID=%s
-        AND id=%s;
+        ORDER BY time_set DESC
+        LIMIT %s;
     """
 
 
@@ -141,8 +135,8 @@ def mysql_database_cursor():
     cursor.close()
     db_connection.close()
 
-class Storage:
 
+class Storage:
     @classmethod
     def get_all_poms_for_user(cls, user: User) -> List[Pom]:
         with mysql_database_cursor() as cursor:
@@ -154,20 +148,14 @@ class Storage:
     @classmethod
     def clear_user_session_poms(cls, user: User):
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION,
-                           (user.id, ))
+            cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION, (user.id, ))
 
     @classmethod
     def delete_all_user_poms(cls, user: User):
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.DELETE_POMS,
-                           (user.id, ))
+            cursor.execute(PomSql.DELETE_ALL_POMS_FOR_USER, (user.id, ))
 
     @classmethod
     def delete_most_recent_user_poms(cls, user: User, count: int):
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.SELECT_ALL_POMS_WITH_LIMIT, (user.id, count))
-
-            cursor.executemany(PomSql.DELETE_POMS_WITH_ID,
-                               [(user.id, pom_id)
-                                for pom_id, *_ in cursor.fetchall()])
+            cursor.execute(PomSql.DELETE_RECENT_POMS_FOR_USER, (user.id, count))

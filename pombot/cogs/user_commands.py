@@ -11,7 +11,7 @@ from discord.ext.commands.bot import Bot
 from pombot.config import Config, Reactions
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
-from pombot.storage import EventSql, PomSql, Storage, Pom
+from pombot.storage import Storage, Pom
 
 
 def _get_duration_message(poms: List[Pom]) -> str:

@@ -41,7 +41,7 @@ class AdminCommands(commands.Cog):
         await ctx.send(f"Total amount of poms: {num_poms}")
 
     @commands.command(name="start", aliases=["start_event"], hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
+    # @commands.has_any_role("Guardian", "Helper")
     async def do_start_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 

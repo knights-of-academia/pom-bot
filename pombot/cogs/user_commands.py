@@ -40,6 +40,9 @@ class UserCommands(commands.Cog):
 
         If the first word in the description is a number (1-10), multiple
         poms will be added with the given description.
+
+        Additionally, find out if there is an ongoing event, and, if so, mark
+        the event as completed if this is the final pom in the event.
         """
         count = 1
 
@@ -75,29 +78,29 @@ class UserCommands(commands.Cog):
         Storage.add_poms_to_user_session(ctx.author, description, count)
         await ctx.message.add_reaction(Reactions.TOMATO)
 
-        cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
-        event_info = cursor.fetchall()
-
-        try:
-            _, event_name, event_goal, event_start, event_end = event_info[0]
-        except IndexError:
-            # No event for current_date.
-            return
-
-        cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
-        cursor.fetchall()
-        poms = cursor.rowcount
-
         if State.goal_reached:
             return
 
-        if event_goal <= poms:
+        try:
+            ongoing_event, *other_ongoing_events = Storage.get_ongoing_events()
+        except ValueError:
+            # No ongoing events.
+            return
+
+        if any(other_ongoing_events):
+            # FIXME in MR: What to do when there are more than one events?
+            raise ValueError("More than one ongoing event. Dunno wut do.")
+
+        num_current_poms_for_event = Storage.get_num_poms_for_date_range(
+            ongoing_event.start_date, ongoing_event.end_date)
+
+        if num_current_poms_for_event >= ongoing_event.pom_goal:
             State.goal_reached = True
 
             await send_embed_message(
                 ctx,
-                title=event_name,
-                description=(f"We've reached our goal of {event_goal} "
+                title=ongoing_event.event_name,
+                description=(f"We've reached our goal of {ongoing_event.pom_goal} "
                              "poms! Well done and keep up the good work!"),
             )
 

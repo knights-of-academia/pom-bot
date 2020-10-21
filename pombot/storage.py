@@ -11,7 +11,7 @@ from pombot.config import Config, Secrets
 
 @dataclass
 class Pom:
-    """A pom, as described in order from the database."""
+    """A pom, as described, in order, from the database."""
     pom_id: int
     user_id: int
     descript: str
@@ -82,6 +82,16 @@ class PomSql:
         ORDER BY time_set DESC
         LIMIT %s;
     """
+
+
+@dataclass
+class Event:
+    """An event, as described, in order, from the database."""
+    event_id: int
+    event_name: str
+    pom_goal: int
+    start_date: datetime
+    end_date: datetime
 
 
 class EventSql:
@@ -168,3 +178,21 @@ class Storage:
     def delete_most_recent_user_poms(cls, user: User, count: int):
         with mysql_database_cursor() as cursor:
             cursor.execute(PomSql.DELETE_RECENT_POMS_FOR_USER, (user.id, count))
+
+    @classmethod
+    def get_ongoing_events(cls) -> List[Event]:
+        current_date = datetime.now()
+
+        with mysql_database_cursor() as cursor:
+            cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
+            rows = cursor.fetchall()
+
+        return [Event(*row) for row in rows]
+
+    @classmethod
+    def get_num_poms_for_date_range(cls, start: datetime, end: datetime) -> int:
+        with mysql_database_cursor() as cursor:
+            cursor.execute(PomSql.EVENT_SELECT, (start, end))
+            rows = cursor.fetchall()
+
+        return len(rows)

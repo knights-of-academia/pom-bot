@@ -9,7 +9,7 @@ from discord.ext.commands.bot import Bot
 from pombot.config import Reactions, Secrets
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
-from pombot.storage import EventSql
+from pombot.storage import EventSql, Storage
 
 
 class AdminCommands(commands.Cog):
@@ -26,18 +26,9 @@ class AdminCommands(commands.Cog):
 
         This is an admin-only command.
         """
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
-        cursor.execute('SELECT * FROM poms;')
-        num_poms = cursor.rowcount
-        cursor.close()
-        db.close()
+        num_poms = Storage.get_num_poms_for_all_users()
 
+        # FIXME in MR: should this be an embed and/or DM?
         await ctx.send(f"Total amount of poms: {num_poms}")
 
     @commands.command(name="start", aliases=["start_event"], hidden=True)
@@ -72,6 +63,7 @@ class AdminCommands(commands.Cog):
                 ```
             """)
 
+        # FIXME: YOU ARE HERE
         try:
             (*event_name, event_goal, start_month, start_day, end_month,
              end_day) = args

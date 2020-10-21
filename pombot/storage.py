@@ -148,6 +148,16 @@ def mysql_database_cursor():
 
 class Storage:
     @classmethod
+    def get_num_poms_for_all_users(cls) -> int:
+        query = f"SELECT * FROM {Config.POMS_TABLE};"
+
+        with mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            num_rows = cursor.rowcount
+
+        return num_rows
+
+    @classmethod
     def get_all_poms_for_user(cls, user: User) -> List[Pom]:
         with mysql_database_cursor() as cursor:
             cursor.execute(PomSql.SELECT_ALL_POMS_BY_USERID, (user.id, ))

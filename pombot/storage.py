@@ -24,6 +24,16 @@ class Pom:
         return bool(self.session)
 
 
+@dataclass
+class Event:
+    """An event, as described, in order, from the database."""
+    event_id: int
+    event_name: str
+    pom_goal: int
+    start_date: dt
+    end_date: dt
+
+
 class PomSql:
     """SQL queries for poms."""
 
@@ -38,63 +48,6 @@ class PomSql:
         );
     """
 
-    INSERT_QUERY = f"""
-        INSERT INTO {Config.POMS_TABLE} (
-            userID,
-            descript,
-            time_set,
-            current_session
-        )
-        VALUES (%s, %s, %s, %s);
-    """
-
-    SELECT_ALL_POMS_BY_USERID = f"""
-        SELECT * FROM {Config.POMS_TABLE}
-        WHERE userID=%s;
-    """
-
-    SELECT_ALL_POMS_CURRENT_SESSION = f"""
-        SELECT * FROM {Config.POMS_TABLE}
-        WHERE userID = %s
-        AND current_session = 1;
-    """
-
-    EVENT_SELECT = f"""
-        SELECT * FROM {Config.POMS_TABLE}
-        WHERE time_set >= %s
-        AND time_set <= %s;
-    """
-
-    UPDATE_REMOVE_ALL_POMS_FROM_SESSION = f"""
-        UPDATE  {Config.POMS_TABLE}
-        SET current_session = 0
-        WHERE userID = %s
-        AND current_session = 1;
-    """
-
-    DELETE_ALL_POMS_FOR_USER = f"""
-        DELETE FROM {Config.POMS_TABLE}
-        WHERE userID=%s;
-    """
-
-    DELETE_RECENT_POMS_FOR_USER = f"""
-        DELETE FROM {Config.POMS_TABLE}
-        WHERE userID=%s
-        ORDER BY time_set DESC
-        LIMIT %s;
-    """
-
-
-@dataclass
-class Event:
-    """An event, as described, in order, from the database."""
-    event_id: int
-    event_name: str
-    pom_goal: int
-    start_date: dt
-    end_date: dt
-
-
 class EventSql:
     """SQL queries for events."""
 
@@ -107,22 +60,6 @@ class EventSql:
             end_date TIMESTAMP NOT NULL DEFAULT 0,
             PRIMARY KEY(id)
         );
-    """
-
-    EVENT_ADD = f"""
-        INSERT INTO {Config.EVENTS_TABLE} (
-            event_name,
-            pom_goal,
-            start_date,
-            end_date
-        )
-        VALUES (%s, %s, %s, %s);
-    """
-
-    SELECT_EVENT = f"""
-        SELECT * FROM {Config.EVENTS_TABLE}
-        WHERE start_date <= %s
-        AND end_date >= %s;
     """
 
 @contextmanager
@@ -161,60 +98,117 @@ class Storage:
 
     @classmethod
     def get_all_poms_for_user(cls, user: User) -> List[Pom]:
+        query = f"""
+            SELECT * FROM {Config.POMS_TABLE}
+            WHERE userID=%s;
+        """
+
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.SELECT_ALL_POMS_BY_USERID, (user.id, ))
+            cursor.execute(query, (user.id, ))
             rows = cursor.fetchall()
 
         return [Pom(*row) for row in rows]
 
     @classmethod
     def add_poms_to_user_session(cls, user: User, descript: str, count: int):
+        query = f"""
+            INSERT INTO {Config.POMS_TABLE} (
+                userID,
+                descript,
+                time_set,
+                current_session
+            )
+            VALUES (%s, %s, %s, %s);
+        """
+
         descript = descript or None
         now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
         poms = [(user.id, descript, now, True) for _ in range(count)]
 
         with mysql_database_cursor() as cursor:
-            cursor.executemany(PomSql.INSERT_QUERY, poms)
+            cursor.executemany(query, poms)
 
     @classmethod
     def clear_user_session_poms(cls, user: User):
+        query = f"""
+            UPDATE  {Config.POMS_TABLE}
+            SET current_session = 0
+            WHERE userID = %s
+            AND current_session = 1;
+        """
+
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION, (user.id, ))
+            cursor.execute(query, (user.id, ))
 
     @classmethod
     def delete_all_user_poms(cls, user: User):
+        query = f"""
+            DELETE FROM {Config.POMS_TABLE}
+            WHERE userID=%s;
+        """
+
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.DELETE_ALL_POMS_FOR_USER, (user.id, ))
+            cursor.execute(query, (user.id, ))
 
     @classmethod
     def delete_most_recent_user_poms(cls, user: User, count: int):
+        query = f"""
+            DELETE FROM {Config.POMS_TABLE}
+            WHERE userID=%s
+            ORDER BY time_set DESC
+            LIMIT %s;
+        """
+
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.DELETE_RECENT_POMS_FOR_USER, (user.id, count))
+            cursor.execute(query, (user.id, count))
 
     @classmethod
     def get_ongoing_events(cls) -> List[Event]:
+        query = f"""
+            SELECT * FROM {Config.EVENTS_TABLE}
+            WHERE start_date <= %s
+            AND end_date >= %s;
+        """
+
         current_date = dt.now()
 
         with mysql_database_cursor() as cursor:
-            cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
+            cursor.execute(query, (current_date, current_date))
             rows = cursor.fetchall()
 
         return [Event(*row) for row in rows]
 
     @classmethod
     def get_num_poms_for_date_range(cls, start: dt, end: dt) -> int:
+        query = f"""
+            SELECT * FROM {Config.POMS_TABLE}
+            WHERE time_set >= %s
+            AND time_set <= %s;
+        """
+
         with mysql_database_cursor() as cursor:
-            cursor.execute(PomSql.EVENT_SELECT, (start, end))
+            cursor.execute(query, (start, end))
             rows = cursor.fetchall()
 
         return len(rows)
 
     @classmethod
     def add_new_event(cls, name: str, goal: int, start: dt, end: dt):
+        query = f"""
+            INSERT INTO {Config.EVENTS_TABLE} (
+                event_name,
+                pom_goal,
+                start_date,
+                end_date
+            )
+            VALUES (%s, %s, %s, %s);
+        """
+
         with mysql_database_cursor() as cursor:
             try:
-                cursor.execute(EventSql.EVENT_ADD, (name, goal, start, end))
+                cursor.execute(query, (name, goal, start, end))
             except mysql.connector.DatabaseError as exc:
+                # Give a nicer error message than the mysql default.
                 raise pombot.errors.EventCreationError(exc.msg)
 
     @classmethod

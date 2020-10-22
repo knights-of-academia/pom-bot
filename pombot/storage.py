@@ -218,7 +218,7 @@ class Storage:
                 raise pombot.errors.EventCreationError(exc.msg)
 
     @classmethod
-    def get_all_events(cls, name: str = None) -> List[Event]:
+    def get_all_events(cls) -> List[Event]:
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             ORDER BY start_date;

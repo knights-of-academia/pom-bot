@@ -1,15 +1,15 @@
 import textwrap
 from datetime import datetime
 
-import mysql.connector
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-from pombot.config import Reactions, Secrets
+import pombot.errors
+from pombot.config import Reactions
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
-from pombot.storage import EventSql, Storage
+from pombot.storage import Storage
 
 
 class AdminCommands(commands.Cog):
@@ -27,12 +27,10 @@ class AdminCommands(commands.Cog):
         This is an admin-only command.
         """
         num_poms = Storage.get_num_poms_for_all_users()
-
-        # FIXME in MR: should this be an embed and/or DM?
         await ctx.send(f"Total amount of poms: {num_poms}")
 
-    @commands.command(name="start", aliases=["start_event"], hidden=True)
-    # @commands.has_any_role("Guardian", "Helper")
+    @commands.command(name="start", aliases=["start_event", "event"], hidden=True)
+    # @commands.has_any_role("Guardian", "Helper")  # FIXME
     async def do_start_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 
@@ -42,8 +40,8 @@ class AdminCommands(commands.Cog):
             cmd = ctx.prefix + ctx.invoked_with
 
             header = (header
-                      or f"Your command `{cmd}` does not meet the usage "
-                      "requirements for this command.")
+                      or f"Your command `{cmd + ' ' + ' '.join(args)}` does "
+                      "not meet the usage requirements.")
 
             return textwrap.dedent(f"""\
                 {header}
@@ -60,19 +58,30 @@ class AdminCommands(commands.Cog):
 
                 Example:
                     {cmd} The Best Event 100 June 10 July 4
+
+                At present, events must not overlap; only one concurrent event
+                can be ongoing at a time.
                 ```
             """)
 
-        # FIXME: YOU ARE HERE
         try:
-            (*event_name, event_goal, start_month, start_day, end_month,
-             end_day) = args
+            *name, pom_goal, start_month, start_day, end_month, end_day = args
         except ValueError:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage())
             return
 
-        event_name = " ".join(event_name)
+        event_name = " ".join(name)
+
+        try:
+            pom_goal = int(pom_goal)
+
+            if pom_goal <= 0:
+                raise ValueError("Goal must be a positive number.")
+        except ValueError as exc:
+            await ctx.message.add_reaction(Reactions.ROBOT)
+            await ctx.author.send(_usage(f"Invalid goal: `{pom_goal}`, {exc}"))
+            return
 
         dateformat = "%B %d %Y %H:%M:%S"
         year = datetime.today().year
@@ -95,27 +104,22 @@ class AdminCommands(commands.Cog):
             end_date = datetime.strptime(
                 f"{end_month} {end_day} {year + 1} 23:59:59", dateformat)
 
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
+        overlapping_events = Storage.get_overlapping_events(start_date, end_date)
 
-        try:
-            cursor.execute(EventSql.EVENT_ADD,
-                           (event_name, event_goal, start_date, end_date))
-        except mysql.connector.DatabaseError as exc:
+        if any(overlapping_events):
+            msg = "Found overlapping events: {}".format(
+                ", ".join(event.event_name for event in overlapping_events)
+            )
             await ctx.message.add_reaction(Reactions.ROBOT)
-            await ctx.author.send(_usage(f"Database update failed: {exc.msg}"))
-            cursor.close()
-            db.close()
+            await ctx.author.send(_usage(msg))
             return
 
-        db.commit()
-        cursor.close()
-        db.close()
+        try:
+            Storage.add_new_event(event_name, pom_goal, start_date, end_date)
+        except pombot.errors.EventCreationError as exc:
+            await ctx.message.add_reaction(Reactions.ROBOT)
+            await ctx.author.send(_usage(f"Failed to create event: {exc}"))
+            return
 
         State.goal_reached = False
 
@@ -124,12 +128,36 @@ class AdminCommands(commands.Cog):
             title="New Event!",
             description=textwrap.dedent(f"""\
                 Event name: **{event_name}**
-                Poms goal:  **{event_goal}**
+                Poms goal:  **{pom_goal}**
 
                 Starts: *{start_date.strftime("%B %d, %Y")}*
                 Ends:   *{end_date.strftime("%B %d, %Y")}*
             """),
         )
+
+    @commands.command(name="remove_event", aliases=["delete_event"], hidden=True)
+    # @commands.has_any_role("Guardian", "Helper")  # FIXME
+    async def do_remove_event(self, ctx: Context, *args):
+        """Allows guardians and helpers to start an event.
+
+        This is an admin-only command.
+        """
+
+        if not args:
+            cmd = ctx.prefix + ctx.invoked_with
+
+            await ctx.author.send(textwrap.dedent(f"""
+                Remove an event.
+                ```text
+                Usage: {cmd} <name>
+                ```
+            """))
+
+            return
+
+        name = " ".join(args).strip()
+        Storage.delete_event(name)
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
 def setup(bot: Bot):

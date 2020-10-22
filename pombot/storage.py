@@ -1,11 +1,12 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime as dt
 from typing import List
 
 import mysql.connector
 from discord.user import User
 
+import pombot.errors
 from pombot.config import Config, Secrets
 
 
@@ -15,7 +16,7 @@ class Pom:
     pom_id: int
     user_id: int
     descript: str
-    time_set: datetime
+    time_set: dt
     session: int
 
     def is_current_session(self) -> bool:
@@ -90,8 +91,8 @@ class Event:
     event_id: int
     event_name: str
     pom_goal: int
-    start_date: datetime
-    end_date: datetime
+    start_date: dt
+    end_date: dt
 
 
 class EventSql:
@@ -139,11 +140,12 @@ def mysql_database_cursor():
     db_connection = mysql.connector.connect(**db_config)
     cursor = db_connection.cursor(buffered=True)
 
-    yield cursor
-
-    db_connection.commit()
-    cursor.close()
-    db_connection.close()
+    try:
+        yield cursor
+    finally:
+        db_connection.commit()
+        cursor.close()
+        db_connection.close()
 
 
 class Storage:
@@ -168,7 +170,7 @@ class Storage:
     @classmethod
     def add_poms_to_user_session(cls, user: User, descript: str, count: int):
         descript = descript or None
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
         poms = [(user.id, descript, now, True) for _ in range(count)]
 
         with mysql_database_cursor() as cursor:
@@ -191,7 +193,7 @@ class Storage:
 
     @classmethod
     def get_ongoing_events(cls) -> List[Event]:
-        current_date = datetime.now()
+        current_date = dt.now()
 
         with mysql_database_cursor() as cursor:
             cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
@@ -200,9 +202,59 @@ class Storage:
         return [Event(*row) for row in rows]
 
     @classmethod
-    def get_num_poms_for_date_range(cls, start: datetime, end: datetime) -> int:
+    def get_num_poms_for_date_range(cls, start: dt, end: dt) -> int:
         with mysql_database_cursor() as cursor:
             cursor.execute(PomSql.EVENT_SELECT, (start, end))
             rows = cursor.fetchall()
 
         return len(rows)
+
+    @classmethod
+    def add_new_event(cls, name: str, goal: int, start: dt, end: dt):
+        with mysql_database_cursor() as cursor:
+            try:
+                cursor.execute(EventSql.EVENT_ADD, (name, goal, start, end))
+            except mysql.connector.DatabaseError as exc:
+                raise pombot.errors.EventCreationError(exc.msg)
+
+    @classmethod
+    def get_all_events(cls, name: str = None) -> List[Event]:
+        query = f"""
+            SELECT * FROM {Config.EVENTS_TABLE}
+            ORDER BY start_date;
+        """
+
+        with mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        return [Event(*row) for row in rows]
+
+    @classmethod
+    def get_overlapping_events(cls, start: dt, end: dt) -> List[Event]:
+        """Return a list of events in the database which overlap with the
+        dates specified.
+        """
+        query = f"""
+            SELECT * FROM {Config.EVENTS_TABLE}
+            WHERE %s < end_date
+            AND %s > start_date;
+        """
+
+        with mysql_database_cursor() as cursor:
+            cursor.execute(query, (start, end))
+            rows = cursor.fetchall()
+
+        return [Event(*row) for row in rows]
+
+    @classmethod
+    def delete_event(cls, name: str):
+        query = f"""
+            DELETE FROM {Config.EVENTS_TABLE}
+            WHERE event_name=%s
+            ORDER BY start_date
+            LIMIT 1;
+        """
+
+        with mysql_database_cursor() as cursor:
+            cursor.execute(query, (name, ))

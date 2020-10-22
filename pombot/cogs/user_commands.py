@@ -8,6 +8,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
+import pombot.errors
 from pombot.config import Config, Reactions
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
@@ -88,8 +89,8 @@ class UserCommands(commands.Cog):
             return
 
         if any(other_ongoing_events):
-            # FIXME in MR: What to do when there are more than one events?
-            raise ValueError("More than one ongoing event. Dunno wut do.")
+            msg = "Only one ongoing event supported."
+            raise pombot.errors.TooManyEventsError(msg)
 
         num_current_poms_for_event = Storage.get_num_poms_for_date_range(
             ongoing_event.start_date, ongoing_event.end_date)
@@ -219,6 +220,59 @@ class UserCommands(commands.Cog):
         """Permanently deletes all of your poms. This cannot be undone."""
         Storage.delete_all_user_poms(ctx.author)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
+
+    @commands.command()
+    async def events(self, ctx: Context):
+        """See the current and next events."""
+        reported_events = []
+
+        try:
+            ongoing_event, *_ = Storage.get_ongoing_events()
+        except ValueError:
+            pass
+        else:
+            await send_embed_message(
+                ctx,
+                title="Ongoing Event!",
+                description=textwrap.dedent(f"""\
+                    Event name: **{ongoing_event.event_name}**
+                    Poms goal:  **{ongoing_event.pom_goal}**
+
+                    Started:  *{ongoing_event.start_date.strftime("%B %d, %Y")}*
+                    Ending:   *{ongoing_event.end_date.strftime("%B %d, %Y")}*
+                """),
+            )
+
+            reported_events.append(ongoing_event)
+
+        try:
+            upcoming_event, *_ = [
+                event for event in Storage.get_all_events()
+                if event.start_date > datetime.now()
+            ]
+        except ValueError:
+            pass
+        else:
+            await send_embed_message(
+                ctx,
+                title="Upcoming Event!",
+                description=textwrap.dedent(f"""\
+                    Event name: **{upcoming_event.event_name}**
+                    Poms goal:  **{upcoming_event.pom_goal}**
+
+                    Starts:  *{upcoming_event.start_date.strftime("%B %d, %Y")}*
+                    Ends:    *{upcoming_event.end_date.strftime("%B %d, %Y")}*
+                """),
+            )
+
+            reported_events.append(upcoming_event)
+
+        if not any(reported_events):
+            await send_embed_message(
+                ctx,
+                title="Events!",
+                description="No ongoing or upcoming events :confused:",
+            )
 
 
 def setup(bot: Bot):

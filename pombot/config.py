@@ -57,6 +57,7 @@ class Debug:
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
+    CHECKMARK = "✅"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"

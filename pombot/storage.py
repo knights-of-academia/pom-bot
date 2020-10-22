@@ -63,7 +63,7 @@ class EventSql:
     """
 
 @contextmanager
-def mysql_database_cursor():
+def _mysql_database_cursor():
     db_config = {
         "host": Secrets.MYSQL_HOST,
         "user": Secrets.MYSQL_USER,
@@ -90,7 +90,7 @@ class Storage:
     def get_num_poms_for_all_users(cls) -> int:
         query = f"SELECT * FROM {Config.POMS_TABLE};"
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query)
             num_rows = cursor.rowcount
 
@@ -103,7 +103,7 @@ class Storage:
             WHERE userID=%s;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, ))
             rows = cursor.fetchall()
 
@@ -125,7 +125,7 @@ class Storage:
         now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
         poms = [(user.id, descript, now, True) for _ in range(count)]
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.executemany(query, poms)
 
     @classmethod
@@ -137,7 +137,7 @@ class Storage:
             AND current_session = 1;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, ))
 
     @classmethod
@@ -147,7 +147,7 @@ class Storage:
             WHERE userID=%s;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, ))
 
     @classmethod
@@ -159,7 +159,7 @@ class Storage:
             LIMIT %s;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, count))
 
     @classmethod
@@ -172,7 +172,7 @@ class Storage:
 
         current_date = dt.now()
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (current_date, current_date))
             rows = cursor.fetchall()
 
@@ -186,7 +186,7 @@ class Storage:
             AND time_set <= %s;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (start, end))
             rows = cursor.fetchall()
 
@@ -204,7 +204,7 @@ class Storage:
             VALUES (%s, %s, %s, %s);
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             try:
                 cursor.execute(query, (name, goal, start, end))
             except mysql.connector.DatabaseError as exc:
@@ -218,7 +218,7 @@ class Storage:
             ORDER BY start_date;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query)
             rows = cursor.fetchall()
 
@@ -235,7 +235,7 @@ class Storage:
             AND %s > start_date;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (start, end))
             rows = cursor.fetchall()
 
@@ -250,5 +250,5 @@ class Storage:
             LIMIT 1;
         """
 
-        with mysql_database_cursor() as cursor:
+        with _mysql_database_cursor() as cursor:
             cursor.execute(query, (name, ))

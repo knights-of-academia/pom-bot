@@ -38,6 +38,8 @@ class Config:
     # MySQL
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
+    USE_CONNECTION_POOL = True
+    CONNECTION_POOL_SIZE = 5
 
     # Restrictions
     POM_CHANNEL_NAMES = [
@@ -55,6 +57,7 @@ class Debug:
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
+    CHECKMARK = "✅"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"

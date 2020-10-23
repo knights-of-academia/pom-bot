@@ -3,48 +3,20 @@ import random
 import textwrap
 from typing import Any
 
-import mysql.connector
 from discord.ext.commands import Bot, Cog, Context, errors
 
 from pombot.config import Config, Debug, Reactions, Secrets
-from pombot.storage import EventSql, PomSql
+from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
-
-
-def _setup_tables():
-    tables = [
-        {"name": Config.POMS_TABLE, "query": PomSql.CREATE_TABLE},
-        {"name": Config.EVENTS_TABLE, "query": EventSql.CREATE_TABLE},
-    ]
-
-    db = mysql.connector.connect(
-        host=Secrets.MYSQL_HOST,
-        user=Secrets.MYSQL_USER,
-        database=Secrets.MYSQL_DATABASE,
-        password=Secrets.MYSQL_PASSWORD,
-    )
-    cursor = db.cursor()
-
-    for query in (table["query"] for table in tables):
-        cursor.execute(query)
-
-    if Debug.DROP_TABLES_ON_RESTART:
-        _log.info("Deleting tables... ")
-
-        for table_name in (table["name"] for table in tables):
-            cursor.execute(f"DELETE FROM {table_name};")
-
-        _log.info("Tables deleted.")
-        db.commit()
-
-    cursor.close()
-    db.close()
 
 
 async def _send_to_errors_channel(ctx: Context, message: str):
     if not Config.ERRORS_CHANNEL_NAME:
         _log.info("ERRORS_CHANNEL_NAME not configured")
+        return
+
+    if ctx.guild is None:
         return
 
     for channel in ctx.guild.channels:
@@ -81,7 +53,10 @@ class EventListeners(Cog):
             for line in debug_enabled_message.split("\n"):
                 _log.info(line)
 
-        _setup_tables()
+        Storage.create_tables_if_not_exists()
+
+        if Debug.DROP_TABLES_ON_RESTART:
+            Storage.delete_all_rows_from_all_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)
 
@@ -130,5 +105,5 @@ class EventListeners(Cog):
 
 
 def setup(bot: Bot):
-    """Required to load extention."""
+    """Required to load extension."""
     bot.add_cog(EventListeners(bot))

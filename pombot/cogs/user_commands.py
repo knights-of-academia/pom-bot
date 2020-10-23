@@ -1,36 +1,21 @@
 import os
 import textwrap
 from collections import Counter
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
-import mysql.connector
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-from pombot.config import Config, Reactions, Secrets
+import pombot.errors
+from pombot.config import Config, Reactions
 from pombot.lib.embeds import send_embed_message
 from pombot.state import State
-from pombot.storage import EventSql, PomSql
+from pombot.storage import Storage, Pom
 
 
-@dataclass
-class _Pom:
-    """A pom, as described in order from the database."""
-    pom_id: int
-    user_id: int
-    descript: str
-    time_set: datetime
-    session: int
-
-    def is_current_session(self) -> bool:
-        """Return whether this pom is in the user's current session."""
-        return bool(self.session)
-
-
-def _get_duration_message(poms: List[_Pom]) -> str:
+def _get_duration_message(poms: List[Pom]) -> str:
     """Return how long the user has been in the current pom."""
     if not poms:
         return "Not started yet"
@@ -56,89 +41,67 @@ class UserCommands(commands.Cog):
 
         If the first word in the description is a number (1-10), multiple
         poms will be added with the given description.
-        """
-        pom_count = 1
-        current_date = datetime.now()
 
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
+        Additionally, find out if there is an ongoing event, and, if so, mark
+        the event as completed if this is the final pom in the event.
+        """
+        count = 1
 
         if description:
-            # If there is a description, check if the first word is a digit. If
-            # it is, split the string to remove the digits length plus 1 for
-            # space.
-            if description.split(' ', 1)[0].isdigit():
-                pom_count = int(description.split(' ', 1)[0])
-                if pom_count > Config.POM_TRACK_LIMIT or pom_count < 1:
+            head, *tail = description.split(" ", 1)
+
+            try:
+                count = int(head)
+            except ValueError:
+                pass
+            else:
+                if not 0 < count <= Config.POM_TRACK_LIMIT:
                     await ctx.message.add_reaction(Reactions.WARNING)
-                    await ctx.send('You can only add between 1 and 10 poms at once.')
-                    cursor.close()
-                    db.close()
+                    await ctx.send("You can only add between 1 and "
+                                   f"{Config.POM_TRACK_LIMIT} poms at once.")
                     return
 
-                description = description[(len(str(pom_count)) + 1):]
+                description = " ".join(tail)
 
-        if description is not None and len(description) > Config.DESCRIPTION_LIMIT:
-            await ctx.message.add_reaction(Reactions.WARNING)
-            await ctx.send('Your pom description must be fewer than 30 characters.')
-            cursor.close()
-            db.close()
-            return
+            if len(description) > Config.DESCRIPTION_LIMIT:
+                await ctx.message.add_reaction(Reactions.WARNING)
+                await ctx.send("Your pom description must be fewer than "
+                               f"{Config.DESCRIPTION_LIMIT} characters.")
+                return
 
         has_multiline_description = description is not None and "\n" in description
 
         if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
             await ctx.message.add_reaction(Reactions.WARNING)
-            await ctx.send('Multi line pom descriptions are disabled.')
-            cursor.close()
-            db.close()
+            await ctx.send("Multi-line pom descriptions are disabled.")
             return
 
-        poms = [(
-            ctx.message.author.id,
-            description,
-            current_date.strftime('%Y-%m-%d) %H:%M:%S'),
-            True,
-        ) for _ in range(pom_count)]
-
-        cursor.executemany(PomSql.INSERT_QUERY, poms)
-
-        db.commit()
-
+        Storage.add_poms_to_user_session(ctx.author, description, count)
         await ctx.message.add_reaction(Reactions.TOMATO)
-
-        cursor.execute(EventSql.SELECT_EVENT, (current_date, current_date))
-        event_info = cursor.fetchall()
-
-        try:
-            _, event_name, event_goal, event_start, event_end = event_info[0]
-        except IndexError:
-            # No event for current_date.
-            cursor.close()
-            db.close()
-            return
-
-        cursor.execute(PomSql.EVENT_SELECT, (event_start, event_end))
-        cursor.fetchall()
-        poms = cursor.rowcount
-        cursor.close()
-        db.close()
 
         if State.goal_reached:
             return
 
-        if event_goal <= poms:
+        try:
+            ongoing_event, *other_ongoing_events = Storage.get_ongoing_events()
+        except ValueError:
+            # No ongoing events.
+            return
+
+        if any(other_ongoing_events):
+            msg = "Only one ongoing event supported."
+            raise pombot.errors.TooManyEventsError(msg)
+
+        num_current_poms_for_event = Storage.get_num_poms_for_date_range(
+            ongoing_event.start_date, ongoing_event.end_date)
+
+        if num_current_poms_for_event >= ongoing_event.pom_goal:
             State.goal_reached = True
 
             await send_embed_message(
                 ctx,
-                title=event_name,
-                description=(f"We've reached our goal of {event_goal} "
+                title=ongoing_event.event_name,
+                description=(f"We've reached our goal of {ongoing_event.pom_goal} "
                              "poms! Well done and keep up the good work!"),
             )
 
@@ -148,35 +111,30 @@ class UserCommands(commands.Cog):
 
         See details for your tracked poms and the current session.
         """
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
-        cursor.execute(PomSql.SELECT_ALL_POMS, (ctx.message.author.id, ))
-        poms = cursor.fetchall()
-        cursor.close()
-        db.close()
+        poms = Storage.get_all_poms_for_user(ctx.author)
+        title = f"Pom statistics for {ctx.author.display_name}"
 
         if not poms:
-            await ctx.message.add_reaction(Reactions.WARNING)
-            await ctx.send("You have no tracked poms.")
+            await send_embed_message(
+                ctx,
+                title=title,
+                description="You have no tracked poms.",
+                private_message=True,
+            )
             return
 
-        session_poms = [
-            pom for pom in [_Pom(*pom) for pom in poms] if pom.is_current_session()
-        ]
+        session_poms = [pom for pom in poms if pom.is_current_session()]
 
-        session_described_poms = Counter(
-            des_pom.descript
-            for des_pom in [pom for pom in session_poms if pom.descript])
+        descriptions = [pom.descript for pom in session_poms if pom.descript]
+        session_poms_with_description = Counter(descriptions)
+
+        num_session_poms_without_description = len(session_poms) - sum(
+            n for n in session_poms_with_description.values())
 
         await send_embed_message(
             ctx,
             private_message=True,
-            title=f"Pom statistics for {ctx.author.display_name}",
+            title=title,
             description=textwrap.dedent(f"""\
                 **Pom statistics**
                 Session started: *{_get_duration_message(session_poms)}*
@@ -185,14 +143,13 @@ class UserCommands(commands.Cog):
 
                 **Poms this session**
                 {os.linesep.join(f"{desc}: {num}"
-                    for desc, num in session_described_poms.most_common())
+                    for desc, num in session_poms_with_description.most_common())
                     or "*No designated poms*"}
-                Undesignated poms: {len(session_poms) - sum(
-                    n for n in session_described_poms.values())}
+                {f"Undesignated poms: {num_session_poms_without_description}"
+                    if num_session_poms_without_description
+                    else "*No undesignated poms*"}
             """),
         )
-
-        await ctx.send("I've sent you a DM with your poms")
 
     @commands.command()
     async def howmany(self, ctx: Context, *, description: str = None):
@@ -202,82 +159,47 @@ class UserCommands(commands.Cog):
             await ctx.send("You must specify a description to search for.")
             return
 
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
+        poms = Storage.get_all_poms_for_user(ctx.author)
+        matching_poms = [pom for pom in poms if pom.descript == description]
 
-        cursor.execute(PomSql.SELECT_ALL_POMS_WITH_DESCRIPT,
-                       (ctx.message.author.id, description))
-        poms = cursor.fetchall()
-        cursor.close()
-        db.close()
-
-        if not poms:
+        if not matching_poms:
             await ctx.message.add_reaction(Reactions.WARNING)
             await ctx.send("You have no tracked poms with that description.")
             return
 
         await ctx.message.add_reaction(Reactions.ABACUS)
         await ctx.send('You have {num_poms} *"{description}"* pom{s}.'.format(
-            num_poms=len(poms),
+            num_poms=len(matching_poms),
             description=description,
-            s="" if len(poms) == 1 else "s",
+            s="" if len(matching_poms) == 1 else "s",
         ))
 
     @commands.command()
-    async def undo(self, ctx: Context, *, description: str = None):
+    async def undo(self, ctx: Context, *, count: str = None):
         """Undo/remove your latest poms.
 
         Optionally specify a number to undo that many poms.
         """
-        count = 1
+        _count = 1
 
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
-
-        if description:
-            first_word, *_ = description.split(' ', 1)
+        if count:
+            first_word, *_ = count.split(" ", 1)
 
             try:
-                count = int(first_word)
+                _count = int(first_word)
             except ValueError:
-                msg = f'Please specify a number of poms to undo.'
-
                 await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send(msg)
-                cursor.close()
-                db.close()
+                await ctx.send(f"Please specify a number of poms to undo.")
                 return
 
-            if count > Config.POM_TRACK_LIMIT:
-                msg = f"You can only undo up to {Config.POM_TRACK_LIMIT} poms at once."
-
+            if not 0 < _count <= Config.POM_TRACK_LIMIT:
                 await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send(msg)
-                cursor.close()
-                db.close()
+                await ctx.send("You can only undo between 1 and "
+                               f"{Config.POM_TRACK_LIMIT} poms at once.")
                 return
 
-        cursor.execute(PomSql.SELECT_ALL_POMS_WITH_LIMIT,
-                       (ctx.message.author.id, count))
-
-        cursor.executemany(PomSql.DELETE_POMS_WITH_ID,
-                           [(ctx.message.author.id, pom_id)
-                            for pom_id, *_ in cursor.fetchall()])
-        db.commit()
-
+        Storage.delete_most_recent_user_poms(ctx.author, _count)
         await ctx.message.add_reaction(Reactions.UNDO)
-        cursor.close()
-        db.close()
 
     @commands.command()
     async def newleaf(self, ctx: Context):
@@ -286,59 +208,73 @@ class UserCommands(commands.Cog):
         Hide the details of your previously tracked poms and start a new
         session.
         """
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
-        cursor.execute(PomSql.SELECT_ALL_POMS_CURRENT_SESSION,
-                       (ctx.message.author.id, ))
+        Storage.clear_user_session_poms(ctx.author)
 
-        no_poms_msg = ("A new session will be started when you track your "
-                       f"next pom, {ctx.author.display_name}")
-
-        num_poms = len(cursor.fetchall())
-        if num_poms == 0:
-            cursor.close()
-            db.close()
-
-            await ctx.message.add_reaction(Reactions.FALLEN_LEAF)
-            await ctx.send(no_poms_msg)
-            return
-
-        cursor.execute(PomSql.UPDATE_REMOVE_ALL_POMS_FROM_SESSION,
-                       (ctx.message.author.id, ))
-        db.commit()
-
-        await ctx.send(no_poms_msg)
+        await ctx.send("A new session will be started when you track your "
+                       f"next pom, <@!{ctx.author.id}>")
         await ctx.message.add_reaction(Reactions.LEAVES)
-
-        cursor.close()
-        db.close()
 
 
     @commands.command(hidden=True)
     async def reset(self, ctx: Context):
         """Permanently deletes all of your poms. This cannot be undone."""
-        db = mysql.connector.connect(
-            host=Secrets.MYSQL_HOST,
-            user=Secrets.MYSQL_USER,
-            database=Secrets.MYSQL_DATABASE,
-            password=Secrets.MYSQL_PASSWORD,
-        )
-        cursor = db.cursor(buffered=True)
-
-        cursor.execute(PomSql.DELETE_POMS, (ctx.message.author.id,))
-
-        db.commit()
-        cursor.close()
-        db.close()
-
+        Storage.delete_all_user_poms(ctx.author)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
+
+    @commands.command()
+    async def events(self, ctx: Context):
+        """See the current and next events."""
+        reported_events = []
+
+        try:
+            ongoing_event, *_ = Storage.get_ongoing_events()
+        except ValueError:
+            pass
+        else:
+            await send_embed_message(
+                ctx,
+                title="Ongoing Event!",
+                description=textwrap.dedent(f"""\
+                    Event name: **{ongoing_event.event_name}**
+                    Poms goal:  **{ongoing_event.pom_goal}**
+
+                    Started:  *{ongoing_event.start_date.strftime("%B %d, %Y")}*
+                    Ending:   *{ongoing_event.end_date.strftime("%B %d, %Y")}*
+                """),
+            )
+
+            reported_events.append(ongoing_event)
+
+        try:
+            upcoming_event, *_ = [
+                event for event in Storage.get_all_events()
+                if event.start_date > datetime.now()
+            ]
+        except ValueError:
+            pass
+        else:
+            await send_embed_message(
+                ctx,
+                title="Upcoming Event!",
+                description=textwrap.dedent(f"""\
+                    Event name: **{upcoming_event.event_name}**
+                    Poms goal:  **{upcoming_event.pom_goal}**
+
+                    Starts:  *{upcoming_event.start_date.strftime("%B %d, %Y")}*
+                    Ends:    *{upcoming_event.end_date.strftime("%B %d, %Y")}*
+                """),
+            )
+
+            reported_events.append(upcoming_event)
+
+        if not any(reported_events):
+            await send_embed_message(
+                ctx,
+                title="Events!",
+                description="No ongoing or upcoming events :confused:",
+            )
 
 
 def setup(bot: Bot):
-    """Required to load extention."""
+    """Required to load extension."""
     bot.add_cog(UserCommands(bot))

@@ -10,6 +10,7 @@
 # Other
 **/*.xml
 **/errors.*
+!**/errors.py
 
 # Runtimes
 **/package-lock.json

@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime as dt
@@ -8,6 +9,8 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,34 +37,6 @@ class Event:
     end_date: dt
 
 
-class PomSql:
-    """SQL queries for poms."""
-
-    CREATE_TABLE = f"""
-        CREATE TABLE IF NOT EXISTS {Config.POMS_TABLE} (
-            id INT(11) NOT NULL AUTO_INCREMENT,
-            userID BIGINT(20),
-            descript VARCHAR(30),
-            time_set TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            current_session TINYINT(1),
-            PRIMARY KEY(id)
-        );
-    """
-
-class EventSql:
-    """SQL queries for events."""
-
-    CREATE_TABLE = f"""
-        CREATE TABLE IF NOT EXISTS {Config.EVENTS_TABLE} (
-            id INT(11) NOT NULL AUTO_INCREMENT,
-            event_name VARCHAR(100) NOT NULL,
-            pom_goal INT(11),
-            start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            end_date TIMESTAMP NOT NULL DEFAULT 0,
-            PRIMARY KEY(id)
-        );
-    """
-
 @contextmanager
 def _mysql_database_cursor():
     db_config = {
@@ -86,8 +61,65 @@ def _mysql_database_cursor():
 
 
 class Storage:
+    """The global object-relational mapping."""
+
+    TABLES = [
+        {
+            "name": Config.POMS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.POMS_TABLE} (
+                    id INT(11) NOT NULL AUTO_INCREMENT,
+                    userID BIGINT(20),
+                    descript VARCHAR(30),
+                    time_set TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    current_session TINYINT(1),
+                    PRIMARY KEY(id)
+                );
+            """
+        },
+        {
+            "name": Config.EVENTS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.EVENTS_TABLE} (
+                    id INT(11) NOT NULL AUTO_INCREMENT,
+                    event_name VARCHAR(100) NOT NULL,
+                    pom_goal INT(11),
+                    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    end_date TIMESTAMP NOT NULL DEFAULT 0,
+                    PRIMARY KEY(id)
+                );
+            """
+        },
+    ]
+
     @classmethod
-    def get_num_poms_for_all_users(cls) -> int:
+    def create_tables_if_not_exists(cls):
+        """Create predefined DB tables if they don't already exist."""
+        for table in cls.TABLES:
+            table_name, table_create_query = table.values()
+            _log.info('Creating "%s" table, if it does not exist', table_name)
+
+            with _mysql_database_cursor() as cursor:
+                cursor.execute(table_create_query)
+
+    @classmethod
+    def delete_all_rows_from_all_tables(cls):
+        """Delete all rows from all tables.
+
+        This is a dangerous function and should only be run by developers on
+        development machines.
+        """
+        _log.info("Deleting tables... ")
+
+        with _mysql_database_cursor() as cursor:
+            for table_name in (table["name"] for table in cls.TABLES):
+                cursor.execute(f"DELETE FROM {table_name};")
+
+        _log.info("Tables deleted.")
+
+    @staticmethod
+    def get_num_poms_for_all_users() -> int:
+        """Return the number of poms in the database as an int."""
         query = f"SELECT * FROM {Config.POMS_TABLE};"
 
         with _mysql_database_cursor() as cursor:
@@ -96,8 +128,9 @@ class Storage:
 
         return num_rows
 
-    @classmethod
-    def get_all_poms_for_user(cls, user: User) -> List[Pom]:
+    @staticmethod
+    def get_all_poms_for_user(user: User) -> List[Pom]:
+        """Return all submitted poms from user as a list."""
         query = f"""
             SELECT * FROM {Config.POMS_TABLE}
             WHERE userID=%s;
@@ -109,8 +142,9 @@ class Storage:
 
         return [Pom(*row) for row in rows]
 
-    @classmethod
-    def add_poms_to_user_session(cls, user: User, descript: str, count: int):
+    @staticmethod
+    def add_poms_to_user_session(user: User, descript: str, count: int):
+        """Add a number of user poms."""
         query = f"""
             INSERT INTO {Config.POMS_TABLE} (
                 userID,
@@ -128,8 +162,9 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.executemany(query, poms)
 
-    @classmethod
-    def clear_user_session_poms(cls, user: User):
+    @staticmethod
+    def clear_user_session_poms(user: User):
+        """Set all active session poms to be non-active."""
         query = f"""
             UPDATE  {Config.POMS_TABLE}
             SET current_session = 0
@@ -140,8 +175,9 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, ))
 
-    @classmethod
-    def delete_all_user_poms(cls, user: User):
+    @staticmethod
+    def delete_all_user_poms(user: User):
+        """Remove all poms for user."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
             WHERE userID=%s;
@@ -150,8 +186,9 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, ))
 
-    @classmethod
-    def delete_most_recent_user_poms(cls, user: User, count: int):
+    @staticmethod
+    def delete_most_recent_user_poms(user: User, count: int):
+        """Delete `count` most recent poms for `user`."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
             WHERE userID=%s
@@ -162,8 +199,9 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user.id, count))
 
-    @classmethod
-    def get_ongoing_events(cls) -> List[Event]:
+    @staticmethod
+    def get_ongoing_events() -> List[Event]:
+        """Return a list of ongoing Events."""
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             WHERE start_date <= %s
@@ -178,8 +216,9 @@ class Storage:
 
         return [Event(*row) for row in rows]
 
-    @classmethod
-    def get_num_poms_for_date_range(cls, start: dt, end: dt) -> int:
+    @staticmethod
+    def get_num_poms_for_date_range(start: dt, end: dt) -> int:
+        """Return the number of poms set within a date range."""
         query = f"""
             SELECT * FROM {Config.POMS_TABLE}
             WHERE time_set >= %s
@@ -192,8 +231,9 @@ class Storage:
 
         return len(rows)
 
-    @classmethod
-    def add_new_event(cls, name: str, goal: int, start: dt, end: dt):
+    @staticmethod
+    def add_new_event(name: str, goal: int, start: dt, end: dt):
+        """Add a new event row."""
         query = f"""
             INSERT INTO {Config.EVENTS_TABLE} (
                 event_name,
@@ -211,8 +251,9 @@ class Storage:
                 # Give a nicer error message than the mysql default.
                 raise pombot.errors.EventCreationError(exc.msg)
 
-    @classmethod
-    def get_all_events(cls) -> List[Event]:
+    @staticmethod
+    def get_all_events() -> List[Event]:
+        """Return a list of all events."""
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             ORDER BY start_date;
@@ -224,8 +265,8 @@ class Storage:
 
         return [Event(*row) for row in rows]
 
-    @classmethod
-    def get_overlapping_events(cls, start: dt, end: dt) -> List[Event]:
+    @staticmethod
+    def get_overlapping_events(start: dt, end: dt) -> List[Event]:
         """Return a list of events in the database which overlap with the
         dates specified.
         """
@@ -241,8 +282,9 @@ class Storage:
 
         return [Event(*row) for row in rows]
 
-    @classmethod
-    def delete_event(cls, name: str):
+    @staticmethod
+    def delete_event(name: str):
+        """Delete the named event from the DB."""
         query = f"""
             DELETE FROM {Config.EVENTS_TABLE}
             WHERE event_name=%s

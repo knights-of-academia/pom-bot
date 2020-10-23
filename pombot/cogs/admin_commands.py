@@ -30,7 +30,7 @@ class AdminCommands(commands.Cog):
         await ctx.send(f"Total amount of poms: {num_poms}")
 
     @commands.command(name="start", aliases=["start_event", "event"], hidden=True)
-    # @commands.has_any_role("Guardian", "Helper")  # FIXME
+    @commands.has_any_role("Guardian", "Helper")
     async def do_start_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 
@@ -136,7 +136,7 @@ class AdminCommands(commands.Cog):
         )
 
     @commands.command(name="remove_event", aliases=["delete_event"], hidden=True)
-    # @commands.has_any_role("Guardian", "Helper")  # FIXME
+    @commands.has_any_role("Guardian", "Helper")
     async def do_remove_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 

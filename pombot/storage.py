@@ -84,8 +84,8 @@ class Storage:
                     id INT(11) NOT NULL AUTO_INCREMENT,
                     event_name VARCHAR(100) NOT NULL,
                     pom_goal INT(11),
-                    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    end_date TIMESTAMP NOT NULL DEFAULT 0,
+                    start_date TIMESTAMP NOT NULL,
+                    end_date TIMESTAMP NOT NULL,
                     PRIMARY KEY(id)
                 );
             """

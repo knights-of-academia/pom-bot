@@ -20,12 +20,23 @@ class AdminCommands(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.has_any_role("Guardian", "Helper")
-    async def total(self, ctx: Context):
-        """Allows guardians and helpers to see the total amount of poms
-        completed by KOA users since ever.
+    async def total(self, ctx: Context, *args):
+        """Display the total poms for all users for a range of dates.
 
         This is an admin-only command.
         """
+
+        def _usage():
+
+        if args:
+            try:
+                start_month, start_day, end_month, end_day = args
+            except ValueError:
+                ctx.send(f'Invalid date range: {" ".join(args)}')
+                await ctx.message.add_reaction(Reactions.ROBOT)
+                await ctx.author.send(_usage())
+                return
+
         num_poms = Storage.get_num_poms_for_all_users()
         await ctx.send(f"Total amount of poms: {num_poms}")
 

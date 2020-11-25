@@ -7,7 +7,7 @@ from discord.ext.commands.bot import Bot
 
 import pombot.errors
 from pombot.config import Reactions
-from pombot.lib.embeds import send_embed_message
+from pombot.lib.messages import send_embed_message, send_usage_message
 from pombot.state import State
 from pombot.storage import Storage
 
@@ -19,14 +19,40 @@ class AdminCommands(commands.Cog):
         self.bot = bot
 
     @commands.command(hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
+    # @commands.has_any_role("Guardian", "Helper")
     async def total(self, ctx: Context, *args):
         """Display the total poms for all users for a range of dates.
 
         This is an admin-only command.
         """
 
-        def _usage():
+        def _usage(header: str = None):
+            cmd = ctx.prefix + ctx.invoked_with
+
+            header = (header
+                      or f"Your command `{cmd + ' ' + ' '.join(args)}` does "
+                      "not meet the usage requirements.")
+
+            return textwrap.dedent(f"""\
+                {header}
+                ```text
+                Usage: {cmd} <name> <goal> <start_month> <start_day> <end_month <end_day>
+
+                Where:
+                    <name>         Name for this event.
+                    <goal>         Number of poms to reach in this event.
+                    <start_month>  Event starting month.
+                    <start_day>    Event starting day.
+                    <end_month>    Event ending month.
+                    <end_day>      Event ending day.
+
+                Example:
+                    {cmd} The Best Event 100 June 10 July 4
+
+                At present, events must not overlap; only one concurrent event
+                can be ongoing at a time.
+                ```
+            """)
 
         if args:
             try:
@@ -41,7 +67,7 @@ class AdminCommands(commands.Cog):
         await ctx.send(f"Total amount of poms: {num_poms}")
 
     @commands.command(name="start", aliases=["start_event", "event"], hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
+    # @commands.has_any_role("Guardian", "Helper")
     async def do_start_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 

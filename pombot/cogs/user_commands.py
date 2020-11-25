@@ -10,7 +10,7 @@ from discord.ext.commands.bot import Bot
 
 import pombot.errors
 from pombot.config import Config, Reactions
-from pombot.lib.embeds import send_embed_message
+from pombot.lib.messages import send_embed_message
 from pombot.state import State
 from pombot.storage import Storage, Pom
 

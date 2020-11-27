@@ -3,6 +3,7 @@
 **/*.vscode/
 **/*~
 **/*.swp
+**/*.vs/
 
 # Environment
 **/*.env

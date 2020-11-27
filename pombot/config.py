@@ -30,6 +30,7 @@ class Config:
         "pombot.cogs.event_listeners",
         "pombot.cogs.user_commands",
         "pombot.cogs.admin_commands",
+        "pombot.cogs.pom_wars_commands",
     ]
 
     # Logging
@@ -46,6 +47,9 @@ class Config:
         channel.lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES", "botspam").split(",")
     ]
+
+class POMWARS:
+    CHANCE_OF_A
 
 
 class Debug:

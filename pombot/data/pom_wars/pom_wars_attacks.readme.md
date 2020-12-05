@@ -26,14 +26,14 @@ All values in this file are non-negative, floating point numbers.
 
 FIXME raise when anything is negative
 
-- *damage_modifier*: A mostly non-zero number relative to 1.
+- *damage_multiplier*: A mostly non-zero number relative to 1.
 
     Normally, any attack will inflict its base damage defined in `config.py`
     and then reset the current total damage modification amount. This field
     will be multiplied by that base-amount. Except in the case of zero.
 
     In the specific case of zero, the attack will do no damage and will also
-    retain the current modifier for future attacks.
+    retain the current multiplier for future attacks.
 
     *See [the turles meta-attributes][turtles-meta-json].*
 
@@ -58,15 +58,15 @@ FIXME raise when anything is negative
 
 FIXME include a script to demonstrate by importing real funcs
 
-- *next_attack_damage_modifier*: A non-zero number.
+- *next_attack_damage_multiplier*: A non-zero number.
 
 FIXME raise when zero
 
-  After the current damage modifier is applied and this attack's damage is
+  After the current damage multiplier is applied and this attack's damage is
   dealt, the next attack's base damage damage will be multiplied by this
   number.
 
-- *next_attack_likelyhood_modifier*: A non-zero number.
+- *next_attack_likelyhood_multiplier*: A non-zero number.
 
 FIXME raise when zero
 

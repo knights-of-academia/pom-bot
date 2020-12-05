@@ -49,7 +49,7 @@ class Config:
     ]
 
 class POMWARS:
-    CHANCE_OF_A
+    pass
 
 
 class Debug:

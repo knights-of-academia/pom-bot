@@ -1,6 +1,6 @@
 {
-    "damage_modifier": 0.2,
+    "damage_multiplier": 0.2,
     "chance_for_this_attack": 0.9,
-    "next_attack_damage_modifier": 0.0,
-    "next_attack_likelyhood_modifier": 0.0
+    "next_attack_damage_multiplier": 0.0,
+    "next_attack_likelyhood_multiplier": 0.0
 }

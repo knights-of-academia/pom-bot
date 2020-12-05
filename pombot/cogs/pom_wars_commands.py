@@ -22,6 +22,7 @@ class AttackDescriptons:
         "cheap",
         "ez",
         "woodyallen",
+        "light",
     ]
 
     STRONG_ATTACKS = [
@@ -40,7 +41,7 @@ class PomWarsCommands(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self._previous_attack_strength = None
-        self._current_modifier = 0.0
+        self._current_multiplier = 0.0
 
     @commands.command()
     async def attack(self, ctx: Context, *args: Tuple[str]):

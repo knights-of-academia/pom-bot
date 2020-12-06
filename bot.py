@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from discord.ext.commands import Bot
 from discord.message import Message
@@ -20,6 +21,10 @@ def main():
     """Load cogs and start bot."""
     # Set log level asap to record discord.py messages.
     logging.basicConfig(level=logging.INFO)
+
+    if sys.version_info < Config.MINIMUM_PYTHON_VERSION:
+        raise RuntimeError("Please update Python to at least {}".format(
+            ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
 
     for extension in Config.EXTENSIONS:
         _log.info("Loading extension: %s", extension)

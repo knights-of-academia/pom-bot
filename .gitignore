@@ -3,6 +3,7 @@
 **/*.vscode/
 **/*~
 **/*.swp
+**/*.vs
 
 # Environment
 **/*.env
@@ -15,3 +16,4 @@
 # Runtimes
 **/package-lock.json
 **/__pycache__
+**/.pytest_cache

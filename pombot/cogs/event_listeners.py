@@ -4,7 +4,6 @@ import textwrap
 from typing import Any
 
 from discord.ext.commands import Bot, Cog, Context, errors
-
 from pombot.config import Config, Debug, Reactions, Secrets
 from pombot.storage import Storage
 
@@ -56,6 +55,13 @@ class EventListeners(Cog):
         Storage.create_tables_if_not_exists()
 
         if Debug.DROP_TABLES_ON_RESTART:
+            if not __debug__:
+                msg = ("This bot is unwilling to drop tables in production. "
+                       "Please review your configuration.")
+
+                await self.bot.close()
+                raise RuntimeError(msg)
+
             Storage.delete_all_rows_from_all_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)

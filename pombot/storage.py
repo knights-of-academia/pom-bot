@@ -8,7 +8,7 @@ import mysql.connector
 from discord.user import User
 
 import pombot.errors
-from pombot.config import Config, Secrets
+from pombot.config import Config, Debug, Secrets
 
 _log = logging.getLogger(__name__)
 
@@ -110,11 +110,9 @@ class Storage:
         development machines.
         """
         _log.info("Deleting tables... ")
-
         with _mysql_database_cursor() as cursor:
             for table_name in (table["name"] for table in cls.TABLES):
                 cursor.execute(f"DELETE FROM {table_name};")
-
         _log.info("Tables deleted.")
 
     @staticmethod

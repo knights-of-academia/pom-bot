@@ -8,7 +8,7 @@ import mysql.connector
 from discord.user import User
 
 import pombot.errors
-from pombot.config import Config, Debug, Secrets
+from pombot.config import Config, Secrets
 
 _log = logging.getLogger(__name__)
 

@@ -29,7 +29,6 @@ async def _send_to_errors_channel(ctx: Context, message: str):
 
 class EventListeners(Cog):
     """Handle global events for the bot."""
-
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
@@ -56,6 +55,14 @@ class EventListeners(Cog):
         Storage.create_tables_if_not_exists()
 
         if Debug.DROP_TABLES_ON_RESTART:
+            if not __debug__:
+                msg = ("This bot is unwilling to drop tables in production. "
+                       "Either review your configuration or run with "
+                       "development settings (use `make dev`).")
+
+                await self.bot.close()
+                raise RuntimeError(msg)
+
             Storage.delete_all_rows_from_all_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)

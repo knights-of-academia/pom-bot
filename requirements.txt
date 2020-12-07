@@ -1,3 +1,5 @@
-python-dotenv>=0.10.5
 discord.py>=1.4.1
 mysql-connector-python>=8.0.20
+pylint==2.6.0
+pytest==6.1.2
+python-dotenv>=0.10.5

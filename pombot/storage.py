@@ -110,11 +110,9 @@ class Storage:
         development machines.
         """
         _log.info("Deleting tables... ")
-
         with _mysql_database_cursor() as cursor:
             for table_name in (table["name"] for table in cls.TABLES):
                 cursor.execute(f"DELETE FROM {table_name};")
-
         _log.info("Tables deleted.")
 
     @staticmethod

@@ -17,7 +17,7 @@ def _str2bool(value: str) -> bool:
 class Config:
     """Bot instance configuration."""
     # Bot
-    MINIMUM_PYTHON_VERSION = (3, 6, 0)
+    MINIMUM_PYTHON_VERSION = (3, 8, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
@@ -53,14 +53,18 @@ class Config:
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
 
-class POMWARS:
-    pass
-
-
 class Debug:
     """Debugging options."""
     RESPOND_TO_DM = _str2bool(os.getenv("RESPOND_TO_DM", "no"))
     DROP_TABLES_ON_RESTART = _str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
+
+
+class POMWARS:
+    """Configuration for Pom Wars."""
+    LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
+    KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
+    VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
+    BASE_DAMAGE_FOR_ATTACKS = os.getenv("BASE_DAMAGE_FOR_ATTACKS")
 
 
 class Reactions:

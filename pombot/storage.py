@@ -9,6 +9,7 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
+from pombot.lib.types import DateRange
 
 _log = logging.getLogger(__name__)
 
@@ -116,9 +117,15 @@ class Storage:
         _log.info("Tables deleted.")
 
     @staticmethod
-    def get_num_poms_for_all_users() -> int:
+    def get_num_poms_for_all_users(date_range: DateRange = None) -> int:
         """Return the number of poms in the database as an int."""
         query = f"SELECT * FROM {Config.POMS_TABLE};"
+
+        if date_range is not None:
+            query = f"""
+                SELECT * FROM {Config.POMS_TABLE}
+                WHERE userID=%s;
+            """
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query)
@@ -217,6 +224,19 @@ class Storage:
     @staticmethod
     def get_num_poms_for_date_range(start: dt, end: dt) -> int:
         """Return the number of poms set within a date range."""
+        # FIXME: this could take in a DateRange
+
+        # FIXME: this function could be generalized in at least 3 places.
+        # FIXME:
+        # FIXME:
+        # FIXME:
+        # FIXME:
+        # FIXME:
+        # FIXME: (YOU ARE HERE (or the other place where this needs to be
+        # FIXME:                combined with))
+        # FIXME:
+        # FIXME:
+        # FIXME:
         query = f"""
             SELECT * FROM {Config.POMS_TABLE}
             WHERE time_set >= %s

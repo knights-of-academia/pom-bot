@@ -84,8 +84,8 @@ class Storage:
                     id INT(11) NOT NULL AUTO_INCREMENT,
                     event_name VARCHAR(100) NOT NULL,
                     pom_goal INT(11),
-                    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    end_date TIMESTAMP NOT NULL DEFAULT 0,
+                    start_date TIMESTAMP NOT NULL,
+                    end_date TIMESTAMP NOT NULL,
                     PRIMARY KEY(id)
                 );
             """
@@ -110,11 +110,9 @@ class Storage:
         development machines.
         """
         _log.info("Deleting tables... ")
-
         with _mysql_database_cursor() as cursor:
             for table_name in (table["name"] for table in cls.TABLES):
                 cursor.execute(f"DELETE FROM {table_name};")
-
         _log.info("Tables deleted.")
 
     @staticmethod

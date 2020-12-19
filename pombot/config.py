@@ -2,6 +2,10 @@ import os
 
 import dotenv
 
+# This file consists of memoized objects with run-time static constants. There
+# should be no need for public methods on any class.
+# pylint: disable=too-few-public-methods
+
 dotenv.load_dotenv(override=True)
 
 
@@ -13,6 +17,7 @@ def _str2bool(value: str) -> bool:
 class Config:
     """Bot instance configuration."""
     # Bot
+    MINIMUM_PYTHON_VERSION = (3, 6, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
@@ -45,7 +50,7 @@ class Config:
     # Restrictions
     POM_CHANNEL_NAMES = [
         channel.lstrip("#")
-        for channel in os.getenv("POM_CHANNEL_NAMES", "botspam").split(",")
+        for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
 
 class POMWARS:

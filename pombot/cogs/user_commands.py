@@ -12,7 +12,8 @@ import pombot.errors
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.state import State
-from pombot.storage import Storage, Pom
+from pombot.storage import Storage
+from pombot.lib.types import DateRange, Pom
 
 
 def _get_duration_message(poms: List[Pom]) -> str:
@@ -71,7 +72,7 @@ class UserCommands(commands.Cog):
 
         has_multiline_description = description is not None and "\n" in description
 
-        if  has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
+        if has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
             await ctx.message.add_reaction(Reactions.WARNING)
             await ctx.send("Multi-line pom descriptions are disabled.")
             return
@@ -92,17 +93,18 @@ class UserCommands(commands.Cog):
             msg = "Only one ongoing event supported."
             raise pombot.errors.TooManyEventsError(msg)
 
-        num_current_poms_for_event = Storage.get_num_poms_for_date_range(
-            ongoing_event.start_date, ongoing_event.end_date)
+        current_poms_for_event = Storage.get_poms(date_range=DateRange(
+            ongoing_event.start_date, ongoing_event.end_date))
 
-        if num_current_poms_for_event >= ongoing_event.pom_goal:
+        if len(current_poms_for_event) >= ongoing_event.pom_goal:
             State.goal_reached = True
 
             await send_embed_message(
                 ctx,
                 title=ongoing_event.event_name,
-                description=(f"We've reached our goal of {ongoing_event.pom_goal} "
-                             "poms! Well done and keep up the good work!"),
+                description=(
+                    f"We've reached our goal of {ongoing_event.pom_goal} poms! "
+                    "Well done and keep up the good work!"),
             )
 
     @commands.command()
@@ -111,7 +113,7 @@ class UserCommands(commands.Cog):
 
         See details for your tracked poms and the current session.
         """
-        poms = Storage.get_all_poms_for_user(ctx.author)
+        poms = Storage.get_poms(user=ctx.author)
         title = f"Pom statistics for {ctx.author.display_name}"
 
         if not poms:
@@ -159,7 +161,7 @@ class UserCommands(commands.Cog):
             await ctx.send("You must specify a description to search for.")
             return
 
-        poms = Storage.get_all_poms_for_user(ctx.author)
+        poms = Storage.get_poms(user=ctx.author)
         matching_poms = [pom for pom in poms if pom.descript == description]
 
         if not matching_poms:
@@ -213,7 +215,6 @@ class UserCommands(commands.Cog):
         await ctx.send("A new session will be started when you track your "
                        f"next pom, <@!{ctx.author.id}>")
         await ctx.message.add_reaction(Reactions.LEAVES)
-
 
     @commands.command(hidden=True)
     async def reset(self, ctx: Context):

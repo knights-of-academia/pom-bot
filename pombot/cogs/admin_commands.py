@@ -86,17 +86,19 @@ class AdminCommands(commands.Cog):
 
         if args:
             try:
-                date_range = _get_date_range_from_input(args[-4:])
+                date_range = _get_date_range_from_input(*args[-4:])
             except ValueError as exc:
                 await ctx.message.add_reaction(Reactions.ROBOT)
                 await ctx.author.send(_usage(header=exc))
                 return
 
-            num_poms = Storage.get_num_poms_for_all_users(date_range)
+            poms = Storage.get_poms(date_range=date_range)
+            msg = f"Total amount of poms in range {date_range}: {len(poms)}"
         else:
-            num_poms = Storage.get_num_poms_for_all_users()
+            poms = Storage.get_poms()
+            msg = f"Total amount of poms since ever: {len(poms)}"
 
-        await ctx.send(f"Total amount of poms since ever: {num_poms}")
+        await ctx.send(msg)
 
     @commands.command(aliases=["start", "event", "new_event"], hidden=True)
     @commands.has_any_role("Guardian")
@@ -153,31 +155,29 @@ class AdminCommands(commands.Cog):
             return
 
         try:
-            start_date, end_date = _get_date_range_from_input(
+            date_range = _get_date_range_from_input(
                 start_month, start_day, end_month, end_day)
         except ValueError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(header=exc))
             return
 
-        overlapping_events = Storage.get_overlapping_events(start_date, end_date)
-
-        if any(overlapping_events):
-            msg = "Found overlapping events: {}".format(
-                ", ".join(event.event_name for event in overlapping_events)
-            )
+        if overlapping := Storage.get_overlapping_events(date_range):
+            msg = "Found overlapping events: {}".format(", ".join(
+                event.event_name for event in overlapping))
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(msg))
             return
 
         try:
-            Storage.add_new_event(event_name, pom_goal, start_date, end_date)
+            Storage.add_new_event(event_name, pom_goal, date_range)
         except pombot.errors.EventCreationError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(f"Failed to create event: {exc}"))
             return
 
         State.goal_reached = False
+        fmt = lambda dt: datetime.strftime(dt, "%B %d, %Y")
 
         await send_embed_message(
             ctx,
@@ -186,8 +186,8 @@ class AdminCommands(commands.Cog):
                 Event name: **{event_name}**
                 Poms goal:  **{pom_goal}**
 
-                Starts: *{start_date.strftime("%B %d, %Y")}*
-                Ends:   *{end_date.strftime("%B %d, %Y")}*
+                Starts: *{fmt(date_range.start_date)}*
+                Ends:   *{fmt(date_range.end_date)}*
             """),
         )
 

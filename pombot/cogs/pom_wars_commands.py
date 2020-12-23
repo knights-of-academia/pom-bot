@@ -13,29 +13,6 @@ import os
 _log = logging.getLogger(__name__)
 
 
-class AttackDescriptons:
-    WEAK_ATTACKS = [
-        "weak",
-        "easy",
-        "turtles",
-        "simple",
-        "cheap",
-        "ez",
-        "woodyallen",
-        "light",
-    ]
-
-    STRONG_ATTACKS = [
-        "strong",
-        "hard",
-        "complex",
-        "heavy",
-        "ne",
-        "raptors",
-        "chucknorris",
-    ]
-
-
 class PomWarsCommands(commands.Cog):
     """Handlers for user-level pom commands."""
     def __init__(self, bot: Bot):

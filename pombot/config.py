@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import dotenv
 
@@ -12,6 +13,15 @@ dotenv.load_dotenv(override=True)
 def _str2bool(value: str) -> bool:
     """Coerce a string to a bool based on its value."""
     return value.lower() in {"yes", "y", "1", "true", "t"}
+
+def _positive_int(value: Any) -> int:
+    """Return the provided value if it is a positive whole number. Raise
+    ValueError otherwise.
+    """
+    if (intval := int(value)) < 0:
+        raise ValueError(f"Expected a positive integer, got {value}")
+
+    return intval
 
 
 class Config:
@@ -44,8 +54,8 @@ class Config:
     # MySQL
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
-    USE_CONNECTION_POOL = True
-    CONNECTION_POOL_SIZE = 5
+    MYSQL_CONNECTION_POOL_SIZE = _positive_int(
+        os.getenv("MYSQL_CONNECTION_POOL_SIZE"))
 
     # Restrictions
     POM_CHANNEL_NAMES = [

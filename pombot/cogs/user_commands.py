@@ -108,6 +108,7 @@ class UserCommands(commands.Cog):
             )
 
     @commands.command()
+    # FIXME: this can more easily take a DateRange now.
     async def poms(self, ctx: Context):
         """Show your poms.
 

@@ -13,36 +13,6 @@ from pombot.state import State
 from pombot.storage import Storage
 
 
-def _get_date_range_from_input(*args) -> DateRange:
-    """ FIXME *args needs explanation: they're positional, etc.
-
-    return needs explanation: it's a tuple, etc.
-    """
-    # Allow ValueError to bubble up.
-    beg_month, beg_day, end_month, end_day = args
-
-    dateformat = "%B %d %Y %H:%M:%S"
-    year = datetime.today().year
-    dates = {
-        "beg": f"{beg_month} {beg_day} {year} 00:00:00",
-        "end": f"{end_month} {end_day} {year} 23:59:59",
-    }
-
-    for date_name, date_str in dates.items():
-        try:
-            dates[date_name] = datetime.strptime(date_str, dateformat)
-        except ValueError as exc:
-            raise ValueError(f"Invalid date: `{date_str}`") from exc
-
-    beg_date, end_date = dates.values()
-
-    if end_date < beg_date:
-        end_date = datetime.strptime(
-            f"{end_month} {end_day} {year + 1} 23:59:59", dateformat)
-
-    return DateRange(beg_date, end_date)
-
-
 class AdminCommands(commands.Cog):
     """Handlers for admin-level pom commands."""
 
@@ -86,7 +56,7 @@ class AdminCommands(commands.Cog):
 
         if args:
             try:
-                date_range = _get_date_range_from_input(*args[-4:])
+                date_range = DateRange(*args[-4:])
             except ValueError as exc:
                 await ctx.message.add_reaction(Reactions.ROBOT)
                 await ctx.author.send(_usage(header=exc))
@@ -155,8 +125,7 @@ class AdminCommands(commands.Cog):
             return
 
         try:
-            date_range = _get_date_range_from_input(
-                start_month, start_day, end_month, end_day)
+            date_range = DateRange(start_month, start_day, end_month, end_day)
         except ValueError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(header=exc))

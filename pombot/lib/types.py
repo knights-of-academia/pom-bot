@@ -68,7 +68,6 @@ class DateRange:
             end_date = datetime.strptime(
                 f"{end_month} {end_day} {year + 1} 23:59:59", dateformat)
 
-        # return super().__new__(cls, beg_date, end_date)
         self.start_date, self.end_date = beg_date, end_date
 
 

@@ -7,31 +7,71 @@ from discord.ext.commands.bot import Bot
 
 import pombot.errors
 from pombot.config import Reactions
-from pombot.lib.embeds import send_embed_message
+from pombot.lib.messages import send_embed_message
+from pombot.lib.types import DateRange
 from pombot.state import State
 from pombot.storage import Storage
 
 
 class AdminCommands(commands.Cog):
     """Handlers for admin-level pom commands."""
-
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @commands.command(hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
-    async def total(self, ctx: Context):
-        """Allows guardians and helpers to see the total amount of poms
-        completed by KOA users since ever.
+    @commands.has_any_role("Guardian")
+    async def total(self, ctx: Context, *args):
+        """Display the total poms for all users for a range of dates. If no
+        range of dates is given, all poms are tallied.
 
         This is an admin-only command.
         """
-        num_poms = Storage.get_num_poms_for_all_users()
-        await ctx.send(f"Total amount of poms: {num_poms}")
+        def _usage(header: str = None):
+            cmd = ctx.prefix + ctx.invoked_with
 
-    @commands.command(name="start", aliases=["start_event", "event"], hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
-    async def do_start_event(self, ctx: Context, *args):
+            header = (header
+                      or f"Your command `{cmd + ' ' + ' '.join(args)}` does "
+                      "not meet the usage requirements.")
+
+            return textwrap.dedent(f"""\
+                {header}
+                ```text
+                Usage: {cmd} [<start_month> <start_day> <end_month <end_day>]
+
+                Where:
+                    <start_month>  From this month...
+                    <start_day>    ...And this day,
+                    <end_month>    To this month...
+                    <end_day>      ...And this day.
+
+                Example:
+                    {cmd}
+
+                    {cmd} january 1 january 31
+
+                    If no range of dates is given, all poms are tallied.
+                ```
+            """)
+
+        if args:
+            try:
+                date_range = DateRange(*args[-4:])
+            except ValueError as exc:
+                await ctx.message.add_reaction(Reactions.ROBOT)
+                await ctx.author.send(_usage(header=exc))
+                return
+
+            poms = Storage.get_poms(date_range=date_range)
+            msg = f"Total amount of poms in range {date_range}: {len(poms)}"
+        else:
+            poms = Storage.get_poms()
+            msg = f"Total amount of poms since ever: {len(poms)}"
+
+        await ctx.send(msg)
+
+    @commands.command(aliases=["start", "event", "new_event"], hidden=True)
+    @commands.has_any_role("Guardian")
+    async def create_new_event(self, ctx: Context, *args):
         """Allows guardians and helpers to start an event.
 
         This is an admin-only command.
@@ -83,45 +123,29 @@ class AdminCommands(commands.Cog):
             await ctx.author.send(_usage(f"Invalid goal: `{pom_goal}`, {exc}"))
             return
 
-        dateformat = "%B %d %Y %H:%M:%S"
-        year = datetime.today().year
-        dates = {
-            "start": f"{start_month} {start_day} {year} 00:00:00",
-            "end": f"{end_month} {end_day} {year} 23:59:59",
-        }
+        try:
+            date_range = DateRange(start_month, start_day, end_month, end_day)
+        except ValueError as exc:
+            await ctx.message.add_reaction(Reactions.ROBOT)
+            await ctx.author.send(_usage(header=exc))
+            return
 
-        for date_name, date_str in dates.items():
-            try:
-                dates[date_name] = datetime.strptime(date_str, dateformat)
-            except ValueError:
-                await ctx.message.add_reaction(Reactions.ROBOT)
-                await ctx.author.send(_usage(f"Invalid date: `{date_str}`"))
-                return
-
-        start_date, end_date = dates.values()
-
-        if end_date < start_date:
-            end_date = datetime.strptime(
-                f"{end_month} {end_day} {year + 1} 23:59:59", dateformat)
-
-        overlapping_events = Storage.get_overlapping_events(start_date, end_date)
-
-        if any(overlapping_events):
-            msg = "Found overlapping events: {}".format(
-                ", ".join(event.event_name for event in overlapping_events)
-            )
+        if overlapping := Storage.get_overlapping_events(date_range):
+            msg = "Found overlapping events: {}".format(", ".join(
+                event.event_name for event in overlapping))
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(msg))
             return
 
         try:
-            Storage.add_new_event(event_name, pom_goal, start_date, end_date)
+            Storage.add_new_event(event_name, pom_goal, date_range)
         except pombot.errors.EventCreationError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(f"Failed to create event: {exc}"))
             return
 
         State.goal_reached = False
+        fmt = lambda dt: datetime.strftime(dt, "%B %d, %Y")
 
         await send_embed_message(
             ctx,
@@ -130,8 +154,8 @@ class AdminCommands(commands.Cog):
                 Event name: **{event_name}**
                 Poms goal:  **{pom_goal}**
 
-                Starts: *{start_date.strftime("%B %d, %Y")}*
-                Ends:   *{end_date.strftime("%B %d, %Y")}*
+                Starts: *{fmt(date_range.start_date)}*
+                Ends:   *{fmt(date_range.end_date)}*
             """),
         )
 
@@ -158,6 +182,13 @@ class AdminCommands(commands.Cog):
         name = " ".join(args).strip()
         Storage.delete_event(name)
         await ctx.message.add_reaction(Reactions.CHECKMARK)
+
+    @commands.command(hidden=True)
+    @commands.has_any_role("Guardian")
+    async def load_pom_wars(self, ctx: Context):
+        """Manually load the pombot.cogs.pom_wars_commands."""
+        await ctx.send("Loading cog.")
+        self.bot.load_extension("pombot.cogs.pom_wars_commands")
 
 
 def setup(bot: Bot):

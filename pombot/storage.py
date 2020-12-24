@@ -1,6 +1,5 @@
 import logging
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import datetime as dt
 from typing import List
 
@@ -9,32 +8,9 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
+from pombot.lib.types import DateRange, Event, Pom
 
 _log = logging.getLogger(__name__)
-
-
-@dataclass
-class Pom:
-    """A pom, as described, in order, from the database."""
-    pom_id: int
-    user_id: int
-    descript: str
-    time_set: dt
-    session: int
-
-    def is_current_session(self) -> bool:
-        """Return whether this pom is in the user's current session."""
-        return bool(self.session)
-
-
-@dataclass
-class Event:
-    """An event, as described, in order, from the database."""
-    event_id: int
-    event_name: str
-    pom_goal: int
-    start_date: dt
-    end_date: dt
 
 
 @contextmanager
@@ -46,8 +22,8 @@ def _mysql_database_cursor():
         "database": Secrets.MYSQL_DATABASE,
     }
 
-    if Config.USE_CONNECTION_POOL:
-        db_config.update({"pool_size": Config.CONNECTION_POOL_SIZE})
+    if Config.MYSQL_CONNECTION_POOL_SIZE:
+        db_config.update({"pool_size": Config.MYSQL_CONNECTION_POOL_SIZE})
 
     db_connection = mysql.connector.connect(**db_config)
     cursor = db_connection.cursor(buffered=True)
@@ -114,31 +90,6 @@ class Storage:
             for table_name in (table["name"] for table in cls.TABLES):
                 cursor.execute(f"DELETE FROM {table_name};")
         _log.info("Tables deleted.")
-
-    @staticmethod
-    def get_num_poms_for_all_users() -> int:
-        """Return the number of poms in the database as an int."""
-        query = f"SELECT * FROM {Config.POMS_TABLE};"
-
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query)
-            num_rows = cursor.rowcount
-
-        return num_rows
-
-    @staticmethod
-    def get_all_poms_for_user(user: User) -> List[Pom]:
-        """Return all submitted poms from user as a list."""
-        query = f"""
-            SELECT * FROM {Config.POMS_TABLE}
-            WHERE userID=%s;
-        """
-
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user.id, ))
-            rows = cursor.fetchall()
-
-        return [Pom(*row) for row in rows]
 
     @staticmethod
     def add_poms_to_user_session(user: User, descript: str, count: int):
@@ -215,22 +166,34 @@ class Storage:
         return [Event(*row) for row in rows]
 
     @staticmethod
-    def get_num_poms_for_date_range(start: dt, end: dt) -> int:
-        """Return the number of poms set within a date range."""
-        query = f"""
-            SELECT * FROM {Config.POMS_TABLE}
-            WHERE time_set >= %s
-            AND time_set <= %s;
+    def get_poms(*,
+                 user: User = None,
+                 date_range: DateRange = None) -> List[Pom]:
+        """Get a list of poms from storage matching certain criteria.
+
+        @param user Only match poms for this user.
+        @param date_range Only match poms with this date range.
+        @return A list of Pom objects.
         """
+        query = [f"SELECT * FROM {Config.POMS_TABLE}"]
+        args = []
+
+        if user:
+            query += [f"WHERE userID=%s"]
+            args += [user.id]
+
+        if date_range:
+            query += ["WHERE time_set >= %s", "AND time_set <= %s"]
+            args += [date_range.start_date, date_range.end_date]
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (start, end))
+            cursor.execute(" ".join(query), args)
             rows = cursor.fetchall()
 
-        return len(rows)
+        return [Pom(*row) for row in rows]
 
     @staticmethod
-    def add_new_event(name: str, goal: int, start: dt, end: dt):
+    def add_new_event(name: str, goal: int, date_range: DateRange):
         """Add a new event row."""
         query = f"""
             INSERT INTO {Config.EVENTS_TABLE} (
@@ -241,10 +204,11 @@ class Storage:
             )
             VALUES (%s, %s, %s, %s);
         """
+        args = name, goal, date_range.start_date, date_range.end_date
 
         with _mysql_database_cursor() as cursor:
             try:
-                cursor.execute(query, (name, goal, start, end))
+                cursor.execute(query, args)
             except mysql.connector.DatabaseError as exc:
                 # Give a nicer error message than the mysql default.
                 raise pombot.errors.EventCreationError(exc.msg)
@@ -264,7 +228,7 @@ class Storage:
         return [Event(*row) for row in rows]
 
     @staticmethod
-    def get_overlapping_events(start: dt, end: dt) -> List[Event]:
+    def get_overlapping_events(date_range: DateRange) -> List[Event]:
         """Return a list of events in the database which overlap with the
         dates specified.
         """
@@ -275,7 +239,7 @@ class Storage:
         """
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (start, end))
+            cursor.execute(query, (date_range.start_date, date_range.end_date))
             rows = cursor.fetchall()
 
         return [Event(*row) for row in rows]

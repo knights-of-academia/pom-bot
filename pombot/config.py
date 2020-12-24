@@ -52,6 +52,17 @@ class Config:
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
 
+    # War-related configuration
+    JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
+    KNIGHT_ONLY_GUILDS = [
+        int(guild.strip())
+        for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
+    ]
+    VIKING_ONLY_GUILDS = [
+        int(guild.strip())
+        for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
+    ]
+
 
 class Debug:
     """Debugging options."""
@@ -71,6 +82,9 @@ class Reactions:
     UNDO = "↩"
     WARNING = "⚠️"
     WASTEBASKET = "🗑️"
+
+    # Reactions related to pom war events
+    DRAFT_JOIN_REACTION = "▶️"
 
 
 class Secrets:

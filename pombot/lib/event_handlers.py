@@ -1,7 +1,8 @@
+from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.message import Message
 
-from pombot.config import Config, Debug
+from pombot.config import Config, Debug, Reactions
 
 
 async def on_message_handler(bot: Bot, message: Message):
@@ -26,3 +27,15 @@ async def on_message_handler(bot: Bot, message: Message):
         message.content = "".join(message.content.split(" ", 1))
 
     await bot.process_commands(message)
+
+async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent):
+    """Handle reactions being added to messages."""
+    channel = bot.get_channel(payload.channel_id)
+
+    if channel is not None:
+        if Config.DRAFT_CHANNEL_NAME == channel.name and Reactions.DRAFT_JOIN_REACTION == payload.emoji.name:
+            # Handle reactions in pom war draft channel, assign users to teams
+            
+            # matchmaking happens here
+            # handle 'forced' teams first, if that doesn't apply, randomly select a team
+            pass

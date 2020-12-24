@@ -12,7 +12,7 @@ dotenv.load_dotenv(override=True)
 
 def _str2bool(value: str) -> bool:
     """Coerce a string to a bool based on its value."""
-    return value.lower() in {"yes", "y", "1", "true", "t"}
+    return value.casefold() in {"yes", "y", "1", "true", "t"}
 
 def _positive_int(value: Any) -> int:
     """Return the provided value if it is a positive whole number. Raise
@@ -61,6 +61,7 @@ class Config:
         channel.lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
+
 
 class Debug:
     """Debugging options."""

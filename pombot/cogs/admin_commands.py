@@ -15,7 +15,6 @@ from pombot.storage import Storage
 
 class AdminCommands(commands.Cog):
     """Handlers for admin-level pom commands."""
-
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -186,8 +185,10 @@ class AdminCommands(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.has_any_role("Guardian")
-    async def load_pom_wars(self, ctx: Context, *args):
-        """FIXME Manually load the pombot.cogs.pom_wars_commands."""
+    async def load_pom_wars(self, ctx: Context):
+        """Manually load the pombot.cogs.pom_wars_commands."""
+        await ctx.send("Loading cog.")
+        self.bot.load_extension("pombot.cogs.pom_wars_commands")
 
 
 def setup(bot: Bot):

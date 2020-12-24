@@ -45,7 +45,6 @@ class Config:
         "pombot.cogs.event_listeners",
         "pombot.cogs.user_commands",
         "pombot.cogs.admin_commands",
-        "pombot.cogs.pom_wars_commands",
     ]
 
     # Logging
@@ -69,12 +68,12 @@ class Debug:
     DROP_TABLES_ON_RESTART = _str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
 
 
-class POMWARS:
+class Pomwars:
     """Configuration for Pom Wars."""
     LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
     KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
     VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
-    BASE_DAMAGE_FOR_ATTACKS = os.getenv("BASE_DAMAGE_FOR_ATTACKS")
+    BASE_DAMAGE_FOR_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_ATTACKS"))
 
 
 class Reactions:

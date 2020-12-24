@@ -6,7 +6,7 @@ The default pom bot.
 
 You will need to install:
 
-1. Python 3.6 or newer.
+1. Python 3.8 or newer.
 2. The Python dependencies (`pip install -r requirements.txt`).
 3. MySQL database running on the default port (3306/tcp).
 

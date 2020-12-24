@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import dotenv
 
@@ -11,13 +12,22 @@ dotenv.load_dotenv(override=True)
 
 def _str2bool(value: str) -> bool:
     """Coerce a string to a bool based on its value."""
-    return value.lower() in {"yes", "y", "1", "true", "t"}
+    return value.casefold() in {"yes", "y", "1", "true", "t"}
+
+def _positive_int(value: Any) -> int:
+    """Return the provided value if it is a positive whole number. Raise
+    ValueError otherwise.
+    """
+    if (intval := int(value)) < 0:
+        raise ValueError(f"Expected a positive integer, got {value}")
+
+    return intval
 
 
 class Config:
     """Bot instance configuration."""
     # Bot
-    MINIMUM_PYTHON_VERSION = (3, 6, 0)
+    MINIMUM_PYTHON_VERSION = (3, 8, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
@@ -43,8 +53,8 @@ class Config:
     # MySQL
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
-    USE_CONNECTION_POOL = True
-    CONNECTION_POOL_SIZE = 5
+    MYSQL_CONNECTION_POOL_SIZE = _positive_int(
+        os.getenv("MYSQL_CONNECTION_POOL_SIZE"))
 
     # Restrictions
     POM_CHANNEL_NAMES = [
@@ -52,22 +62,29 @@ class Config:
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
 
-    # War-related configuration
-    JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
-    KNIGHT_ONLY_GUILDS = [
-        int(guild.strip())
-        for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
-    ]
-    VIKING_ONLY_GUILDS = [
-        int(guild.strip())
-        for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
-    ]
-
 
 class Debug:
     """Debugging options."""
     RESPOND_TO_DM = _str2bool(os.getenv("RESPOND_TO_DM", "no"))
     DROP_TABLES_ON_RESTART = _str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
+
+
+class Pomwars:
+    """Configuration for Pom Wars."""
+    LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
+    KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
+    VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
+    BASE_DAMAGE_FOR_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_ATTACKS"))
+
+    JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
+    KNIGHT_ONLY_GUILDS = [
+        guild.strip()
+        for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
+    ]
+    VIKING_ONLY_GUILDS = [
+        guild.strip()
+        for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
+    ]
 
 
 class Reactions:

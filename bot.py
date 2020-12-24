@@ -5,7 +5,7 @@ from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.message import Message
 
-from pombot.config import Config, Secrets
+from pombot.config import Config, Pomwars, Secrets
 from pombot.lib.event_handlers import on_message_handler, on_raw_reaction_add_handler
 
 _log = logging.getLogger(__name__)
@@ -30,6 +30,9 @@ def main():
     if sys.version_info < Config.MINIMUM_PYTHON_VERSION:
         raise RuntimeError("Please update Python to at least {}".format(
             ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
+
+    if Pomwars.LOAD_ON_STARTUP:
+        Config.EXTENSIONS.append("pombot.cogs.pom_wars_commands")
 
     for extension in Config.EXTENSIONS:
         _log.info("Loading extension: %s", extension)

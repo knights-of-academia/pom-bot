@@ -3,7 +3,7 @@
 **/*.vscode/
 **/*~
 **/*.swp
-**/*.vs
+**/*.vs/
 
 # Environment
 **/*.env

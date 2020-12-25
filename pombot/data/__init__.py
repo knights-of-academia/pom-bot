@@ -9,6 +9,9 @@ _log = logging.getLogger(__name__)
 
 class Locations:  # pylint: disable=too-few-public-methods
     """Path-like locations of data for the bot."""
+    MESSAGE = "message.txt"
+    META = "meta.json"
+
     NORMAL_ATTACKS_DIR = POM_WARS_DATA_DIR / "normal_attacks"
     HEAVY_ATTACKS_DIR = POM_WARS_DATA_DIR / "heavy_attacks"
 
@@ -28,7 +31,7 @@ def _check_is_attacks_dir(path: Path) -> True:
             continue
 
         attack_dir = item
-        expected_items = {"message.txt", "meta.json"}
+        expected_items = {Locations.MESSAGE, Locations.META}
         actual_items = {item.name for item in attack_dir.iterdir()}
 
         # NOTE: Other items in the directory are allowed to exist.

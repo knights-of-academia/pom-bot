@@ -27,7 +27,7 @@ def _positive_int(value: Any) -> int:
 class Config:
     """Bot instance configuration."""
     # Bot
-    MINIMUM_PYTHON_VERSION = (3, 8, 0)
+    MINIMUM_PYTHON_VERSION = (3, 9, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30

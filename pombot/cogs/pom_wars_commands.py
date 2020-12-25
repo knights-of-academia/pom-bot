@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import random
+from functools import cache
 from pathlib import Path
 from typing import List
 
@@ -39,12 +40,14 @@ def _load_attacks(location: Path) -> List[Attack]:
 
 
 def _is_attack_successful(user: User, is_heavy_attack: bool) -> bool:
-    # FIXME: memoize
+    @cache
     def _get_normal_attack_success_chance(num_poms: int):
+        operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
+
         probabilities = {
             range(0, 6): lambda x: 1.0,
             range(6, 11): lambda x: -0.016 * math.pow(x, 2) + 0.16 * x + 0.6,
-            range(11, 1000): lambda x: (1 / x),  # FIXME: help me pls :'(
+            range(11, 1000): lambda x: operand(x) / operand(9)
         }
 
         for range_, function in probabilities.items():
@@ -55,7 +58,7 @@ def _is_attack_successful(user: User, is_heavy_attack: bool) -> bool:
 
         return function(num_poms)
 
-    # FIXME: memoize
+    @cache
     def _get_heavy_attack_success_chance(num_poms):
         return 1 / num_poms  # FIXME
 

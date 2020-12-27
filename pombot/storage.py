@@ -66,6 +66,22 @@ class Storage:
                 );
             """
         },
+        {
+            "name": Config.USERS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.USERS_TABLE} (
+                    PRIMARY KEY(id)
+                );
+            """
+        },
+        {
+            "name": Config.ACTIONS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.ACTIONS_TABLE} (
+                    PRIMARY KEY(id)
+                );
+            """
+        },
     ]
 
     @classmethod

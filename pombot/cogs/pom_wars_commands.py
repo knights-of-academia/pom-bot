@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import random
+import re
 from functools import cache
 from pathlib import Path
 from typing import List
@@ -9,8 +10,11 @@ from typing import List
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
+from discord.role import Role
 from discord.user import User
 
+from pombot import errors
+from pombot.config import Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.types import DateRange
 from pombot.storage import Storage
@@ -20,21 +24,66 @@ _log = logging.getLogger(__name__)
 
 class Attack:
     """An attack as specified by file and directory structure."""
-    def __init__(self, directory: Path) -> None:
+    def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
         self.name = directory.name
+        self.is_heavy = is_heavy
+        self.is_critical = is_critical
         self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
         self._meta = (directory / Locations.META).read_text(encoding="utf8")
 
+        self.chance_for_this_attack = None
+        self.damage_multiplier = None
+        for key, val in json.loads(self._meta).items():
+            setattr(self, key, val)
 
-def _load_attacks(location: Path) -> List[Attack]:
+    @property
+    def damage(self):
+        """The configured base damage for this attack."""
+        base_damage = Pomwars.BASE_DAMAGE_FOR_NORMAL_ATTACKS
+
+        if self.is_heavy:
+            base_damage = Pomwars.BASE_DAMAGE_FOR_HEAVY_ATTACKS
+
+        return int(base_damage * self.damage_multiplier)
+
+    @property
+    def weight(self):
+        """The configured base weighted-chance for this attack."""
+        return self.chance_for_this_attack
+
+    def mount(self, user: User):
+        """The markdown-formatted version of the message.txt from the
+        attack's directory.
+        """
+        team_roles = [
+            role for role in user.roles
+            if role.name in [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
+        ]
+
+        if len(team_roles) != 1:
+            raise errors.InvalidNumberOfRolesError()
+        team = team_roles[0]
+
+        you = f"<@{user.id}>"
+        opposing_team = "Vikings" if team == "Knights" else "Knights"
+        emote = Pomwars.SUCCESSFUL_ATTACK_EMOTE
+        lines = [
+            re.sub(r'(?<!\n)\n(?!\n)|\n{3,}', ' ', self._message),
+            f"{emote} {you} attacked the {opposing_team} for {self.damage} damage!"
+        ]
+
+        return "\n\n".join(lines)
+
+
+def _load_attacks(location: Path, *, is_heavy: bool, is_critical=False) -> List[Attack]:
     attacks = []
+    location = location / "~criticals" if is_critical else location
 
     for attack_dir in location.iterdir():
         if attack_dir.name.startswith("~"):
-            attacks.extend(_load_attacks(attack_dir))
             continue
 
-        attacks.append(Attack(attack_dir))
+        attacks.append(Attack(attack_dir, is_heavy, is_critical))
 
     return attacks
 
@@ -65,9 +114,9 @@ def _is_attack_successful(user: User, is_heavy_attack: bool) -> bool:
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)
 
-    # We don't need to add 1 to this because, at this point, the poms table
-    # will have been updated with the actual pom.
-    this_pom_number = len(Storage.get_poms(user=user))  # FIXME: get number of poms so far today.
+    # FIXME: Get number of ACTIONS! so far today, instead of all poms. This will
+    # needs to adjust for user's timezone (use UTC for now).
+    this_pom_number = len(Storage.get_poms(user=user))
 
     return random.random() <= chance_func(this_pom_number)
 
@@ -82,20 +131,27 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
-        # FIXME: call UserCommands.pom()
-        # FIXME: the rest of the args should be the "description" (sans "heavy")
+        heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
+        description = " ".join(args[1:] if heavy_attack else args)
 
-        heavy_attack = args and args[0].casefold() in self.HEAVY_QUALIFIERS
+        Storage.add_poms_to_user_session(ctx.author, description, count=1)
+        await ctx.message.add_reaction(Reactions.TOMATO)
 
         if not _is_attack_successful(ctx.author, heavy_attack):
-            ctx.send("you missed")
+            emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
+            await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             return
 
-        attacks = _load_attacks(Locations.HEAVY_ATTACKS_DIR if heavy_attack
-                                else Locations.NORMAL_ATTACKS_DIR)
+        if is_critical := random.random() <= Pomwars.BASE_CHANCE_FOR_CRITICAL:
+            await ctx.message.add_reaction(Reactions.BOOM)
 
-        _log.info("selected: %s", attacks)
-        ctx.send(" ".join(attack.name for attack in attacks))
+        attacks = _load_attacks(Locations.HEAVY_ATTACKS_DIR if heavy_attack
+                                else Locations.NORMAL_ATTACKS_DIR,
+                                is_critical=is_critical, is_heavy=heavy_attack)
+        weights = [attack.weight for attack in attacks]
+        choice, *_ = random.choices(attacks, weights=weights)
+
+        await ctx.send(choice.mount(ctx.author))
 
 
 class PomWarsAdminCommands(commands.Cog):

@@ -53,6 +53,8 @@ class Config:
     # MySQL
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
+    USERS_TABLE = "users"
+    ACTIONS_TABLE = "actions"
     MYSQL_CONNECTION_POOL_SIZE = _positive_int(
         os.getenv("MYSQL_CONNECTION_POOL_SIZE"))
 
@@ -72,14 +74,18 @@ class Debug:
 class Pomwars:
     """Configuration for Pom Wars."""
     LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
-    KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
-    VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
-    BASE_DAMAGE_FOR_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_ATTACKS"))
+    KNIGHT_ROLE = os.getenv("KNIGHT_ROLE")
+    VIKING_ROLE = os.getenv("VIKING_ROLE")
+    BASE_DAMAGE_FOR_NORMAL_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_NORMAL_ATTACKS"))
+    BASE_DAMAGE_FOR_HEAVY_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_HEAVY_ATTACKS"))
+    BASE_CHANCE_FOR_CRITICAL = 0.20
+    SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
 
 
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
+    BOOM = "💥"
     CHECKMARK = "✅"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"

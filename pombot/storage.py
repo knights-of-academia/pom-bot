@@ -66,6 +66,37 @@ class Storage:
                 );
             """
         },
+        {
+            "name": Config.USERS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.USERS_TABLE} (
+                    userID BIGINT(20) NOT NULL UNIQUE,
+                    timezone VARCHAR(8) NOT NULL,
+                    team VARCHAR(10) NOT NULL,
+                    inventory_string TEXT(30000),
+                    attack_level TINYINT(1) NOT NULL DEFAULT 1, 
+                    heavy_attack_level TINYINT(1) NOT NULL DEFAULT 1,
+                    defend_level TINYINT(1) NOT NULL DEFAULT 1,
+                    PRIMARY KEY(userID)
+                );
+            """
+        },
+        {
+            "name": Config.ACTIONS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.ACTIONS_TABLE} (
+                    id INT(11) NOT NULL AUTO_INCREMENT,
+                    userID BIGINT(20),
+                    type VARCHAR(20) NOT NULL,
+                    was_successful TINYINT(1) NOT NULL,
+                    was_critical TINYINT(1),
+                    items_dropped VARCHAR(30),
+                    damage INT(4),
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY(id)
+                );
+            """
+        },
     ]
 
     @classmethod

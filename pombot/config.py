@@ -72,17 +72,17 @@ class Debug:
 class Pomwars:
     """Configuration for Pom Wars."""
     LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
-    KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
-    VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
+    KNIGHTS_ROLE_NAME = os.getenv("KNIGHTS_ROLE_NAME")
+    VIKINGS_ROLE_NAME = os.getenv("VIKINGS_ROLE_NAME")
     BASE_DAMAGE_FOR_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_ATTACKS"))
 
     JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
     KNIGHT_ONLY_GUILDS = [
-        guild.strip()
+        int(guild.strip()) if guild.strip() else 0
         for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
     ]
     VIKING_ONLY_GUILDS = [
-        guild.strip()
+        int(guild.strip()) if guild.strip() else 0
         for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
     ]
 
@@ -101,7 +101,7 @@ class Reactions:
     WASTEBASKET = "🗑️"
 
     # Reactions related to pom war events
-    DRAFT_JOIN_REACTION = "▶️"
+    WAR_JOIN_REACTION = "▶️"
 
 
 class Secrets:

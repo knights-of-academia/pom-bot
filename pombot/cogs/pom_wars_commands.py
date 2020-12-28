@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 import math
@@ -15,7 +16,7 @@ from discord.user import User
 from pombot import errors
 from pombot.config import Pomwars, Reactions
 from pombot.data import Locations
-from pombot.lib.types import DateRange, Team
+from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
@@ -131,25 +132,49 @@ class PomWarsUserCommands(commands.Cog):
         """Attack the other team."""
         heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        Storage.add_poms_to_user_session(ctx.author, description, count=1)
+        Storage.add_poms_to_user_session(
+            ctx.author,
+            description,
+            count=1,
+            time_set=timestamp,
+        )
         await ctx.message.add_reaction(Reactions.TOMATO)
+
+        action = {
+            "user":           ctx.author,
+            "action_type":    ActionType.HEAVY_ATTACK if heavy_attack
+                              else ActionType.NORMAL_ATTACK,
+            "was_successful": False,
+            "was_critical":   False,
+            "items_dropped":  "",
+            "damage":         None,
+            "timestamp":      timestamp,
+        }
 
         if not _is_attack_successful(ctx.author, heavy_attack):
             emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
             await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
+            Storage.add_pom_war_action(**action)
             return
 
-        if is_critical := random.random() <= Pomwars.BASE_CHANCE_FOR_CRITICAL:
-            await ctx.message.add_reaction(Reactions.BOOM)
+        action["was_successful"] = True
+        action["was_critical"] = random.random() <= Pomwars.BASE_CHANCE_FOR_CRITICAL
+        await ctx.message.add_reaction(Reactions.BOOM)
 
-        attacks = _load_attacks(Locations.HEAVY_ATTACKS_DIR if heavy_attack
-                                else Locations.NORMAL_ATTACKS_DIR,
-                                is_critical=is_critical, is_heavy=heavy_attack)
+        attacks = _load_attacks(
+            Locations.HEAVY_ATTACKS_DIR
+            if heavy_attack else Locations.NORMAL_ATTACKS_DIR,
+            is_critical=action["was_critical"],
+            is_heavy=heavy_attack,
+        )
         weights = [attack.weight for attack in attacks]
-        choice, *_ = random.choices(attacks, weights=weights)
+        attack, = random.choices(attacks, weights=weights)
 
-        await ctx.send(choice.get_message(ctx.author))
+        action["damage"] = attack.damage
+        Storage.add_pom_war_action(**action)
+        await ctx.send(attack.get_message(ctx.author))
 
 
 class PomWarsAdminCommands(commands.Cog):

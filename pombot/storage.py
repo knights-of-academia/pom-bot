@@ -8,7 +8,7 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
-from pombot.lib.types import DateRange, Event, Pom
+from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
 
 _log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class Storage:
                     timezone VARCHAR(8) NOT NULL,
                     team VARCHAR(10) NOT NULL,
                     inventory_string TEXT(30000),
-                    attack_level TINYINT(1) NOT NULL DEFAULT 1, 
+                    attack_level TINYINT(1) NOT NULL DEFAULT 1,
                     heavy_attack_level TINYINT(1) NOT NULL DEFAULT 1,
                     defend_level TINYINT(1) NOT NULL DEFAULT 1,
                     PRIMARY KEY(userID)
@@ -123,7 +123,12 @@ class Storage:
         _log.info("Tables deleted.")
 
     @staticmethod
-    def add_poms_to_user_session(user: User, descript: str, count: int):
+    def add_poms_to_user_session(
+        user: User,
+        descript: str,
+        count: int,
+        time_set: dt = None,
+    ):
         """Add a number of user poms."""
         query = f"""
             INSERT INTO {Config.POMS_TABLE} (
@@ -136,8 +141,7 @@ class Storage:
         """
 
         descript = descript or None
-        now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
-        poms = [(user.id, descript, now, True) for _ in range(count)]
+        poms = [(user.id, descript, time_set, True) for _ in range(count)]
 
         with _mysql_database_cursor() as cursor:
             cursor.executemany(query, poms)
@@ -287,3 +291,32 @@ class Storage:
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (name, ))
+
+    @staticmethod
+    def add_pom_war_action(
+        user: User,
+        action_type: ActionType,
+        was_successful: bool,
+        was_critical: bool,
+        items_dropped: str,
+        damage: int,
+        timestamp: dt,
+    ):
+        """Add an action to the ledger."""
+        query = f"""
+            INSERT INTO {Config.ACTIONS_TABLE} (
+                userID,
+                type,
+                was_successful,
+                was_critical,
+                items_dropped,
+                damage,
+                timestamp
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+        """
+        values = (user.id, action_type.value, was_successful, was_critical,
+                  items_dropped, damage, timestamp)
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, values)

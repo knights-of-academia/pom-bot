@@ -114,6 +114,19 @@ class ActionType(str, Enum):
     DEFEND = 'defend'
 
 
+@dataclass
+class Action:
+    """An event, as described, in order, from the database."""
+    action_id: int
+    user_id: int
+    type: ActionType
+    was_successful: bool
+    was_critical: bool
+    items_dropped: str
+    damage: int
+    timestamp: datetime
+
+
 class InstantItem(str, Enum):
     """Type of an instant-use item in the actions table of the database."""
     TEAM_INVINCIBILITY = 'team_invincibility'

@@ -119,6 +119,7 @@ class Action:
     """An event, as described, in order, from the database."""
     action_id: int
     user_id: int
+    team: str
     type: ActionType
     was_successful: bool
     was_critical: bool

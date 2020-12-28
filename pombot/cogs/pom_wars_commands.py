@@ -91,7 +91,11 @@ def _load_attacks(location: Path, *, is_heavy: bool, is_critical=False) -> List[
     return attacks
 
 
-def _is_attack_successful(user: User, is_heavy_attack: bool) -> bool:
+def _is_attack_successful(
+    user: User,
+    is_heavy_attack: bool,
+    timestamp: datetime,
+) -> bool:
     @cache
     def _get_normal_attack_success_chance(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
@@ -117,9 +121,13 @@ def _is_attack_successful(user: User, is_heavy_attack: bool) -> bool:
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)
 
-    # FIXME: Get number of ACTIONS! so far today, instead of all poms. This will
-    # needs to adjust for user's timezone (use UTC for now).
-    this_pom_number = len(Storage.get_poms(user=user))
+    date_from_time = lambda x: datetime.strptime(
+        datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
+
+    this_pom_number = len(Storage.get_actions(user=user, date_range=DateRange(
+        date_from_time("%Y-%m-%d 00:00:00"),
+        date_from_time("%Y-%m-%d 23:59:59"),
+    )))
 
     return random.random() <= chance_func(this_pom_number)
 
@@ -136,7 +144,7 @@ class PomWarsUserCommands(commands.Cog):
         """Attack the other team."""
         heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now()
 
         Storage.add_poms_to_user_session(
             ctx.author,
@@ -155,10 +163,10 @@ class PomWarsUserCommands(commands.Cog):
             "was_critical":   False,
             "items_dropped":  "",
             "damage":         None,
-            "timestamp":      timestamp,
+            "time_set":       timestamp,
         }
 
-        if not _is_attack_successful(ctx.author, heavy_attack):
+        if not _is_attack_successful(ctx.author, heavy_attack, timestamp):
             emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
             await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             Storage.add_pom_war_action(**action)

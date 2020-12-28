@@ -70,12 +70,13 @@ class Storage:
             "name": Config.USERS_TABLE,
             "create_query": f"""
                 CREATE TABLE IF NOT EXISTS {Config.USERS_TABLE} (
-                    userID BIGINT(20),
+                    userID BIGINT(20) NOT NULL UNIQUE,
                     timezone VARCHAR(8) NOT NULL,
-                    inventory_string VARCHAR(45000)
-                    attacklevel = 1
-                    heavyattacklevel = 1
-                    defendlevel = 1
+                    team VARCHAR(10) NOT NULL,
+                    inventory_string TEXT(30000),
+                    attack_level TINYINT(1) NOT NULL DEFAULT 1, 
+                    heavy_attack_level TINYINT(1) NOT NULL DEFAULT 1,
+                    defend_level TINYINT(1) NOT NULL DEFAULT 1,
                     PRIMARY KEY(userID)
                 );
             """
@@ -86,12 +87,12 @@ class Storage:
                 CREATE TABLE IF NOT EXISTS {Config.ACTIONS_TABLE} (
                     id INT(11) NOT NULL AUTO_INCREMENT,
                     userID BIGINT(20),
-                    type     # heavy_attack, normal_attack, defend
-                    was_successful TINYINT(1),
+                    type VARCHAR(20) NOT NULL,
+                    was_successful TINYINT(1) NOT NULL,
                     was_critical TINYINT(1),
-                    dropped
-                    damage
-                    timestamp
+                    items_dropped VARCHAR(30),
+                    damage INT(4),
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY(id)
                 );
             """

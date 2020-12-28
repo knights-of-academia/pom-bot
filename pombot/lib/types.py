@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 
 
 @dataclass
@@ -93,3 +94,23 @@ class Event:
     pom_goal: int
     start_date: datetime
     end_date: datetime
+
+
+class Team(str, Enum):
+    """Team that a user can be on."""
+    KNIGHTS = 'knights'
+    VIKINGS = 'vikings'
+
+
+class ActionType(str, Enum):
+    """Type of an action in the actions table of the database."""
+    NORMAL_ATTACK = 'normal_attack'
+    HEAVY_ATTACK = 'heavy_attack'
+    DEFEND = 'defend'
+
+
+class InstantItem(str, Enum):
+    """Type of an instant-use item in the actions table of the database."""
+    TEAM_INVINCIBILITY = 'team_invincibility'
+    TEAM_DAMAGE_BUFF = 'team_damage_buff'
+    TEAM_SUCCESS_CHANCE_BUFF = 'team_success_chance_buff'

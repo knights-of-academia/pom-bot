@@ -81,6 +81,16 @@ class Pomwars:
     BASE_CHANCE_FOR_CRITICAL = 0.20
     SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
 
+    JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
+    KNIGHT_ONLY_GUILDS = [
+        int(guild.strip()) if guild.strip() else 0
+        for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
+    ]
+    VIKING_ONLY_GUILDS = [
+        int(guild.strip()) if guild.strip() else 0
+        for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
+    ]
+
 
 class Reactions:
     """Static reaction emojis."""
@@ -95,6 +105,9 @@ class Reactions:
     UNDO = "↩"
     WARNING = "⚠️"
     WASTEBASKET = "🗑️"
+
+    # Reactions related to pom war events
+    WAR_JOIN_REACTION = "▶️"
 
 
 class Secrets:

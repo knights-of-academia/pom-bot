@@ -10,13 +10,12 @@ from typing import List
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
-from discord.role import Role
 from discord.user import User
 
 from pombot import errors
 from pombot.config import Pomwars, Reactions
 from pombot.data import Locations
-from pombot.lib.types import DateRange
+from pombot.lib.types import DateRange, Team
 from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
@@ -51,9 +50,9 @@ class Attack:
         """The configured base weighted-chance for this attack."""
         return self.chance_for_this_attack
 
-    def mount(self, user: User):
+    def get_message(self, user: User) -> str:
         """The markdown-formatted version of the message.txt from the
-        attack's directory.
+        attack's directory, and the resulting action, as a string.
         """
         team_roles = [
             role for role in user.roles
@@ -62,17 +61,16 @@ class Attack:
 
         if len(team_roles) != 1:
             raise errors.InvalidNumberOfRolesError()
-        team = team_roles[0]
 
-        you = f"<@{user.id}>"
-        opposing_team = "Vikings" if team == "Knights" else "Knights"
-        emote = Pomwars.SUCCESSFUL_ATTACK_EMOTE
-        lines = [
-            re.sub(r'(?<!\n)\n(?!\n)|\n{3,}', ' ', self._message),
-            f"{emote} {you} attacked the {opposing_team} for {self.damage} damage!"
-        ]
+        story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
+        action = "{emt} {you} attacked the {team} for {dmg} damage!".format(
+            emt=Pomwars.SUCCESSFUL_ATTACK_EMOTE,
+            you=f"<@{user.id}>",
+            team=f"{(~Team(team_roles[0].name)).value}s",
+            dmg=self.damage,
+        )
 
-        return "\n\n".join(lines)
+        return "\n\n".join([story, action])
 
 
 def _load_attacks(location: Path, *, is_heavy: bool, is_critical=False) -> List[Attack]:
@@ -151,7 +149,7 @@ class PomWarsUserCommands(commands.Cog):
         weights = [attack.weight for attack in attacks]
         choice, *_ = random.choices(attacks, weights=weights)
 
-        await ctx.send(choice.mount(ctx.author))
+        await ctx.send(choice.get_message(ctx.author))
 
 
 class PomWarsAdminCommands(commands.Cog):

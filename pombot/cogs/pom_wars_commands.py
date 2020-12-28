@@ -22,6 +22,18 @@ from pombot.storage import Storage
 _log = logging.getLogger(__name__)
 
 
+def _get_user_team(user: User) -> Team:
+    team_roles = [
+        role for role in user.roles
+        if role.name in [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
+    ]
+
+    if len(team_roles) != 1:
+        raise errors.InvalidNumberOfRolesError()
+
+    return Team(team_roles[0].name)
+
+
 class Attack:
     """An attack as specified by file and directory structure."""
     def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
@@ -55,19 +67,11 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         attack's directory, and the resulting action, as a string.
         """
-        team_roles = [
-            role for role in user.roles
-            if role.name in [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
-        ]
-
-        if len(team_roles) != 1:
-            raise errors.InvalidNumberOfRolesError()
-
         story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
         action = "{emt} {you} attacked the {team} for {dmg} damage!".format(
             emt=Pomwars.SUCCESSFUL_ATTACK_EMOTE,
             you=f"<@{user.id}>",
-            team=f"{(~Team(team_roles[0].name)).value}s",
+            team=f"{(~_get_user_team(user)).value}s",
             dmg=self.damage,
         )
 
@@ -144,6 +148,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
+            "team":           _get_user_team(ctx.author),
             "action_type":    ActionType.HEAVY_ATTACK if heavy_attack
                               else ActionType.NORMAL_ATTACK,
             "was_successful": False,

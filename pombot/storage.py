@@ -8,7 +8,7 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
-from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
+from pombot.lib.types import ActionType, DateRange, Event, Pom, Team
 
 _log = logging.getLogger(__name__)
 
@@ -87,6 +87,7 @@ class Storage:
                 CREATE TABLE IF NOT EXISTS {Config.ACTIONS_TABLE} (
                     id INT(11) NOT NULL AUTO_INCREMENT,
                     userID BIGINT(20),
+                    team VARCHAR(10) NOT NULL,
                     type VARCHAR(20) NOT NULL,
                     was_successful TINYINT(1) NOT NULL,
                     was_critical TINYINT(1),
@@ -295,6 +296,7 @@ class Storage:
     @staticmethod
     def add_pom_war_action(
         user: User,
+        team: Team,
         action_type: ActionType,
         was_successful: bool,
         was_critical: bool,
@@ -306,6 +308,7 @@ class Storage:
         query = f"""
             INSERT INTO {Config.ACTIONS_TABLE} (
                 userID,
+                team,
                 type,
                 was_successful,
                 was_critical,
@@ -313,10 +316,10 @@ class Storage:
                 damage,
                 timestamp
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s);
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (user.id, action_type.value, was_successful, was_critical,
-                  items_dropped, damage, timestamp)
+        values = (user.id, team.value, action_type.value, was_successful,
+                  was_critical, items_dropped, damage, timestamp)
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, values)

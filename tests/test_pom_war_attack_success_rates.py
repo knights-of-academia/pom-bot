@@ -61,30 +61,18 @@ def test_normal_attack_success_rate(random_mock: Mock, get_actions_mock: Mock):
 def test_heavy_attack_success_rate(random_mock: Mock, get_actions_mock: Mock):
     """Generically test _is_attack_successful when doing a heavy attack."""
     dice_rolls_and_expected_outcomes = {
-        1: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        2: [(0.1, 0.2, 0.3, 0.4),  # FIXME: actual results TBD
-            (TRU, TRU, FLS, FLS)],
-        3: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        4: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        5: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        6: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        7: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        8: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        9: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        10: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        11: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
-        12: [(0.1, 0.2, 0.3, 0.4),
-            (TRU, TRU, FLS, FLS)],
+        1: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        2: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        3: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        4: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        5: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        6: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        7: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        8: [(0.1, 0.2, 0.3), (TRU, TRU, FLS)],
+        9: [(0.1, 0.2, 0.3), (TRU, FLS, FLS)],
+        10: [(0.1, 0.2, 0.3), (TRU, FLS, FLS)],
+        11: [(0.1, 0.2, 0.3), (FLS, FLS, FLS)],
+        12: [(0.1, 0.2, 0.3), (FLS, FLS, FLS)],
     }
     user = MagicMock()
     is_heavy_attack = True

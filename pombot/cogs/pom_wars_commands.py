@@ -96,8 +96,7 @@ def _is_attack_successful(
     is_heavy_attack: bool,
     timestamp: datetime,
 ) -> bool:
-    @cache
-    def _get_normal_attack_success_chance(num_poms: int):
+    def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
 
         probabilities = {
@@ -115,8 +114,12 @@ def _is_attack_successful(
         return function(num_poms)
 
     @cache
-    def _get_heavy_attack_success_chance(num_poms):
-        return 1 / num_poms  # FIXME
+    def _get_normal_attack_success_chance(num_poms: int):
+        return 1.0 * _delayed_exponential_drop(num_poms)
+
+    @cache
+    def _get_heavy_attack_success_chance(num_poms: int):
+        return 0.25 * _delayed_exponential_drop(num_poms)
 
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)

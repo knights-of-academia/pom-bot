@@ -27,7 +27,7 @@ def _positive_int(value: Any) -> int:
 class Config:
     """Bot instance configuration."""
     # Bot
-    MINIMUM_PYTHON_VERSION = (3, 8, 0)
+    MINIMUM_PYTHON_VERSION = (3, 9, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
@@ -53,6 +53,8 @@ class Config:
     # MySQL
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
+    USERS_TABLE = "users"
+    ACTIONS_TABLE = "actions"
     MYSQL_CONNECTION_POOL_SIZE = _positive_int(
         os.getenv("MYSQL_CONNECTION_POOL_SIZE"))
 
@@ -72,14 +74,28 @@ class Debug:
 class Pomwars:
     """Configuration for Pom Wars."""
     LOAD_ON_STARTUP = _str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
-    KNIGHTS_ROLE = os.getenv("KNIGHTS_ROLE")
-    VIKINGS_ROLE = os.getenv("VIKINGS_ROLE")
-    BASE_DAMAGE_FOR_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_ATTACKS"))
+    KNIGHT_ROLE = os.getenv("KNIGHT_ROLE")
+    VIKING_ROLE = os.getenv("VIKING_ROLE")
+    BASE_DAMAGE_FOR_NORMAL_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_NORMAL_ATTACKS"))
+    BASE_DAMAGE_FOR_HEAVY_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_HEAVY_ATTACKS"))
+    BASE_CHANCE_FOR_CRITICAL = 0.20
+    SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
+
+    JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
+    KNIGHT_ONLY_GUILDS = [
+        int(guild.strip()) if guild.strip() else 0
+        for guild in os.getenv("KNIGHT_ONLY_GUILDS").split(",")
+    ]
+    VIKING_ONLY_GUILDS = [
+        int(guild.strip()) if guild.strip() else 0
+        for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
+    ]
 
 
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
+    BOOM = "💥"
     CHECKMARK = "✅"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
@@ -89,6 +105,9 @@ class Reactions:
     UNDO = "↩"
     WARNING = "⚠️"
     WASTEBASKET = "🗑️"
+
+    # Reactions related to pom war events
+    WAR_JOIN_REACTION = "▶️"
 
 
 class Secrets:

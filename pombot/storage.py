@@ -8,7 +8,7 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
-from pombot.lib.types import DateRange, Event, Pom
+from pombot.lib.types import Action, ActionType, DateRange, Event, Pom, Team
 
 _log = logging.getLogger(__name__)
 
@@ -34,6 +34,11 @@ def _mysql_database_cursor():
         db_connection.commit()
         cursor.close()
         db_connection.close()
+
+
+def _replace_further_occurances(text: str, old: str, new: str) -> str:
+    offset = text.index(old) + 1
+    return text[:offset] + text[offset:].replace(old, new)
 
 
 class Storage:
@@ -66,6 +71,38 @@ class Storage:
                 );
             """
         },
+        {
+            "name": Config.USERS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.USERS_TABLE} (
+                    userID BIGINT(20) NOT NULL UNIQUE,
+                    timezone VARCHAR(8) NOT NULL,
+                    team VARCHAR(10) NOT NULL,
+                    inventory_string TEXT(30000),
+                    attack_level TINYINT(1) NOT NULL DEFAULT 1,
+                    heavy_attack_level TINYINT(1) NOT NULL DEFAULT 1,
+                    defend_level TINYINT(1) NOT NULL DEFAULT 1,
+                    PRIMARY KEY(userID)
+                );
+            """
+        },
+        {
+            "name": Config.ACTIONS_TABLE,
+            "create_query": f"""
+                CREATE TABLE IF NOT EXISTS {Config.ACTIONS_TABLE} (
+                    id INT(11) NOT NULL AUTO_INCREMENT,
+                    userID BIGINT(20),
+                    team VARCHAR(10) NOT NULL,
+                    type VARCHAR(20) NOT NULL,
+                    was_successful TINYINT(1) NOT NULL,
+                    was_critical TINYINT(1),
+                    items_dropped VARCHAR(30),
+                    damage INT(4),
+                    time_set TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY(id)
+                );
+            """
+        },
     ]
 
     @classmethod
@@ -92,7 +129,12 @@ class Storage:
         _log.info("Tables deleted.")
 
     @staticmethod
-    def add_poms_to_user_session(user: User, descript: str, count: int):
+    def add_poms_to_user_session(
+        user: User,
+        descript: str,
+        count: int,
+        time_set: dt = None,
+    ):
         """Add a number of user poms."""
         query = f"""
             INSERT INTO {Config.POMS_TABLE} (
@@ -105,8 +147,7 @@ class Storage:
         """
 
         descript = descript or None
-        now = dt.now().strftime("%Y-%m-%d %H:%M:%S")
-        poms = [(user.id, descript, now, True) for _ in range(count)]
+        poms = [(user.id, descript, time_set, True) for _ in range(count)]
 
         with _mysql_database_cursor() as cursor:
             cursor.executemany(query, poms)
@@ -172,8 +213,8 @@ class Storage:
         """Get a list of poms from storage matching certain criteria.
 
         @param user Only match poms for this user.
-        @param date_range Only match poms with this date range.
-        @return A list of Pom objects.
+        @param date_range Only match poms within this date range.
+        @return List of Pom objects.
         """
         query = [f"SELECT * FROM {Config.POMS_TABLE}"]
         args = []
@@ -186,8 +227,10 @@ class Storage:
             query += ["WHERE time_set >= %s", "AND time_set <= %s"]
             args += [date_range.start_date, date_range.end_date]
 
+        query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
+
         with _mysql_database_cursor() as cursor:
-            cursor.execute(" ".join(query), args)
+            cursor.execute(query_str, args)
             rows = cursor.fetchall()
 
         return [Pom(*row) for row in rows]
@@ -256,3 +299,66 @@ class Storage:
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (name, ))
+
+    @staticmethod
+    def add_pom_war_action(
+        user: User,
+        team: Team,
+        action_type: ActionType,
+        was_successful: bool,
+        was_critical: bool,
+        items_dropped: str,
+        damage: int,
+        time_set: dt,
+    ):
+        """Add an action to the ledger."""
+        query = f"""
+            INSERT INTO {Config.ACTIONS_TABLE} (
+                userID,
+                team,
+                type,
+                was_successful,
+                was_critical,
+                items_dropped,
+                damage,
+                time_set
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """
+        values = (user.id, team.value, action_type.value, was_successful,
+                  was_critical, items_dropped, damage, time_set)
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, values)
+
+    @staticmethod
+    def get_actions(
+        *,
+        user: User = None,
+        date_range: DateRange = None,
+    ) -> List[Action]:
+        """Get a list of actions from storage matching certain criteria.
+
+        @param user Only match actions for this user.
+        @param date_range Only match actions within this date range.
+        @return List of Action objects.
+        """
+        query = [f"SELECT * FROM {Config.ACTIONS_TABLE}"]
+        args = []
+
+        if user:
+            query += [f"WHERE userID=%s"]
+            args += [user.id]
+
+        if date_range:
+            query += ["WHERE time_set >= %s", "AND time_set <= %s"]
+            args += [date_range.start_date, date_range.end_date]
+
+        query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query_str, args)
+            rows = cursor.fetchall()
+
+
+        return [Action(*row) for row in rows]

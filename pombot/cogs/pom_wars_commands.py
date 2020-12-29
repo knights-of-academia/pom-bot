@@ -11,6 +11,7 @@ from typing import List
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
+from discord.role import Role
 from discord.user import User
 
 from pombot import errors

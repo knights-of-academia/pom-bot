@@ -1,10 +1,13 @@
 import random
+from datetime import timedelta, timezone
 
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.message import Message
 
 from pombot.config import Config, Debug, Pomwars, Reactions
+from pombot.lib.types import Team
+from pombot.storage import Storage
 
 
 async def on_message_handler(bot: Bot, message: Message):
@@ -31,32 +34,68 @@ async def on_message_handler(bot: Bot, message: Message):
     await bot.process_commands(message)
 
 async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent):
-    """Handle reactions being added to messages."""
+    """Handle reactions being added to messages, assign users to teams when they react."""
+    guild = bot.get_guild(payload.guild_id)
     channel = bot.get_channel(payload.channel_id)
 
-    # Handle reactions in pom war draft channel, assign users to teams
-    if bot.is_ready() and channel is not None and payload.user_id is not bot.user.id:
-        if Pomwars.JOIN_CHANNEL_NAME == channel.name and \
-           Reactions.WAR_JOIN_REACTION == payload.emoji.name:
-            guild = bot.get_guild(payload.guild_id)
-            knight_role = None
-            viking_role = None
-            for role in guild.roles:
-                if role.name == Pomwars.KNIGHT_ROLE:
-                    knight_role = role
-                if role.name == Pomwars.VIKING_ROLE:
-                    viking_role = role
+    conditions = [
+        bot.is_ready(),
+        guild is not None,
+        channel is not None,
+        payload.user_id != bot.user.id
+    ]
+    if not all(conditions):
+        return
 
-            if knight_role is not None and viking_role is not None:
-                await payload.member.remove_roles(knight_role, viking_role)
-                team = knight_role
+    draft_conditions = [
+        Pomwars.JOIN_CHANNEL_NAME == channel.name,
+        Reactions.WAR_JOIN_REACTION == payload.emoji.name
+    ]
+    if not all(draft_conditions):
+        return
 
-                if payload.guild_id in Pomwars.KNIGHT_ONLY_GUILDS:
-                    team = knight_role
-                elif payload.guild_id in Pomwars.VIKING_ONLY_GUILDS:
-                    team = viking_role
-                else:
-                    choice = bool(random.getrandbits(1))
-                    team = knight_role if choice else viking_role
+    knight_role = None
+    viking_role = None
+    for role in guild.roles:
+        if role.name == Pomwars.KNIGHT_ROLE:
+            knight_role = role
+        if role.name == Pomwars.VIKING_ROLE:
+            viking_role = role
 
-                await payload.member.add_roles(team)
+    if None in [knight_role, viking_role]:
+        return
+
+    team = _get_assigned_team(payload.guild_id)
+
+    Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+
+    assigned_team_role = None
+    if team == Team.KNIGHTS:
+        assigned_team_role = knight_role
+    elif team == Team.VIKINGS:
+        assigned_team_role = viking_role
+
+    await payload.member.add_roles(assigned_team_role)
+
+def _get_assigned_team(guild_id: int) -> Team:
+    """Decide which team a user should be on, based on their guild and the
+    team that currently needs more players.
+
+    @param guild_id The ID of the guild the user is part of
+    @return The team the user is assigned to
+    """
+    assigned_team = None
+    if guild_id in Pomwars.KNIGHT_ONLY_GUILDS:
+        assigned_team = Team.KNIGHTS
+    elif guild_id in Pomwars.VIKING_ONLY_GUILDS:
+        assigned_team = Team.VIKINGS
+    else:
+        knights_count, vikings_count = Storage.get_team_populations()
+        if knights_count > vikings_count:
+            assigned_team = Team.VIKINGS
+        elif vikings_count > knights_count:
+            assigned_team = Team.KNIGHTS
+        else:
+            assigned_team = random.choice([Team.KNIGHTS, Team.VIKINGS])
+
+    return assigned_team

@@ -13,7 +13,7 @@ lint:
 
 test:
 	@echo "Testing..."
-	@${PYTHON} -m pytest -q -x --ff tests
+	@${PYTHON} -m pytest -x --ff tests
 
 dev: lint test
 	@echo "Launching..."

@@ -42,9 +42,9 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
             knight_role = None
             viking_role = None
             for role in guild.roles:
-                if role.name == Pomwars.KNIGHTS_ROLE_NAME:
+                if role.name == Pomwars.KNIGHT_ROLE:
                     knight_role = role
-                if role.name == Pomwars.VIKINGS_ROLE_NAME:
+                if role.name == Pomwars.VIKING_ROLE:
                     viking_role = role
 
             if knight_role is not None and viking_role is not None:

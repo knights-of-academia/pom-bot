@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+
+from pombot.config import Pomwars
 
 
 @dataclass
@@ -93,3 +96,40 @@ class Event:
     pom_goal: int
     start_date: datetime
     end_date: datetime
+
+
+class Team(str, Enum):
+    """Team that a user can be on."""
+    KNIGHTS = Pomwars.KNIGHT_ROLE
+    VIKINGS = Pomwars.VIKING_ROLE
+
+    def __invert__(self):
+        return self.VIKINGS if self == self.KNIGHTS else self.KNIGHTS
+
+
+class ActionType(str, Enum):
+    """Type of an action in the actions table of the database."""
+    NORMAL_ATTACK = 'normal_attack'
+    HEAVY_ATTACK = 'heavy_attack'
+    DEFEND = 'defend'
+
+
+@dataclass
+class Action:
+    """An event, as described, in order, from the database."""
+    action_id: int
+    user_id: int
+    team: str
+    type: ActionType
+    was_successful: bool
+    was_critical: bool
+    items_dropped: str
+    damage: int
+    timestamp: datetime
+
+
+class InstantItem(str, Enum):
+    """Type of an instant-use item in the actions table of the database."""
+    TEAM_INVINCIBILITY = 'team_invincibility'
+    TEAM_DAMAGE_BUFF = 'team_damage_buff'
+    TEAM_SUCCESS_CHANCE_BUFF = 'team_success_chance_buff'

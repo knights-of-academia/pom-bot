@@ -1,14 +1,14 @@
 import logging
 from contextlib import contextmanager
-from datetime import datetime as dt
-from typing import List
+from datetime import datetime as dt, time, timezone
+from typing import List, Tuple
 
 import mysql.connector
 from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Secrets
-from pombot.lib.types import DateRange, Event, Pom
+from pombot.lib.types import DateRange, Event, Pom, Team
 
 _log = logging.getLogger(__name__)
 
@@ -287,3 +287,43 @@ class Storage:
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (name, ))
+
+    @staticmethod
+    def add_user(user_id: str, zone: timezone, team: Team):
+        """Add a user into the users table."""
+        query = f"""
+            INSERT INTO {Config.USERS_TABLE} (
+                userID,
+                timezone,
+                team
+            )
+            VALUES (%s, %s, %s);
+        """
+
+        zone_str = time(tzinfo=zone).strftime('%z')
+        team_str = team.value
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, (user_id, zone_str, team_str))
+
+    @staticmethod
+    def get_team_populations() -> Tuple[int, int]:
+        """Get the number of players on each team.
+
+        @return Two numbers, the number of users on Knights and the number of users on Vikings
+        """
+        query = f"""
+            SELECT
+                SUM(IF(team = '{Team.KNIGHTS}', 1, 0)),
+                SUM(IF(team = '{Team.VIKINGS}', 1, 0))
+            FROM {Config.USERS_TABLE};
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        if None in rows[0]:
+            return 0, 0
+
+        return tuple([int(row) for row in rows[0]])

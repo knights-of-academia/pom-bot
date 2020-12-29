@@ -77,16 +77,16 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         await payload.member.add_roles(assigned_team_role)
 
     timezones = {
-        Reactions.UTC_MINUS_10_TO_9: "-09:00",
-        Reactions.UTC_MINUS_8_TO_7: "-07:00",
-        Reactions.UTC_MINUS_6_TO_5: "-05:00",
-        Reactions.UTC_MINUS_4_TO_3: "-03:00",
-        Reactions.UTC_MINUS_2_TO_1: "-01:00",
-        Reactions.UTC_PLUS_1_TO_2: "+02:00",
-        Reactions.UTC_PLUS_3_TO_4: "+04:00",
-        Reactions.UTC_PLUS_5_TO_6: "+06:00",
-        Reactions.UTC_PLUS_7_TO_8: "+08:00",
-        Reactions.UTC_PLUS_9_TO_10: "+10:00"
+        Reactions.UTC_MINUS_10_TO_9: -9,
+        Reactions.UTC_MINUS_8_TO_7: -7,
+        Reactions.UTC_MINUS_6_TO_5: -5,
+        Reactions.UTC_MINUS_4_TO_3: -3,
+        Reactions.UTC_MINUS_2_TO_1: -1,
+        Reactions.UTC_PLUS_1_TO_2: +2,
+        Reactions.UTC_PLUS_3_TO_4: +4,
+        Reactions.UTC_PLUS_5_TO_6: +6,
+        Reactions.UTC_PLUS_7_TO_8: +8,
+        Reactions.UTC_PLUS_9_TO_10: +10
     }
     is_valid_timezone = True if payload.emoji.name in timezones else False
     timezone_conditions = [
@@ -95,9 +95,10 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
     ]
     #Set the timezone
     if all(timezone_conditions):
-        Storage.set_user_timezone(payload.user_id, timezones[payload.emoji.name])
+        Storage.set_user_timezone(payload.user_id, timezone(timedelta(hours=timezones[payload.emoji.name])))
 
     return
+
 
 def _get_assigned_team(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the

@@ -133,7 +133,7 @@ class Storage:
         user: User,
         descript: str,
         count: int,
-        time_set: dt = dt.now(),
+        time_set: dt = None,
     ):
         """Add a number of user poms."""
         query = f"""
@@ -147,6 +147,7 @@ class Storage:
         """
 
         descript = descript or None
+        time_set = time_set or dt.now()
         poms = [(user.id, descript, time_set, True) for _ in range(count)]
 
         with _mysql_database_cursor() as cursor:

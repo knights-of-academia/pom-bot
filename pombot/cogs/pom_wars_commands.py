@@ -230,7 +230,7 @@ class PomWarsUserCommands(commands.Cog):
 
             total = len(actions)
             tot_emote = Reactions.TOMATO
-            descripts.append(f"Damage dealt:  {tot_emote}  _{total}_")
+            descripts.append(f"Total poms:  {tot_emote}  _{total}_")
 
             damage = sum([a.damage for a in actions if a.damage])
             dam_emote = Reactions.CROSSED_SWORDS

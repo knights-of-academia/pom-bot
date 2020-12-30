@@ -80,6 +80,7 @@ class Pomwars:
     BASE_DAMAGE_FOR_HEAVY_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_HEAVY_ATTACKS"))
     BASE_CHANCE_FOR_CRITICAL = 0.20
     SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
+    ACTION_COLOUR = 0x00ff00
 
     JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
     KNIGHT_ONLY_GUILDS = [
@@ -90,6 +91,9 @@ class Pomwars:
         int(guild.strip()) if guild.strip() else 0
         for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
     ]
+
+    SAMATTACK_SWORD_URL = "https://cdn.discordapp.com/attachments/" \
+                          "793560646594854944/793560743290208296/image0.png"
 
 
 class Reactions:

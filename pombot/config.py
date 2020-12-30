@@ -108,6 +108,16 @@ class Reactions:
 
     # Reactions related to pom war events
     WAR_JOIN_REACTION = "▶️"
+    UTC_MINUS_10_TO_9 = "1️⃣"
+    UTC_MINUS_8_TO_7 = "2️⃣"
+    UTC_MINUS_6_TO_5 = "3️⃣"
+    UTC_MINUS_4_TO_3 = "4️⃣"
+    UTC_MINUS_2_TO_1 = "5️⃣"
+    UTC_PLUS_1_TO_2 = "6️⃣"
+    UTC_PLUS_3_TO_4 = "7️⃣"
+    UTC_PLUS_5_TO_6 = "8️⃣"
+    UTC_PLUS_7_TO_8 = "9️⃣"
+    UTC_PLUS_9_TO_10 = "🔟"
 
 
 class Secrets:

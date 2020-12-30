@@ -243,6 +243,7 @@ class PomWarsUserCommands(commands.Cog):
             description=description,
             icon_url=Pomwars.SAMATTACK_SWORD_URL,
             colour=Pomwars.ACTION_COLOUR,
+            private_message=True,
         )
 
 

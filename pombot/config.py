@@ -92,8 +92,13 @@ class Pomwars:
         for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
     ]
 
-    SAMATTACK_SWORD_URL = "https://cdn.discordapp.com/attachments/" \
-                          "793560646594854944/793560743290208296/image0.png"
+    # pylint: disable=line-too-long
+    class IconUrls:
+        """Locations of embeddable emojis."""
+        SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
+        SHIELD = "https://cdn.discordapp.com/attachments/784284292506189845/793858520805408828/image0.png"
+        AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
+    # pylint: enable=line-too-long
 
 
 class Reactions:

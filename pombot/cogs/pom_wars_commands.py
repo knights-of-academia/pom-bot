@@ -145,6 +145,58 @@ class PomWarsUserCommands(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def actions(self, ctx: Context, *args):
+        """Get your current, previous, or specific day's actions."""
+        date_range = None
+        today = datetime.today().strftime("%B %d").split()
+        yesterday = (datetime.today() -
+                     timedelta(days=1)).strftime("%B %d").split()
+
+        descriptive_dates = {
+            "today": DateRange(*today, *today),
+            "yesterday": DateRange(*yesterday, *yesterday)
+        }
+
+        if args:
+            date_range = descriptive_dates.get(args[0].casefold())
+
+        if date_range is None:
+            try:
+                date_range = DateRange(*args, *args)
+            except ValueError:
+                today = datetime.today()
+                date_range = descriptive_dates["today"]
+
+        actions = Storage.get_actions(user=ctx.author, date_range=date_range)
+
+        if not actions:
+            description = "*No recorded actions.*"
+        else:
+            normal_attacks = [a for a in actions if not a.heavy_attack]
+            missed_normal_attacks = [a for a in normal_attacks if not a.was_successful]
+
+            heavy_attacks = [a for a in actions if a.heavy_attack]
+            missed_heavy_attacks = [a for a in heavy_attacks if not a.was_successful]
+
+            total_damage = sum([a.damage for a in actions if a.damage])
+
+            description = textwrap.dedent(f"""\
+                Normal attacks: {len(normal_attacks)} (missed {len(missed_normal_attacks)})
+                Heavy attacks: {len(heavy_attacks)} (missed {len(missed_heavy_attacks)})
+
+                Damage dealt:  :crossed_swords:  _**{total_damage}**_
+            """)
+
+        await send_embed_message(
+            ctx,
+            title=f"Actions for {date_range}",
+            description=description,
+            icon_url=Pomwars.IconUrls.SWORD,
+            colour=Pomwars.ACTION_COLOUR,
+            private_message=True,
+        )
+
+    @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
         heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
@@ -193,58 +245,6 @@ class PomWarsUserCommands(commands.Cog):
         action["damage"] = attack.damage
         Storage.add_pom_war_action(**action)
         await ctx.send(attack.get_message(ctx.author))
-
-    @commands.command()
-    async def actions(self, ctx: Context, *args):
-        """Get your current, previous, or specific day's actions."""
-        date_range = None
-        today = datetime.today().strftime("%B %d").split()
-        yesterday = (datetime.today() -
-                     timedelta(days=1)).strftime("%B %d").split()
-
-        descriptive_dates = {
-            "today": DateRange(*today, *today),
-            "yesterday": DateRange(*yesterday, *yesterday)
-        }
-
-        if args:
-            date_range = descriptive_dates.get(args[0].casefold())
-
-        if date_range is None:
-            try:
-                date_range = DateRange(*args, *args)
-            except ValueError:
-                today = datetime.today()
-                date_range = descriptive_dates["today"]
-
-        actions = Storage.get_actions(user=ctx.author, date_range=date_range)
-
-        if not actions:
-            description = "*No recorded actions.*"
-        else:
-            normal_attacks = [a for a in actions if not a.heavy_attack]
-            missed_normal_attacks = [a for a in normal_attacks if not a.was_successful]
-
-            heavy_attacks = [a for a in actions if a.heavy_attack]
-            missed_heavy_attacks = [a for a in heavy_attacks if not a.was_successful]
-
-            total_damage = sum([a.damage for a in actions if a.damage])
-
-            description = textwrap.dedent(f"""\
-                Normal attacks: {len(normal_attacks)} (missed {len(missed_normal_attacks)})
-                Heavy attacks: {len(heavy_attacks)} (missed {len(missed_heavy_attacks)})
-
-                Damage dealt:  :crossed_swords:  _**{total_damage}**_
-            """)
-
-        await send_embed_message(
-            ctx,
-            title=f"Actions for {date_range}",
-            description=description,
-            icon_url=Pomwars.SAMATTACK_SWORD_URL,
-            colour=Pomwars.ACTION_COLOUR,
-            private_message=True,
-        )
 
 
 class PomWarsAdminCommands(commands.Cog):

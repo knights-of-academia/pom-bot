@@ -13,6 +13,11 @@ class DateRange:
 
     def __str__(self):
         fmt = lambda dt: datetime.strftime(dt, "%B %d, %Y")
+        ignore_time = lambda dt: datetime.strftime(dt, "%B %d")
+
+        if ignore_time(self.start_date) == ignore_time(self.end_date):
+            return f"{fmt(self.start_date)}"
+
         return f"{fmt(self.start_date)} - {fmt(self.end_date)}"
 
     def __init__(self, *args):
@@ -126,6 +131,11 @@ class Action:
     items_dropped: str
     damage: int
     timestamp: datetime
+
+    @property
+    def heavy_attack(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.HEAVY_ATTACK
 
 
 class InstantItem(str, Enum):

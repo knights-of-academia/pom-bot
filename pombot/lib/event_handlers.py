@@ -47,35 +47,58 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
     if not all(conditions):
         return
 
-    draft_conditions = [
+    # Assign the role
+    join_conditions = [
         Pomwars.JOIN_CHANNEL_NAME == channel.name,
         Reactions.WAR_JOIN_REACTION == payload.emoji.name
     ]
-    if not all(draft_conditions):
-        return
+    if all(join_conditions):
+        knight_role = None
+        viking_role = None
+        for role in guild.roles:
+            if role.name == Pomwars.KNIGHT_ROLE:
+                knight_role = role
+            if role.name == Pomwars.VIKING_ROLE:
+                viking_role = role
 
-    knight_role = None
-    viking_role = None
-    for role in guild.roles:
-        if role.name == Pomwars.KNIGHT_ROLE:
-            knight_role = role
-        if role.name == Pomwars.VIKING_ROLE:
-            viking_role = role
+        if None in [knight_role, viking_role]:
+            return
 
-    if None in [knight_role, viking_role]:
-        return
+        team = _get_assigned_team(payload.guild_id)
 
-    team = _get_assigned_team(payload.guild_id)
+        Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
 
-    Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+        assigned_team_role = None
+        if team == Team.KNIGHTS:
+            assigned_team_role = knight_role
+        elif team == Team.VIKINGS:
+            assigned_team_role = viking_role
 
-    assigned_team_role = None
-    if team == Team.KNIGHTS:
-        assigned_team_role = knight_role
-    elif team == Team.VIKINGS:
-        assigned_team_role = viking_role
+        await payload.member.add_roles(assigned_team_role)
 
-    await payload.member.add_roles(assigned_team_role)
+    timezones = {
+        Reactions.UTC_MINUS_10_TO_9: -9,
+        Reactions.UTC_MINUS_8_TO_7: -7,
+        Reactions.UTC_MINUS_6_TO_5: -5,
+        Reactions.UTC_MINUS_4_TO_3: -3,
+        Reactions.UTC_MINUS_2_TO_1: -1,
+        Reactions.UTC_PLUS_1_TO_2: +2,
+        Reactions.UTC_PLUS_3_TO_4: +4,
+        Reactions.UTC_PLUS_5_TO_6: +6,
+        Reactions.UTC_PLUS_7_TO_8: +8,
+        Reactions.UTC_PLUS_9_TO_10: +10
+    }
+    is_valid_timezone = True if payload.emoji.name in timezones else False
+    timezone_conditions = [
+        Pomwars.JOIN_CHANNEL_NAME == channel.name,
+        is_valid_timezone
+    ]
+    #Set the timezone
+    if all(timezone_conditions):
+        Storage.set_user_timezone(payload.user_id, timezone(timedelta(hours=timezones[payload.emoji.name])))
+
+    return
+
 
 def _get_assigned_team(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the

@@ -37,7 +37,6 @@ For "live":
 
 - Remove the restrictions on the #the-draft channel
 
-
 ## Inviting the bot to partner servers
 - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 - Click on the application associated with the bot, or create a new application if necessary.

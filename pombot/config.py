@@ -111,6 +111,7 @@ class Reactions:
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"
     ROBOT = "🤖"
+    SHIELD = "🛡"
     TOMATO = "🍅"
     UNDO = "↩"
     WARNING = "⚠️"

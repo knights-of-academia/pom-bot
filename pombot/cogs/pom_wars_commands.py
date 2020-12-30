@@ -7,7 +7,7 @@ import textwrap
 from datetime import datetime, timedelta
 from functools import cache
 from pathlib import Path
-from typing import List, Union
+from typing import Any, List, Union
 
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -112,26 +112,29 @@ class Defend:
 
 def _load_actions(
     location: Path,
+    type_: Union[Attack, Defend],  # pylint: disable=unsubscriptable-object
     *,
     is_heavy: bool = False,
     is_critical: bool = False,
-) -> Union[List[Attack], List[Defend]]:  # pylint: disable=unsubscriptable-object
-    attacks = []
+) -> List[Any]:
+    actions = []
     location = location / "~criticals" if is_critical else location
 
-    for attack_dir in location.iterdir():
-        if attack_dir.name.startswith("~"):
+    for action_dir in location.iterdir():
+        if action_dir.name.startswith("~"):
             continue
 
-        attacks.append(Attack(attack_dir, is_heavy, is_critical))
+        actions.append(
+            Attack(action_dir, is_heavy, is_critical) if type_ ==
+            Attack else Defend(action_dir))
 
-    return attacks
+    return actions
 
 
-def _is_attack_successful(
+def _is_action_successful(
     user: User,
-    is_heavy_attack: bool,
     timestamp: datetime,
+    is_heavy_attack: bool = False,
 ) -> bool:
     def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
@@ -262,7 +265,7 @@ class PomWarsUserCommands(commands.Cog):
             "time_set":       timestamp,
         }
 
-        if not _is_attack_successful(ctx.author, heavy_attack, timestamp):
+        if not _is_action_successful(ctx.author, timestamp, heavy_attack):
             emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
             await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             Storage.add_pom_war_action(**action)
@@ -275,6 +278,7 @@ class PomWarsUserCommands(commands.Cog):
         attacks = _load_actions(
             Locations.HEAVY_ATTACKS_DIR
             if heavy_attack else Locations.NORMAL_ATTACKS_DIR,
+            type_=Attack,
             is_critical=action["was_critical"],
             is_heavy=heavy_attack,
         )
@@ -297,7 +301,32 @@ class PomWarsUserCommands(commands.Cog):
         )
         await ctx.message.add_reaction(Reactions.TOMATO)
 
-        defends = _load_actions(Locations.DEFENDS_DIR)
+        action = {
+            "user":           ctx.author,
+            "team":           _get_user_team(ctx.author),
+            "action_type":    ActionType.DEFEND,
+            "was_successful": False,
+            "was_critical":   None,
+            "items_dropped":  "",
+            "damage":         None,
+            "time_set":       timestamp,
+        }
+
+        if not _is_action_successful(ctx.author, timestamp):
+            emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
+            await ctx.send(f"<@{ctx.author.id}> defence failed! {emote}")
+            Storage.add_pom_war_action(**action)
+            return
+
+        action["was_successful"] = True
+        await ctx.message.add_reaction(Reactions.SHIELD)
+
+        defends = _load_actions(Locations.DEFENDS_DIR, type_=Defend)
+        weights = [defend.weight for defend in defends]
+        defend, = random.choices(defends, weights=weights)
+
+        Storage.add_pom_war_action(**action)
+        await ctx.send(defend.get_message(ctx.author))
 
 
 class PomWarsAdminCommands(commands.Cog):

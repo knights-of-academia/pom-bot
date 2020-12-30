@@ -7,7 +7,7 @@ import textwrap
 from datetime import datetime, timedelta
 from functools import cache
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -37,7 +37,7 @@ def _get_user_team(user: User) -> Team:
 
 
 class Attack:
-    """An attack as specified by file and directory structure."""
+    """An attack action as specified by file and directory structure."""
     def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
         self.name = directory.name
         self.is_heavy = is_heavy
@@ -45,14 +45,14 @@ class Attack:
         self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
         self._meta = (directory / Locations.META).read_text(encoding="utf8")
 
-        self.chance_for_this_attack = None
+        self.chance_for_this_action = None
         self.damage_multiplier = None
         for key, val in json.loads(self._meta).items():
             setattr(self, key, val)
 
     @property
     def damage(self):
-        """The configured base damage for this attack."""
+        """The configured base damage for this action."""
         base_damage = Pomwars.BASE_DAMAGE_FOR_NORMAL_ATTACKS
 
         if self.is_heavy:
@@ -62,12 +62,12 @@ class Attack:
 
     @property
     def weight(self):
-        """The configured base weighted-chance for this attack."""
-        return self.chance_for_this_attack
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
 
     def get_message(self, user: User) -> str:
         """The markdown-formatted version of the message.txt from the
-        attack's directory, and the resulting action, as a string.
+        action's directory, and its result, as a string.
         """
         story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
         action = "{emt} {you} attacked the {team} for {dmg} damage!".format(
@@ -80,7 +80,42 @@ class Attack:
         return "\n\n".join([story, action])
 
 
-def _load_attacks(location: Path, *, is_heavy: bool, is_critical=False) -> List[Attack]:
+class Defend:
+    """A defend action as specified by file and directory structure."""
+    def __init__(self, directory: Path):
+        self.name = directory.name
+        self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
+        self._meta = (directory / Locations.META).read_text(encoding="utf8")
+
+        self.chance_for_this_action = None
+        for key, val in json.loads(self._meta).items():
+            setattr(self, key, val)
+
+    @property
+    def weight(self):
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
+
+    def get_message(self, user: User) -> str:
+        """The markdown-formatted version of the message.txt from the
+        action's directory, and its result, as a string.
+        """
+        story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
+        action = "{emt} {you} help defend the {team}!".format(
+            emt=Pomwars.SUCCESSFUL_DEFEND_EMOTE,
+            you=f"<@{user.id}>",
+            team=f"{(_get_user_team(user)).value}s",
+        )
+
+        return "\n\n".join([story, action])
+
+
+def _load_actions(
+    location: Path,
+    *,
+    is_heavy: bool = False,
+    is_critical: bool = False,
+) -> Union[List[Attack], List[Defend]]:  # pylint: disable=unsubscriptable-object
     attacks = []
     location = location / "~criticals" if is_critical else location
 
@@ -172,17 +207,21 @@ class PomWarsUserCommands(commands.Cog):
         if not actions:
             description = "*No recorded actions.*"
         else:
-            normal_attacks = [a for a in actions if not a.heavy_attack]
+            normal_attacks = [a for a in actions if a.is_normal]
             missed_normal_attacks = [a for a in normal_attacks if not a.was_successful]
 
-            heavy_attacks = [a for a in actions if a.heavy_attack]
+            heavy_attacks = [a for a in actions if a.is_heavy]
             missed_heavy_attacks = [a for a in heavy_attacks if not a.was_successful]
+
+            defends = [a for a in actions if a.is_defend]
+            missed_defends = [a for a in defends if not a.was_successful]
 
             total_damage = sum([a.damage for a in actions if a.damage])
 
             description = textwrap.dedent(f"""\
                 Normal attacks: {len(normal_attacks)} (missed {len(missed_normal_attacks)})
                 Heavy attacks: {len(heavy_attacks)} (missed {len(missed_heavy_attacks)})
+                defends: {len(defends)} (missed {len(missed_defends)})
 
                 Damage dealt:  :crossed_swords:  _**{total_damage}**_
             """)
@@ -233,7 +272,7 @@ class PomWarsUserCommands(commands.Cog):
         action["was_critical"] = random.random() <= Pomwars.BASE_CHANCE_FOR_CRITICAL
         await ctx.message.add_reaction(Reactions.BOOM)
 
-        attacks = _load_attacks(
+        attacks = _load_actions(
             Locations.HEAVY_ATTACKS_DIR
             if heavy_attack else Locations.NORMAL_ATTACKS_DIR,
             is_critical=action["was_critical"],
@@ -245,6 +284,20 @@ class PomWarsUserCommands(commands.Cog):
         action["damage"] = attack.damage
         Storage.add_pom_war_action(**action)
         await ctx.send(attack.get_message(ctx.author))
+
+    @commands.command()
+    async def defend(self, ctx: Context, *args):
+        """Defend your team."""
+        timestamp = datetime.now()
+        Storage.add_poms_to_user_session(
+            ctx.author,
+            descript=" ".join(args),
+            count=1,
+            time_set=timestamp,
+        )
+        await ctx.message.add_reaction(Reactions.TOMATO)
+
+        defends = _load_actions(Locations.DEFENDS_DIR)
 
 
 class PomWarsAdminCommands(commands.Cog):

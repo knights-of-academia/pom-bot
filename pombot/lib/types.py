@@ -133,9 +133,19 @@ class Action:
     timestamp: datetime
 
     @property
-    def heavy_attack(self) -> bool:
+    def is_defend(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.DEFEND
+
+    @property
+    def is_heavy(self) -> bool:
         """Return whether or not the action was a heavy attack."""
         return self.type == ActionType.HEAVY_ATTACK
+
+    @property
+    def is_normal(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.NORMAL_ATTACK
 
 
 class InstantItem(str, Enum):

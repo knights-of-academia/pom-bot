@@ -1,7 +1,7 @@
 PYTHON := python3
 
-.PHONY = test run
-.DEFAULT_GOAL = prod
+.PHONY = lint test dev prod build
+.DEFAULT_GOAL = build
 
 lint:
 	@echo "Linting..."
@@ -15,7 +15,9 @@ test:
 	@echo "Testing..."
 	@${PYTHON} -m pytest -x --ff tests
 
-dev: lint test
+build: lint test
+
+dev: build
 	@echo "Launching..."
 
 	@# Run without optimization. Python's -O will set __debug__ to False and
@@ -23,7 +25,7 @@ dev: lint test
 	@# possible to, say, delete all tables on startup.
 	@${PYTHON} bot.py
 
-prod: lint test
+prod:
 	@echo "Launching..."
 
 	@# Use a single -O here because, with -OO, Python will remove docstrings

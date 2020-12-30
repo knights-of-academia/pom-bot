@@ -107,6 +107,7 @@ class Reactions:
     ABACUS = "🧮"
     BOOM = "💥"
     CHECKMARK = "✅"
+    CROSSED_SWORDS= "⚔"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"

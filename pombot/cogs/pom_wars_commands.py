@@ -3,7 +3,6 @@ import logging
 import math
 import random
 import re
-import textwrap
 from datetime import datetime, timedelta
 from functools import cache
 from pathlib import Path
@@ -210,24 +209,34 @@ class PomWarsUserCommands(commands.Cog):
         if not actions:
             description = "*No recorded actions.*"
         else:
-            normal_attacks = [a for a in actions if a.is_normal]
-            missed_normal_attacks = [a for a in normal_attacks if not a.was_successful]
+            descripts = []
 
-            heavy_attacks = [a for a in actions if a.is_heavy]
-            missed_heavy_attacks = [a for a in heavy_attacks if not a.was_successful]
+            nrm = [a for a in actions if a.is_normal]
+            nrmx = [a for a in nrm if not a.was_successful]
+            descripts.append("Normal attacks: {}{}".format(
+                len(nrm), f" (missed {len(nrmx)})" if nrmx else "") if nrm else "")
 
-            defends = [a for a in actions if a.is_defend]
-            missed_defends = [a for a in defends if not a.was_successful]
+            hvy = [a for a in actions if a.is_heavy]
+            hvyx = [a for a in hvy if not a.was_successful]
+            descripts.append("Heavy attacks: {}{}".format(
+                len(hvy), f" (missed {len(hvyx)})" if hvyx else "") if hvy else "")
 
-            total_damage = sum([a.damage for a in actions if a.damage])
+            dfn = [a for a in actions if a.is_defend]
+            dfnx = [a for a in dfn if not a.was_successful]
+            descripts.append("Defends: {}{}".format(
+                len(dfn), f" (missed {len(dfnx)})" if dfnx else "") if dfn else "")
 
-            description = textwrap.dedent(f"""\
-                Normal attacks: {len(normal_attacks)} (missed {len(missed_normal_attacks)})
-                Heavy attacks: {len(heavy_attacks)} (missed {len(missed_heavy_attacks)})
-                defends: {len(defends)} (missed {len(missed_defends)})
+            descripts.append(" ")  # &nbsp;
 
-                Damage dealt:  :crossed_swords:  _**{total_damage}**_
-            """)
+            total = len(actions)
+            tot_emote = Reactions.TOMATO
+            descripts.append(f"Damage dealt:  {tot_emote}  _{total}_")
+
+            damage = sum([a.damage for a in actions if a.damage])
+            dam_emote = Reactions.CROSSED_SWORDS
+            descripts.append(f"Damage dealt:  {dam_emote}  _**{damage}**_")
+
+            description = "\n".join(d for d in descripts if d)
 
         await send_embed_message(
             ctx,

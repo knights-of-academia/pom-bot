@@ -79,6 +79,7 @@ class Storage:
                     timezone VARCHAR(8) NOT NULL,
                     team VARCHAR(10) NOT NULL,
                     inventory_string TEXT(30000),
+                    player_level TINYINT(1) NOT NULL DEFAULT 1,
                     attack_level TINYINT(1) NOT NULL DEFAULT 1,
                     heavy_attack_level TINYINT(1) NOT NULL DEFAULT 1,
                     defend_level TINYINT(1) NOT NULL DEFAULT 1,

@@ -34,7 +34,8 @@ async def on_message_handler(bot: Bot, message: Message):
     await bot.process_commands(message)
 
 async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent):
-    """Handle reactions being added to messages, assign users to teams when they react."""
+    """Handle reactions being added to messages, assign users to teams when
+    they react."""
     guild = bot.get_guild(payload.guild_id)
     channel = bot.get_channel(payload.channel_id)
 
@@ -44,14 +45,15 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         channel is not None,
         payload.user_id != bot.user.id
     ]
+
     if not all(conditions):
         return
 
-    # Assign the role
     join_conditions = [
         Pomwars.JOIN_CHANNEL_NAME == channel.name,
         Reactions.WAR_JOIN_REACTION == payload.emoji.name
     ]
+
     if all(join_conditions):
         knight_role = None
         viking_role = None
@@ -86,16 +88,13 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         Reactions.UTC_PLUS_3_TO_4: +4,
         Reactions.UTC_PLUS_5_TO_6: +6,
         Reactions.UTC_PLUS_7_TO_8: +8,
-        Reactions.UTC_PLUS_9_TO_10: +10
+        Reactions.UTC_PLUS_9_TO_10: +10,
     }
-    is_valid_timezone = True if payload.emoji.name in timezones else False
-    timezone_conditions = [
-        Pomwars.JOIN_CHANNEL_NAME == channel.name,
-        is_valid_timezone
-    ]
-    #Set the timezone
-    if all(timezone_conditions):
-        Storage.set_user_timezone(payload.user_id, timezone(timedelta(hours=timezones[payload.emoji.name])))
+
+    if (channel.name == Pomwars.JOIN_CHANNEL_NAME and payload.emoji.name in timezones):
+        Storage.set_user_timezone(
+            payload.user_id,
+            timezone(timedelta(hours=timezones[payload.emoji.name])))
 
     return
 
@@ -108,12 +107,14 @@ def _get_assigned_team(guild_id: int) -> Team:
     @return The team the user is assigned to
     """
     assigned_team = None
+
     if guild_id in Pomwars.KNIGHT_ONLY_GUILDS:
         assigned_team = Team.KNIGHTS
     elif guild_id in Pomwars.VIKING_ONLY_GUILDS:
         assigned_team = Team.VIKINGS
     else:
         knights_count, vikings_count = Storage.get_team_populations()
+
         if knights_count > vikings_count:
             assigned_team = Team.VIKINGS
         elif vikings_count > knights_count:

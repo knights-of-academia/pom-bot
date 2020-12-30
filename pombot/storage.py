@@ -133,7 +133,7 @@ class Storage:
         user: User,
         descript: str,
         count: int,
-        time_set: dt = None,
+        time_set: dt = dt.now(),
     ):
         """Add a number of user poms."""
         query = f"""

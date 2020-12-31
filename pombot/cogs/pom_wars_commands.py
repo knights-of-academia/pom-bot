@@ -14,7 +14,7 @@ from discord.ext.commands.bot import Bot
 from discord.user import User
 
 from pombot import errors
-from pombot.config import Pomwars, Reactions
+from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
@@ -268,6 +268,12 @@ class PomWarsUserCommands(commands.Cog):
         heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
+
+        if len(description) > Config.DESCRIPTION_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send(f"{ctx.author.mention}, your pom description must "
+                           f"be fewer than {Config.DESCRIPTION_LIMIT} characters.")
+            return
 
         Storage.add_poms_to_user_session(
             ctx.author,

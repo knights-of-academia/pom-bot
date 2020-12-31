@@ -101,13 +101,7 @@ class Pomwars:
         AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
     # pylint: enable=line-too-long
 
-    DEFEND_LEVEL_MULTIPLIERS = {
-        1: 0.02,
-        2: 0.03,
-        3: 0.04,
-        4: 0.05,
-        5: 0.07,
-    }
+    DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
 
 class Reactions:

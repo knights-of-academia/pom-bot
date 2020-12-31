@@ -320,7 +320,11 @@ class Storage:
         team_str = team.value
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user_id, zone_str, team_str))
+            try:
+                cursor.execute(query, (user_id, zone_str, team_str))
+            except mysql.connector.errors.IntegrityError:
+                # User with this userID already exists.
+                pass
 
     @staticmethod
     def set_user_timezone(user_id: str, zone: timezone):

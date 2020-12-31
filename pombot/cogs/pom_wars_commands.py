@@ -64,16 +64,16 @@ class Attack:
         """The configured base weighted-chance for this action."""
         return self.chance_for_this_action
 
-    def get_message(self, user: User) -> str:
+    def get_message(self, user: User, adjusted_damage: int = None) -> str:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
         story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
-        action = "{emt} {you} attacked the {team} for {dmg} damage!".format(
+        action = "{emt} {you} attacked the {team} for {dmg:.2f} damage!".format(
             emt=Pomwars.SUCCESSFUL_ATTACK_EMOTE,
             you=f"<@{user.id}>",
             team=f"{(~_get_user_team(user)).value}s",
-            dmg=self.damage,
+            dmg=adjusted_damage or self.damage,
         )
 
         return "\n\n".join([story, action])
@@ -174,6 +174,21 @@ def _is_action_successful(
     return random.random() <= chance_func(this_pom_number)
 
 
+def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
+    defend_actions = Storage.get_actions(
+        team=team,
+        action_type=ActionType.DEFEND,
+        date_range=DateRange(
+            timestamp - timedelta(days=10, minutes=10),  # FIXME
+            timestamp,
+        ),
+    )
+    defenders = Storage.get_users_by_id([a.user_id for a in defend_actions])
+    multipliers = [Pomwars.DEFEND_LEVEL_MULTIPLIERS[d.defend_level] for d in defenders]
+
+    return min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
+
+
 class PomWarsUserCommands(commands.Cog):
     """Commands used by users during a Pom War."""
     HEAVY_QUALIFIERS = ["heavy", "hard", "sharp", "strong"]
@@ -234,7 +249,7 @@ class PomWarsUserCommands(commands.Cog):
 
             damage = sum([a.damage for a in actions if a.damage])
             dam_emote = Reactions.CROSSED_SWORDS
-            descripts.append(f"Damage dealt:  {dam_emote}  _**{damage}**_")
+            descripts.append(f"Damage dealt:  {dam_emote}  _**{damage:.2f}**_")
 
             description = "\n".join(d for d in descripts if d)
 
@@ -294,9 +309,13 @@ class PomWarsUserCommands(commands.Cog):
         weights = [attack.weight for attack in attacks]
         attack, = random.choices(attacks, weights=weights)
 
-        action["damage"] = attack.damage
+        defensive_multiplier = _get_defensive_multiplier(
+            team=~_get_user_team(ctx.author),
+            timestamp=timestamp)
+
+        action["damage"] = attack.damage - attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
-        await ctx.send(attack.get_message(ctx.author))
+        await ctx.send(attack.get_message(ctx.author, action["damage"]))
 
     @commands.command()
     async def defend(self, ctx: Context, *args):

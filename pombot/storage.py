@@ -1,14 +1,16 @@
 import logging
 from contextlib import contextmanager
-from datetime import datetime as dt, time, timezone
-from typing import List, Tuple
+from datetime import datetime as dt
+from datetime import time, timezone
+from typing import List, Set, Tuple
 
 import mysql.connector
-from discord.user import User
+from discord.user import User as DiscordUser
 
 import pombot.errors
 from pombot.config import Config, Secrets
 from pombot.lib.types import Action, ActionType, DateRange, Event, Pom, Team
+from pombot.lib.types import User as PombotUser
 
 _log = logging.getLogger(__name__)
 
@@ -131,7 +133,7 @@ class Storage:
 
     @staticmethod
     def add_poms_to_user_session(
-        user: User,
+        user: DiscordUser,
         descript: str,
         count: int,
         time_set: dt = None,
@@ -155,7 +157,7 @@ class Storage:
             cursor.executemany(query, poms)
 
     @staticmethod
-    def clear_user_session_poms(user: User):
+    def clear_user_session_poms(user: DiscordUser):
         """Set all active session poms to be non-active."""
         query = f"""
             UPDATE  {Config.POMS_TABLE}
@@ -168,7 +170,7 @@ class Storage:
             cursor.execute(query, (user.id, ))
 
     @staticmethod
-    def delete_all_user_poms(user: User):
+    def delete_all_user_poms(user: DiscordUser):
         """Remove all poms for user."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
@@ -179,7 +181,7 @@ class Storage:
             cursor.execute(query, (user.id, ))
 
     @staticmethod
-    def delete_most_recent_user_poms(user: User, count: int):
+    def delete_most_recent_user_poms(user: DiscordUser, count: int):
         """Delete `count` most recent poms for `user`."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
@@ -210,7 +212,7 @@ class Storage:
 
     @staticmethod
     def get_poms(*,
-                 user: User = None,
+                 user: DiscordUser = None,
                  date_range: DateRange = None) -> List[Pom]:
         """Get a list of poms from storage matching certain criteria.
 
@@ -358,8 +360,28 @@ class Storage:
         return tuple([int(row) for row in rows[0]])
 
     @staticmethod
+    def get_users_by_id(user_ids: List[int]) -> Set[PombotUser]:
+        if not user_ids:
+            return []
+
+        query = [f"SELECT * FROM {Config.USERS_TABLE}"]
+        values = []
+
+        for user_id in user_ids:
+            query += ["WHERE userID=%s"]
+            values += [user_id]
+
+        query_str = _replace_further_occurances(" ".join(query), "WHERE", "OR")
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query_str, values)
+            rows = cursor.fetchall()
+
+        return {PombotUser(*r) for r in rows}
+
+    @staticmethod
     def add_pom_war_action(
-        user: User,
+        user: DiscordUser,
         team: Team,
         action_type: ActionType,
         was_successful: bool,
@@ -383,7 +405,7 @@ class Storage:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
         values = (user.id, team.value, action_type.value, was_successful,
-                  was_critical, items_dropped, damage, time_set)
+                  was_critical, items_dropped, damage * 100, time_set)
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, values)
@@ -391,7 +413,9 @@ class Storage:
     @staticmethod
     def get_actions(
         *,
-        user: User = None,
+        action_type: ActionType = None,
+        user: DiscordUser = None,
+        team: Team = None,
         date_range: DateRange = None,
     ) -> List[Action]:
         """Get a list of actions from storage matching certain criteria.
@@ -401,20 +425,28 @@ class Storage:
         @return List of Action objects.
         """
         query = [f"SELECT * FROM {Config.ACTIONS_TABLE}"]
-        args = []
+        values = []
+
+        if action_type:
+            query += [f"WHERE type=%s"]
+            values += [action_type.value]
 
         if user:
             query += [f"WHERE userID=%s"]
-            args += [user.id]
+            values += [user.id]
+
+        if team:
+            query += [f"WHERE team=%s"]
+            values += [team.value]
 
         if date_range:
             query += ["WHERE time_set >= %s", "AND time_set <= %s"]
-            args += [date_range.start_date, date_range.end_date]
+            values += [date_range.start_date, date_range.end_date]
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query_str, args)
+            cursor.execute(query_str, values)
             rows = cursor.fetchall()
 
 

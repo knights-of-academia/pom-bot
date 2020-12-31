@@ -9,6 +9,9 @@ To get a guild ready for the event, decide which is right for your guild.
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
 - Make a role called either "Knight" or "Viking"
+  - Adding the bot to the guild will have created a role with the bot's name.
+    Make sure that this role is above the new "Knight"/"Viking" role in
+    the role settings. Roles can be moved by clicking and dragging.
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put (#battlegrounds)
   - Set permissions so that only players with the chosen role can see this
@@ -20,6 +23,9 @@ To get a guild ready for the event, decide which is right for your guild.
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
 - Make two roles called "Knight" and "Viking"
+  - Adding the bot to the guild will have created a role with the bot's name.
+  Make sure that this role is above the new "Knight" and "Viking" roles in
+  the role settings. Roles can be moved by clicking and dragging.
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put for each Role (eg. #knights,
   #vikings)

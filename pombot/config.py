@@ -80,6 +80,7 @@ class Pomwars:
     BASE_DAMAGE_FOR_HEAVY_ATTACKS = _positive_int(os.getenv("BASE_DAMAGE_FOR_HEAVY_ATTACKS"))
     BASE_CHANCE_FOR_CRITICAL = 0.20
     SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
+    SUCCESSFUL_DEFEND_EMOTE = os.getenv("SUCCESSFUL_DEFEND_EMOTE")
     ACTION_COLOUR = 0x00ff00
 
     JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
@@ -92,19 +93,34 @@ class Pomwars:
         for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
     ]
 
-    SAMATTACK_SWORD_URL = "https://cdn.discordapp.com/attachments/" \
-                          "793560646594854944/793560743290208296/image0.png"
+    # pylint: disable=line-too-long
+    class IconUrls:
+        """Locations of embeddable emojis."""
+        SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
+        SHIELD = "https://cdn.discordapp.com/attachments/793560646594854944/793959733928787998/pom-war-shield.png"
+        AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
+    # pylint: enable=line-too-long
 
+    DEFEND_LEVEL_MULTIPLIERS = {
+        1: 0.02,
+        2: 0.03,
+        3: 0.04,
+        4: 0.05,
+        5: 0.07,
+    }
+    MAXIMUM_TEAM_DEFENCE = 0.25
 
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
     BOOM = "💥"
     CHECKMARK = "✅"
+    CROSSED_SWORDS= "⚔"
     ERROR = "🐛"
     FALLEN_LEAF = "🍂"
     LEAVES = "🍃"
     ROBOT = "🤖"
+    SHIELD = "🛡"
     TOMATO = "🍅"
     UNDO = "↩"
     WARNING = "⚠️"

@@ -97,7 +97,7 @@ class Pomwars:
     class IconUrls:
         """Locations of embeddable emojis."""
         SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
-        SHIELD = "https://cdn.discordapp.com/attachments/784284292506189845/793858520805408828/image0.png"
+        SHIELD = "https://cdn.discordapp.com/attachments/793560646594854944/793959733928787998/pom-war-shield.png"
         AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
     # pylint: enable=line-too-long
 

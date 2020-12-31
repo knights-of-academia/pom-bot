@@ -405,7 +405,7 @@ class Storage:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
         values = (user.id, team.value, action_type.value, was_successful,
-                  was_critical, items_dropped, damage * 100, time_set)
+                  was_critical, items_dropped, (damage or 0) * 100, time_set)
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, values)
@@ -416,6 +416,7 @@ class Storage:
         action_type: ActionType = None,
         user: DiscordUser = None,
         team: Team = None,
+        was_successful = None,
         date_range: DateRange = None,
     ) -> List[Action]:
         """Get a list of actions from storage matching certain criteria.
@@ -438,6 +439,10 @@ class Storage:
         if team:
             query += [f"WHERE team=%s"]
             values += [team.value]
+
+        if was_successful:
+            query += [f"WHERE was_successful=%s"]
+            values += [1]
 
         if date_range:
             query += ["WHERE time_set >= %s", "AND time_set <= %s"]

@@ -176,8 +176,9 @@ def _is_action_successful(
 
 def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
     defend_actions = Storage.get_actions(
-        team=team,
         action_type=ActionType.DEFEND,
+        team=team,
+        was_successful=True,
         date_range=DateRange(
             timestamp - timedelta(days=10, minutes=10),  # FIXME
             timestamp,

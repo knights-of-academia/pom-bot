@@ -32,7 +32,7 @@ All values in this file are non-negative, floating point numbers.
 
     In the specific case of zero, the attack will do no damage.
 
-- *chance_for_this_attack*: A non-zero number.
+- *chance_for_this_action*: A non-zero number.
 
   The chance that this attack, relative to other attacks of the same
   strength, will be chosen as this turn's attack. For example, given three

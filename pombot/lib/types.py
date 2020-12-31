@@ -147,6 +147,7 @@ class Action:
 
     @property
     def damage(self) -> float:
+        """The real damage of this action."""
         return self.raw_damage / 100.0
 
     @property

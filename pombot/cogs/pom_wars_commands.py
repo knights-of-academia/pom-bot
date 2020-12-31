@@ -180,7 +180,7 @@ def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
         team=team,
         was_successful=True,
         date_range=DateRange(
-            timestamp - timedelta(days=10, minutes=10),  # FIXME
+            timestamp - timedelta(minutes=10),
             timestamp,
         ),
     )

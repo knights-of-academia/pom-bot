@@ -361,6 +361,7 @@ class Storage:
 
     @staticmethod
     def get_users_by_id(user_ids: List[int]) -> Set[PombotUser]:
+        """Return a list of users from a list of userID's."""
         if not user_ids:
             return []
 

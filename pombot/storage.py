@@ -353,21 +353,6 @@ class Storage:
             cursor.execute(query, (team.value, user_id))
 
     @staticmethod
-    def set_user_timezone(user_id: str, zone: timezone):
-        """Set the user timezone"""
-        query = f"""
-            UPDATE {Config.USERS_TABLE}
-            SET timezone=%s
-            WHERE userID=%s
-        """
-
-        zone_str = time(tzinfo=zone).strftime('%z')
-
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (zone_str, user_id))
-
-
-    @staticmethod
     def get_team_populations() -> Tuple[int, int]:
         """Get the number of players on each team.
 

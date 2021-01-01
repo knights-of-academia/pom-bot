@@ -111,7 +111,7 @@ class Defend:
 
 def _load_actions(
     location: Path,
-    type_: Union[Attack, Defend],  # pylint: disable=unsubscriptable-object
+    type_: Union[Attack, Defend],
     *,
     is_heavy: bool = False,
     is_critical: bool = False,

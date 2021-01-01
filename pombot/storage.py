@@ -322,13 +322,13 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             try:
                 cursor.execute(query, (user_id, zone_str, team_str))
-            except mysql.connector.errors.IntegrityError:
-                # User with this userID already exists.
-                pass
+            except mysql.connector.errors.IntegrityError as exc:
+                user = Storage.get_user_by_id(user_id)
+                raise pombot.errors.UserAlreadyExistsError(user.team) from exc
 
     @staticmethod
     def set_user_timezone(user_id: str, zone: timezone):
-        """Set the user timezone"""
+        """Set the user timezone."""
         query = f"""
             UPDATE {Config.USERS_TABLE}
             SET timezone=%s
@@ -340,6 +340,17 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (zone_str, user_id))
 
+    @staticmethod
+    def update_user_team(user_id: str, team: Team):
+        """Set the user team."""
+        query = f"""
+            UPDATE {Config.USERS_TABLE}
+            SET team=%s
+            WHERE userID=%s
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, (team.value, user_id))
 
     @staticmethod
     def get_team_populations() -> Tuple[int, int]:
@@ -364,8 +375,27 @@ class Storage:
         return tuple([int(row) for row in rows[0]])
 
     @staticmethod
+    def get_user_by_id(user_id: int) -> PombotUser:
+        """Return a single user by its userID."""
+        query = f"""
+            SELECT * FROM {Config.USERS_TABLE}
+            WHERE userID=%s;
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, (user_id,))
+            row = cursor.fetchone()
+
+        return PombotUser(*row)
+
+    @staticmethod
     def get_users_by_id(user_ids: List[int]) -> Set[PombotUser]:
-        """Return a list of users from a list of userID's."""
+        """Return a list of users from a list of userID's.
+
+        This is a small optimization function to call the storage a single
+        time to return multiple unique users, instead of calling it one time
+        for each user.
+        """
         if not user_ids:
             return []
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pombot.config import Pomwars
@@ -13,6 +13,11 @@ class DateRange:
 
     def __str__(self):
         fmt = lambda dt: datetime.strftime(dt, "%B %d, %Y")
+        ignore_time = lambda dt: datetime.strftime(dt, "%B %d")
+
+        if ignore_time(self.start_date) == ignore_time(self.end_date):
+            return f"{fmt(self.start_date)}"
+
         return f"{fmt(self.start_date)} - {fmt(self.end_date)}"
 
     def __init__(self, *args):
@@ -106,6 +111,10 @@ class Team(str, Enum):
     def __invert__(self):
         return self.VIKINGS if self == self.KNIGHTS else self.KNIGHTS
 
+    def get_icon(self):
+        """Return the team's configured IconUrl."""
+        return Pomwars.IconUrls.KNIGHT if self == self.KNIGHTS else Pomwars.IconUrls.VIKING
+
 
 class ActionType(str, Enum):
     """Type of an action in the actions table of the database."""
@@ -114,9 +123,22 @@ class ActionType(str, Enum):
     DEFEND = 'defend'
 
 
+@dataclass(frozen=True)
+class User:
+    """A user, as described, in order, from the database."""
+    user_id: int
+    timezone: timezone
+    team: Team
+    inventory_string: str
+    player_level: int
+    attack_level: int
+    heavy_attack_level: int
+    defend_level: int
+
+
 @dataclass
 class Action:
-    """An event, as described, in order, from the database."""
+    """An action, as described, in order, from the database."""
     action_id: int
     user_id: int
     team: str
@@ -124,8 +146,28 @@ class Action:
     was_successful: bool
     was_critical: bool
     items_dropped: str
-    damage: int
+    raw_damage: int
     timestamp: datetime
+
+    @property
+    def damage(self) -> float:
+        """The real damage of this action."""
+        return self.raw_damage / 100.0
+
+    @property
+    def is_defend(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.DEFEND
+
+    @property
+    def is_heavy(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.HEAVY_ATTACK
+
+    @property
+    def is_normal(self) -> bool:
+        """Return whether or not the action was a heavy attack."""
+        return self.type == ActionType.NORMAL_ATTACK
 
 
 class InstantItem(str, Enum):

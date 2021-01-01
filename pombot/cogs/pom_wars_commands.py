@@ -1,22 +1,22 @@
-from datetime import datetime
 import json
 import logging
 import math
 import random
 import re
+from datetime import datetime, timedelta
 from functools import cache
 from pathlib import Path
-from typing import List
+from typing import Any, List, Union
 
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
-from discord.role import Role
 from discord.user import User
 
 from pombot import errors
-from pombot.config import Pomwars, Reactions
+from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
+from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
 
@@ -36,7 +36,7 @@ def _get_user_team(user: User) -> Team:
 
 
 class Attack:
-    """An attack as specified by file and directory structure."""
+    """An attack action as specified by file and directory structure."""
     def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
         self.name = directory.name
         self.is_heavy = is_heavy
@@ -44,14 +44,14 @@ class Attack:
         self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
         self._meta = (directory / Locations.META).read_text(encoding="utf8")
 
-        self.chance_for_this_attack = None
+        self.chance_for_this_action = None
         self.damage_multiplier = None
         for key, val in json.loads(self._meta).items():
             setattr(self, key, val)
 
     @property
     def damage(self):
-        """The configured base damage for this attack."""
+        """The configured base damage for this action."""
         base_damage = Pomwars.BASE_DAMAGE_FOR_NORMAL_ATTACKS
 
         if self.is_heavy:
@@ -61,44 +61,81 @@ class Attack:
 
     @property
     def weight(self):
-        """The configured base weighted-chance for this attack."""
-        return self.chance_for_this_attack
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
 
-    def get_message(self, user: User) -> str:
+    def get_message(self, user: User, adjusted_damage: int = None) -> str:
         """The markdown-formatted version of the message.txt from the
-        attack's directory, and the resulting action, as a string.
+        action's directory, and its result, as a string.
         """
         story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
-        action = "{emt} {you} attacked the {team} for {dmg} damage!".format(
+        action = "{emt} {you} attacked the {team} for {dmg:.2f} damage!".format(
             emt=Pomwars.SUCCESSFUL_ATTACK_EMOTE,
             you=f"<@{user.id}>",
             team=f"{(~_get_user_team(user)).value}s",
-            dmg=self.damage,
+            dmg=adjusted_damage or self.damage,
         )
 
         return "\n\n".join([story, action])
 
 
-def _load_attacks(location: Path, *, is_heavy: bool, is_critical=False) -> List[Attack]:
-    attacks = []
+class Defend:
+    """A defend action as specified by file and directory structure."""
+    def __init__(self, directory: Path):
+        self.name = directory.name
+        self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
+        self._meta = (directory / Locations.META).read_text(encoding="utf8")
+
+        self.chance_for_this_action = None
+        for key, val in json.loads(self._meta).items():
+            setattr(self, key, val)
+
+    @property
+    def weight(self):
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
+
+    def get_message(self, user: User) -> str:
+        """The markdown-formatted version of the message.txt from the
+        action's directory, and its result, as a string.
+        """
+        story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
+        action = "{emt} {you} help defend the {team}!".format(
+            emt=Pomwars.SUCCESSFUL_DEFEND_EMOTE,
+            you=f"<@{user.id}>",
+            team=f"{(_get_user_team(user)).value}s",
+        )
+
+        return "\n\n".join([story, action])
+
+
+def _load_actions(
+    location: Path,
+    type_: Union[Attack, Defend],
+    *,
+    is_heavy: bool = False,
+    is_critical: bool = False,
+) -> List[Any]:
+    actions = []
     location = location / "~criticals" if is_critical else location
 
-    for attack_dir in location.iterdir():
-        if attack_dir.name.startswith("~"):
+    for action_dir in location.iterdir():
+        if action_dir.name.startswith("~"):
             continue
 
-        attacks.append(Attack(attack_dir, is_heavy, is_critical))
+        actions.append(
+            Attack(action_dir, is_heavy, is_critical) if type_ ==
+            Attack else Defend(action_dir))
 
-    return attacks
+    return actions
 
 
-def _is_attack_successful(
+def _is_action_successful(
     user: User,
-    is_heavy_attack: bool,
     timestamp: datetime,
+    is_heavy_attack: bool = False,
 ) -> bool:
-    @cache
-    def _get_normal_attack_success_chance(num_poms: int):
+    def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
 
         probabilities = {
@@ -116,8 +153,12 @@ def _is_attack_successful(
         return function(num_poms)
 
     @cache
-    def _get_heavy_attack_success_chance(num_poms):
-        return 1 / num_poms  # FIXME
+    def _get_normal_attack_success_chance(num_poms: int):
+        return 1.0 * _delayed_exponential_drop(num_poms)
+
+    @cache
+    def _get_heavy_attack_success_chance(num_poms: int):
+        return 0.25 * _delayed_exponential_drop(num_poms)
 
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)
@@ -133,6 +174,22 @@ def _is_attack_successful(
     return random.random() <= chance_func(this_pom_number)
 
 
+def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
+    defend_actions = Storage.get_actions(
+        action_type=ActionType.DEFEND,
+        team=team,
+        was_successful=True,
+        date_range=DateRange(
+            timestamp - timedelta(minutes=10),
+            timestamp,
+        ),
+    )
+    defenders = Storage.get_users_by_id([a.user_id for a in defend_actions])
+    multipliers = [Pomwars.DEFEND_LEVEL_MULTIPLIERS[d.defend_level] for d in defenders]
+
+    return min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
+
+
 class PomWarsUserCommands(commands.Cog):
     """Commands used by users during a Pom War."""
     HEAVY_QUALIFIERS = ["heavy", "hard", "sharp", "strong"]
@@ -141,11 +198,83 @@ class PomWarsUserCommands(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    async def actions(self, ctx: Context, *args):
+        """Get your current, previous, or specific day's actions."""
+        date_range = None
+        today = datetime.today().strftime("%B %d").split()
+        yesterday = (datetime.today() -
+                     timedelta(days=1)).strftime("%B %d").split()
+
+        descriptive_dates = {
+            "today": DateRange(*today, *today),
+            "yesterday": DateRange(*yesterday, *yesterday)
+        }
+
+        if args:
+            date_range = descriptive_dates.get(args[0].casefold())
+
+        if date_range is None:
+            try:
+                date_range = DateRange(*args, *args)
+            except ValueError:
+                today = datetime.today()
+                date_range = descriptive_dates["today"]
+
+        actions = Storage.get_actions(user=ctx.author, date_range=date_range)
+
+        if not actions:
+            description = "*No recorded actions.*"
+        else:
+            descripts = []
+
+            nrm = [a for a in actions if a.is_normal]
+            nrmx = [a for a in nrm if not a.was_successful]
+            descripts.append("Normal attacks: {}{}".format(
+                len(nrm), f" (missed {len(nrmx)})" if nrmx else "") if nrm else "")
+
+            hvy = [a for a in actions if a.is_heavy]
+            hvyx = [a for a in hvy if not a.was_successful]
+            descripts.append("Heavy attacks: {}{}".format(
+                len(hvy), f" (missed {len(hvyx)})" if hvyx else "") if hvy else "")
+
+            dfn = [a for a in actions if a.is_defend]
+            dfnx = [a for a in dfn if not a.was_successful]
+            descripts.append("Defends: {}{}".format(
+                len(dfn), f" (missed {len(dfnx)})" if dfnx else "") if dfn else "")
+
+            descripts.append(" ")  # &nbsp;
+
+            total = len(actions)
+            tot_emote = Reactions.TOMATO
+            descripts.append(f"Total poms:  {tot_emote}  _{total}_")
+
+            damage = sum([a.damage for a in actions if a.damage])
+            dam_emote = Reactions.CROSSED_SWORDS
+            descripts.append(f"Damage dealt:  {dam_emote}  _**{damage:.2f}**_")
+
+            description = "\n".join(d for d in descripts if d)
+
+        await send_embed_message(
+            ctx,
+            title=f"Actions for {date_range}",
+            description=description,
+            icon_url=Pomwars.IconUrls.SWORD,
+            colour=Pomwars.ACTION_COLOUR,
+            private_message=True,
+        )
+
+    @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
         heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
+
+        if len(description) > Config.DESCRIPTION_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send(f"{ctx.author.mention}, your pom description must "
+                           f"be fewer than {Config.DESCRIPTION_LIMIT} characters.")
+            return
 
         Storage.add_poms_to_user_session(
             ctx.author,
@@ -167,7 +296,7 @@ class PomWarsUserCommands(commands.Cog):
             "time_set":       timestamp,
         }
 
-        if not _is_attack_successful(ctx.author, heavy_attack, timestamp):
+        if not _is_action_successful(ctx.author, timestamp, heavy_attack):
             emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
             await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             Storage.add_pom_war_action(**action)
@@ -177,18 +306,62 @@ class PomWarsUserCommands(commands.Cog):
         action["was_critical"] = random.random() <= Pomwars.BASE_CHANCE_FOR_CRITICAL
         await ctx.message.add_reaction(Reactions.BOOM)
 
-        attacks = _load_attacks(
+        attacks = _load_actions(
             Locations.HEAVY_ATTACKS_DIR
             if heavy_attack else Locations.NORMAL_ATTACKS_DIR,
+            type_=Attack,
             is_critical=action["was_critical"],
             is_heavy=heavy_attack,
         )
         weights = [attack.weight for attack in attacks]
         attack, = random.choices(attacks, weights=weights)
 
-        action["damage"] = attack.damage
+        defensive_multiplier = _get_defensive_multiplier(
+            team=~_get_user_team(ctx.author),
+            timestamp=timestamp)
+
+        action["damage"] = attack.damage - attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
-        await ctx.send(attack.get_message(ctx.author))
+        await ctx.send(attack.get_message(ctx.author, action["damage"]))
+
+    @commands.command()
+    async def defend(self, ctx: Context, *args):
+        """Defend your team."""
+        timestamp = datetime.now()
+        Storage.add_poms_to_user_session(
+            ctx.author,
+            descript=" ".join(args),
+            count=1,
+            time_set=timestamp,
+        )
+        await ctx.message.add_reaction(Reactions.TOMATO)
+
+        action = {
+            "user":           ctx.author,
+            "team":           _get_user_team(ctx.author),
+            "action_type":    ActionType.DEFEND,
+            "was_successful": False,
+            "was_critical":   None,
+            "items_dropped":  "",
+            "damage":         None,
+            "time_set":       timestamp,
+        }
+
+        if not _is_action_successful(ctx.author, timestamp):
+            emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
+            await ctx.send(f"<@{ctx.author.id}> defence failed! {emote}")
+            Storage.add_pom_war_action(**action)
+            return
+
+        action["was_successful"] = True
+        await ctx.message.add_reaction(Reactions.SHIELD)
+
+        defends = _load_actions(Locations.DEFENDS_DIR, type_=Defend)
+        weights = [defend.weight for defend in defends]
+        defend, = random.choices(defends, weights=weights)
+
+        Storage.add_pom_war_action(**action)
+        await ctx.send(defend.get_message(ctx.author))
 
 
 class PomWarsAdminCommands(commands.Cog):

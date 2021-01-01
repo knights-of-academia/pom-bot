@@ -14,20 +14,21 @@ class Locations:  # pylint: disable=too-few-public-methods
 
     NORMAL_ATTACKS_DIR = POM_WARS_DATA_DIR / "normal_attacks"
     HEAVY_ATTACKS_DIR = POM_WARS_DATA_DIR / "heavy_attacks"
+    DEFENDS_DIR = POM_WARS_DATA_DIR / "defends"
 
 
 # Check sanity to discover errors in folder structure during developement.
-def _check_is_attacks_dir(path: Path) -> True:
+def _check_is_actions_dir(path: Path) -> True:
     log_name = (path.name if not path.name.startswith("~")
             else "/".join(path.parts[-2:]))
-    _log.info("Loading attacks directory: %s", log_name)
+    _log.info("Loading actions directory: %s", log_name)
 
     for item in path.iterdir():
         if not item.is_dir():
             continue
 
         if item.name.startswith("~"):
-            _check_is_attacks_dir(item)
+            _check_is_actions_dir(item)
             continue
 
         attack_dir = item
@@ -50,7 +51,6 @@ for attr in vars(Locations):
     location: Path = getattr(Locations, name).resolve()
 
     if not location.is_dir():
-        raise RuntimeError(f'Variable named "{location}" is not a directory')
+        raise RuntimeError(f"Variable named '{location}' is not a directory")
 
-    if location.name.casefold().endswith("attacks"):
-        _check_is_attacks_dir(location)
+    _check_is_actions_dir(location)

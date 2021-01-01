@@ -11,6 +11,7 @@ class Locations:  # pylint: disable=too-few-public-methods
     """Path-like locations of data for the bot."""
     MESSAGE = "message.txt"
     META = "meta.json"
+    SCOREBOARD_BODY = POM_WARS_DATA_DIR / "scoreboard.txt"
 
     NORMAL_ATTACKS_DIR = POM_WARS_DATA_DIR / "normal_attacks"
     HEAVY_ATTACKS_DIR = POM_WARS_DATA_DIR / "heavy_attacks"

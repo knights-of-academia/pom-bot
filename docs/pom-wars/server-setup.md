@@ -8,7 +8,6 @@ To get a guild ready for the event, decide which is right for your guild.
 ## Single-team guilds
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
-- Make a role called either "Knight" or "Viking"
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put (#battlegrounds)
   - Set permissions so that only players with the chosen role can see this
@@ -19,7 +18,6 @@ To get a guild ready for the event, decide which is right for your guild.
 ## Any-team guilds
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
-- Make two roles called "Knight" and "Viking"
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put for each Role (eg. #knights,
   #vikings)
@@ -64,3 +62,18 @@ For "live":
   works as intended.
 - If the link works correctly, send the link to the partners who will be
   inviting the bot to their servers.
+
+## A Note on Roles
+
+For a Pom War, the bot needs to be configured with two unique roles (here,
+"Knight" and "Viking") and, on each server, there should only exist one role
+with each name.
+
+With a running bot, when a user attempts to join a war by reacting to the
+scoreboard message, Pombot will attempt to create these roles if they do not
+exist.
+
+Should the configured roles aready exist on the guild that the running bot is
+joined to, the bot will attempt to assign them to users when they join the
+war. This will result in Permissions errors when the roles-to-be-assigned are
+"higher" than the bot's role.

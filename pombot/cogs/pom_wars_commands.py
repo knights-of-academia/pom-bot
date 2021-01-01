@@ -68,10 +68,17 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You attack the {team} for {dmg:.2f} damage!".format(
-            team=f"{(~_get_user_team(user)).value}s",
-            dmg=adjusted_damage or self.damage,
-        )
+        if (is_critical):
+            action = "<:attack:794694043015446530> `{dmg:.2f} Damage to {team}!`\n<:star_red:573285441076199444> `Critical hit!`".format(
+                team=f"{(~_get_user_team(user)).value}s",
+                dmg=adjusted_damage or self.damage,
+            )
+        else:
+            action = "<:attack:794694043015446530> `{dmg:.2f} Damage to {team}!`".format(
+                team=f"{(~_get_user_team(user)).value}s",
+                dmg=adjusted_damage or self.damage,
+            )
+
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
@@ -97,7 +104,7 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You help defend the {team}!".format(
+        action = "<:defend:794694015861260308> `2%% damage reduction to {team}!`".format(
             team=f"{(_get_user_team(user)).value}s",
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
@@ -320,12 +327,19 @@ class PomWarsUserCommands(commands.Cog):
         action["damage"] = attack.damage - attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
 
+        embedVar = discord.Embed(
+        color=red
+      )
+
+        if (is_heavy) dependent_color = 0xFFD700
+        else dependent_color = 0xFFD700
+
         await send_embed_message(
             None,
-            title="Attack successful!",
+            title="You have used Attack!",
             description=attack.get_message(ctx.author, action["damage"]),
             icon_url=Pomwars.IconUrls.SWORD,
-            colour=Pomwars.ACTION_COLOUR,
+            colour=dependent_color,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
@@ -369,10 +383,10 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="Defend successful!",
+            title="You have used Defend!",
             description=defend.get_message(ctx.author),
             icon_url=Pomwars.IconUrls.SHIELD,
-            colour=Pomwars.ACTION_COLOUR,
+            colour=0x55aedd,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 

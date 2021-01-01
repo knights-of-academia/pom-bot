@@ -106,6 +106,7 @@ class Pomwars:
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
 
+
 class Reactions:
     """Static reaction emojis."""
     ABACUS = "🧮"
@@ -143,3 +144,17 @@ class Secrets:
     MYSQL_USER = os.getenv("MYSQL_USER")
     MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+
+
+TIMEZONES = {
+    Reactions.UTC_MINUS_10_TO_9: -9,
+    Reactions.UTC_MINUS_8_TO_7: -7,
+    Reactions.UTC_MINUS_6_TO_5: -5,
+    Reactions.UTC_MINUS_4_TO_3: -3,
+    Reactions.UTC_MINUS_2_TO_1: -1,
+    Reactions.UTC_PLUS_1_TO_2: +2,
+    Reactions.UTC_PLUS_3_TO_4: +4,
+    Reactions.UTC_PLUS_5_TO_6: +6,
+    Reactions.UTC_PLUS_7_TO_8: +8,
+    Reactions.UTC_PLUS_9_TO_10: +10,
+}

@@ -3,13 +3,22 @@ from datetime import timedelta, timezone
 
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
+from discord.guild import Guild
 from discord.message import Message
 
 import pombot.errors
-from pombot.config import Config, Debug, Pomwars, Reactions
+from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
+
+
+async def _create_roles_on_guild(roles: list, guild: Guild):
+    for role in roles:
+        if role in (r.name for r in guild.roles):
+            continue
+
+        await guild.create_role(name=role)
 
 
 async def on_message_handler(bot: Bot, message: Message):
@@ -48,70 +57,53 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
                 payload.user_id != bot.user.id]):
         return
 
-    if not all([Pomwars.JOIN_CHANNEL_NAME == channel.name,
-                Reactions.WAR_JOIN_REACTION == payload.emoji.name]):
+    if channel.name != Pomwars.JOIN_CHANNEL_NAME:
         return
 
-    for bot_role in bot_roles:
-        if bot_role in (r.name for r in guild.roles):
-            continue
+    if payload.emoji.name == Reactions.WAR_JOIN_REACTION:
+        await _create_roles_on_guild(bot_roles, guild)
 
-        await guild.create_role(name=bot_role)
+        team = _get_guild_team_or_random(payload.guild_id)
+        dm_description = "Enjoy to the Pom War event! Good luck and have fun!"
 
-    team = _get_guild_team_or_random(payload.guild_id)
-    dm_description = "Enjoy to the Pom War event! Good luck and have fun!"
+        try:
+            Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+        except pombot.errors.UserAlreadyExistsError as exc:
+            dm_description = "You're already on a team! :open_mouth:"
+            user_roles = [r.name for r in payload.member.roles]
+            bot_roles_on_user = []
 
-    try:
-        Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
-    except pombot.errors.UserAlreadyExistsError as exc:
-        dm_description = "You're already on a team! :open_mouth:"
-        user_roles = [r.name for r in payload.member.roles]
-        bot_roles_on_user = []
+            for bot_role in bot_roles:
+                try:
+                    bot_roles_on_user.append(user_roles[user_roles.index(bot_role)])
+                except ValueError:
+                    continue
 
-        for bot_role in bot_roles:
-            try:
-                bot_roles_on_user.append(user_roles[user_roles.index(bot_role)])
-            except ValueError:
-                continue
+            if len(bot_roles_on_user) in [0, 2]:
+                team = Team(exc.team)
+            else:
+                team = Team(bot_roles_on_user[0])
 
-        if len(bot_roles_on_user) in [0, 2]:
-            team = Team(exc.team)
-        else:
-            team = Team(bot_roles_on_user[0])
+                if team != exc.team:
+                    dm_description = "It looks like your team has been swapped!"
+                    Storage.update_user_team(payload.user_id, team)
 
-            if team != exc.team:
-                dm_description = "It looks like your team has been swapped!"
-                Storage.update_user_team(payload.user_id, team)
+        await send_embed_message(
+            None,
+            title=f"Welcome to the {team}s, {payload.member.display_name}!",
+            description=dm_description,
+            colour=Pomwars.ACTION_COLOUR,
+            icon_url=team.get_icon(),
+            _func=payload.member.send,
+        )
 
-    await send_embed_message(
-        None,
-        title=f"Welcome to the {team}s, {payload.member.display_name}!",
-        description=dm_description,
-        colour=Pomwars.ACTION_COLOUR,
-        icon_url=team.get_icon(),
-        _func=payload.member.send,
-    )
+        role, = [r for r in guild.roles if r.name == team.value]
+        await payload.member.add_roles(role)
 
-    role, = [r for r in guild.roles if r.name == team.value]
-    await payload.member.add_roles(role)
-
-    timezones = {
-        Reactions.UTC_MINUS_10_TO_9: -9,
-        Reactions.UTC_MINUS_8_TO_7: -7,
-        Reactions.UTC_MINUS_6_TO_5: -5,
-        Reactions.UTC_MINUS_4_TO_3: -3,
-        Reactions.UTC_MINUS_2_TO_1: -1,
-        Reactions.UTC_PLUS_1_TO_2: +2,
-        Reactions.UTC_PLUS_3_TO_4: +4,
-        Reactions.UTC_PLUS_5_TO_6: +6,
-        Reactions.UTC_PLUS_7_TO_8: +8,
-        Reactions.UTC_PLUS_9_TO_10: +10,
-    }
-
-    if (channel.name == Pomwars.JOIN_CHANNEL_NAME and payload.emoji.name in timezones):
+    if payload.emoji.name in TIMEZONES:
         Storage.set_user_timezone(
             payload.user_id,
-            timezone(timedelta(hours=timezones[payload.emoji.name])))
+            timezone(timedelta(hours=TIMEZONES[payload.emoji.name])))
 
 
 def _get_guild_team_or_random(guild_id: int) -> Team:

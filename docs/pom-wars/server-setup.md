@@ -8,7 +8,6 @@ To get a guild ready for the event, decide which is right for your guild.
 ## Single-team guilds
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
-- Make a role called either "Knight" or "Viking"
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put (#battlegrounds)
   - Set permissions so that only players with the chosen role can see this
@@ -19,7 +18,6 @@ To get a guild ready for the event, decide which is right for your guild.
 ## Any-team guilds
 
 - [Add the bot to the guild](#inviting-the-bot-to-partner-servers)
-- Make two roles called "Knight" and "Viking"
 - Make a channel called "#the-draft"
 - Make a channel where ! actions will be put for each Role (eg. #knights,
   #vikings)

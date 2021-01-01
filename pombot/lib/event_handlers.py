@@ -48,15 +48,15 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
                 payload.user_id != bot.user.id]):
         return
 
+    if not all([Pomwars.JOIN_CHANNEL_NAME == channel.name,
+                Reactions.WAR_JOIN_REACTION == payload.emoji.name]):
+        return
+
     for bot_role in bot_roles:
         if bot_role in (r.name for r in guild.roles):
             continue
 
         await guild.create_role(name=bot_role)
-
-    if not all([Pomwars.JOIN_CHANNEL_NAME == channel.name,
-                Reactions.WAR_JOIN_REACTION == payload.emoji.name]):
-        return
 
     team = _get_guild_team_or_random(payload.guild_id)
     dm_description = "Enjoy to the Pom War event! Good luck and have fun!"

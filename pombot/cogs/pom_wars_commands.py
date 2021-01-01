@@ -68,15 +68,13 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
-        action = "{emt} {you} attacked the {team} for {dmg:.2f} damage!".format(
-            emt=Pomwars.SUCCESSFUL_ATTACK_EMOTE,
-            you=f"<@{user.id}>",
+        action = "You attack the {team} for {dmg:.2f} damage!".format(
             team=f"{(~_get_user_team(user)).value}s",
             dmg=adjusted_damage or self.damage,
         )
+        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
-        return "\n\n".join([story, action])
+        return "\n\n".join([action, story.strip()])
 
 
 class Defend:
@@ -99,14 +97,12 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        story = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message)
-        action = "{emt} {you} help defend the {team}!".format(
-            emt=Pomwars.SUCCESSFUL_DEFEND_EMOTE,
-            you=f"<@{user.id}>",
+        action = "You help defend the {team}!".format(
             team=f"{(_get_user_team(user)).value}s",
         )
+        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
-        return "\n\n".join([story, action])
+        return "\n\n".join([action, story.strip()])
 
 
 def _load_actions(
@@ -262,6 +258,7 @@ class PomWarsUserCommands(commands.Cog):
             colour=Pomwars.ACTION_COLOUR,
             private_message=True,
         )
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
 
     @commands.command()
     async def attack(self, ctx: Context, *args):
@@ -298,8 +295,8 @@ class PomWarsUserCommands(commands.Cog):
 
         if not _is_action_successful(ctx.author, timestamp, heavy_attack):
             emote = random.choice(["¯\\_(ツ)_/¯", "(╯°□°）╯︵ ┻━┻"])
-            await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             Storage.add_pom_war_action(**action)
+            await ctx.send(f"<@{ctx.author.id}>'s attack missed! {emote}")
             return
 
         action["was_successful"] = True
@@ -322,7 +319,15 @@ class PomWarsUserCommands(commands.Cog):
 
         action["damage"] = attack.damage - attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
-        await ctx.send(attack.get_message(ctx.author, action["damage"]))
+
+        await send_embed_message(
+            None,
+            title="Attack successful!",
+            description=attack.get_message(ctx.author, action["damage"]),
+            icon_url=Pomwars.IconUrls.SWORD,
+            colour=Pomwars.ACTION_COLOUR,
+            _func=partial(ctx.channel.send, content=ctx.author.mention),
+        )
 
     @commands.command()
     async def defend(self, ctx: Context, *args):
@@ -361,7 +366,15 @@ class PomWarsUserCommands(commands.Cog):
         defend, = random.choices(defends, weights=weights)
 
         Storage.add_pom_war_action(**action)
-        await ctx.send(defend.get_message(ctx.author))
+
+        await send_embed_message(
+            None,
+            title="Defend successful!",
+            description=defend.get_message(ctx.author),
+            icon_url=Pomwars.IconUrls.SHIELD,
+            colour=Pomwars.ACTION_COLOUR,
+            _func=partial(ctx.channel.send, content=ctx.author.mention),
+        )
 
 
 class PomWarsAdminCommands(commands.Cog):

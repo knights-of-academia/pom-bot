@@ -43,7 +43,7 @@ class Config:
     # Extensions
     EXTENSIONS = [
         "pombot.cogs.event_listeners",
-        "pombot.cogs.user_commands",
+        # "pombot.cogs.user_commands",
         "pombot.cogs.admin_commands",
     ]
 
@@ -99,8 +99,8 @@ class Pomwars:
         KNIGHT = "https://cdn.discordapp.com/attachments/758012800789381331/794257081455869952/if_Knight_2913116_1.png"
         VIKING = "https://cdn.discordapp.com/attachments/758012800789381331/794257094454149130/if_Viking_2913107_1.png"
         AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
-        SHIELD = "https://cdn.discordapp.com/attachments/793560646594854944/793959733928787998/pom-war-shield.png"
-        SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
+        SHIELD = "https://cdn.discordapp.com/attachments/791201687410835497/794634532145725440/image0.png"
+        SWORD = "https://cdn.discordapp.com/attachments/791201687410835497/794620213374877696/image0.png"
     # pylint: enable=line-too-long
 
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}

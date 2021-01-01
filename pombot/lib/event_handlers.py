@@ -102,19 +102,19 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
 
     if payload.emoji.name in TIMEZONES:
         user = Storage.get_user_by_id(payload.user_id)
-        if len(user) == 0:
-            Storage.set_user_timezone(
-                payload.user_id,
-                timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))
-            )
-        else:
+        if not user:
             await send_embed_message(
                 None,
                 title=f"Oops! Looks like i had some problem setting your timezone.",
                 description="You first need to join the event",
                 _func=payload.member.send
             )
-
+            return
+        
+        Storage.set_user_timezone(
+                payload.user_id,
+                timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))
+            )
 
 def _get_guild_team_or_random(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the

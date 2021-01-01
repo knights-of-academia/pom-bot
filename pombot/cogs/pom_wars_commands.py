@@ -401,7 +401,6 @@ class PomwarsEventListeners(Cog):
 
             try:
                 message, = await history.flatten()
-                # await message.delete()
             except ValueError:
                 if channel.guild.id in Pomwars.KNIGHT_ONLY_GUILDS:
                     icon_url = Pomwars.IconUrls.KNIGHT

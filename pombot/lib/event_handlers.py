@@ -77,11 +77,11 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         if len(bot_roles_on_user) in [0, 2]:
             team = Team(exc.team)
         else:
-            user_team = Team(bot_roles_on_user[0])
+            team = Team(bot_roles_on_user[0])
 
-            if user_team != exc.team:
+            if team != exc.team:
                 dm_description = "It looks like your team has been swapped!"
-                Storage.update_user_team(payload.user_id, team := user_team)
+                Storage.update_user_team(payload.user_id, team)
 
     await send_embed_message(
         None,

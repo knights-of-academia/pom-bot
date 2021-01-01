@@ -64,7 +64,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         await _create_roles_on_guild(bot_roles, guild)
 
         team = _get_guild_team_or_random(payload.guild_id)
-        dm_description = "Enjoy to the Pom War event! Good luck and have fun!"
+        dm_description = "Enjoy the Pom War event! Good luck and have fun!"
 
         try:
             Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)

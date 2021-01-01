@@ -70,6 +70,7 @@ disable=locally-disabled,
         suppressed-message,
         missing-module-docstring,
         f-string-without-interpolation,
+        unsubscriptable-object,
 
 
 [REPORTS]

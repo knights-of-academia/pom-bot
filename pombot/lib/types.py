@@ -111,6 +111,10 @@ class Team(str, Enum):
     def __invert__(self):
         return self.VIKINGS if self == self.KNIGHTS else self.KNIGHTS
 
+    def get_icon(self):
+        """Return the team's configured IconUrl."""
+        return Pomwars.IconUrls.KNIGHT if self == self.KNIGHTS else Pomwars.IconUrls.VIKING
+
 
 class ActionType(str, Enum):
     """Type of an action in the actions table of the database."""

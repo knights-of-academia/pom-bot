@@ -3,11 +3,22 @@ from datetime import timedelta, timezone
 
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
+from discord.guild import Guild
 from discord.message import Message
 
-from pombot.config import Config, Debug, Pomwars, Reactions
+import pombot.errors
+from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
+from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
+
+
+async def _create_roles_on_guild(roles: list, guild: Guild):
+    for role in roles:
+        if role in (r.name for r in guild.roles):
+            continue
+
+        await guild.create_role(name=role)
 
 
 async def on_message_handler(bot: Bot, message: Message):
@@ -38,68 +49,64 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
     they react."""
     guild = bot.get_guild(payload.guild_id)
     channel = bot.get_channel(payload.channel_id)
+    bot_roles = [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
 
-    conditions = [
-        bot.is_ready(),
-        guild is not None,
-        channel is not None,
-        payload.user_id != bot.user.id
-    ]
-
-    if not all(conditions):
+    if not all([bot.is_ready(),
+                guild is not None,
+                channel is not None,
+                payload.user_id != bot.user.id]):
         return
 
-    join_conditions = [
-        Pomwars.JOIN_CHANNEL_NAME == channel.name,
-        Reactions.WAR_JOIN_REACTION == payload.emoji.name
-    ]
+    if channel.name != Pomwars.JOIN_CHANNEL_NAME:
+        return
 
-    if all(join_conditions):
-        knight_role = None
-        viking_role = None
-        for role in guild.roles:
-            if role.name == Pomwars.KNIGHT_ROLE:
-                knight_role = role
-            if role.name == Pomwars.VIKING_ROLE:
-                viking_role = role
+    if payload.emoji.name == Reactions.WAR_JOIN_REACTION:
+        await _create_roles_on_guild(bot_roles, guild)
 
-        if None in [knight_role, viking_role]:
-            return
+        team = _get_guild_team_or_random(payload.guild_id)
+        dm_description = "Enjoy the Pom War event! Good luck and have fun!"
 
-        team = _get_assigned_team(payload.guild_id)
+        try:
+            Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+        except pombot.errors.UserAlreadyExistsError as exc:
+            dm_description = "You're already on a team! :open_mouth:"
+            user_roles = [r.name for r in payload.member.roles]
+            bot_roles_on_user = []
 
-        Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+            for bot_role in bot_roles:
+                try:
+                    bot_roles_on_user.append(user_roles[user_roles.index(bot_role)])
+                except ValueError:
+                    continue
 
-        assigned_team_role = None
-        if team == Team.KNIGHTS:
-            assigned_team_role = knight_role
-        elif team == Team.VIKINGS:
-            assigned_team_role = viking_role
+            if len(bot_roles_on_user) in [0, 2]:
+                team = Team(exc.team)
+            else:
+                team = Team(bot_roles_on_user[0])
 
-        await payload.member.add_roles(assigned_team_role)
+                if team != exc.team:
+                    dm_description = "It looks like your team has been swapped!"
+                    Storage.update_user_team(payload.user_id, team)
 
-    timezones = {
-        Reactions.UTC_MINUS_10_TO_9: -9,
-        Reactions.UTC_MINUS_8_TO_7: -7,
-        Reactions.UTC_MINUS_6_TO_5: -5,
-        Reactions.UTC_MINUS_4_TO_3: -3,
-        Reactions.UTC_MINUS_2_TO_1: -1,
-        Reactions.UTC_PLUS_1_TO_2: +2,
-        Reactions.UTC_PLUS_3_TO_4: +4,
-        Reactions.UTC_PLUS_5_TO_6: +6,
-        Reactions.UTC_PLUS_7_TO_8: +8,
-        Reactions.UTC_PLUS_9_TO_10: +10,
-    }
+        await send_embed_message(
+            None,
+            title=f"Welcome to the {team}s, {payload.member.display_name}!",
+            description=dm_description,
+            colour=Pomwars.ACTION_COLOUR,
+            icon_url=team.get_icon(),
+            _func=payload.member.send,
+        )
 
-    if (channel.name == Pomwars.JOIN_CHANNEL_NAME and payload.emoji.name in timezones):
+        role, = [r for r in guild.roles if r.name == team.value]
+        await payload.member.add_roles(role)
+
+    if payload.emoji.name in TIMEZONES:
         Storage.set_user_timezone(
             payload.user_id,
-            timezone(timedelta(hours=timezones[payload.emoji.name])))
-
-    return
+            timezone(timedelta(hours=TIMEZONES[payload.emoji.name])))
 
 
-def _get_assigned_team(guild_id: int) -> Team:
+def _get_guild_team_or_random(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the
     team that currently needs more players.
 

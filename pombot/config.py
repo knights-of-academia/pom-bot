@@ -96,13 +96,16 @@ class Pomwars:
     # pylint: disable=line-too-long
     class IconUrls:
         """Locations of embeddable emojis."""
-        SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
-        SHIELD = "https://cdn.discordapp.com/attachments/793560646594854944/793959733928787998/pom-war-shield.png"
+        KNIGHT = "https://cdn.discordapp.com/attachments/758012800789381331/794257081455869952/if_Knight_2913116_1.png"
+        VIKING = "https://cdn.discordapp.com/attachments/758012800789381331/794257094454149130/if_Viking_2913107_1.png"
         AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
+        SHIELD = "https://cdn.discordapp.com/attachments/793560646594854944/793959733928787998/pom-war-shield.png"
+        SWORD = "https://cdn.discordapp.com/attachments/793560646594854944/793560743290208296/image0.png"
     # pylint: enable=line-too-long
 
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
+
 
 class Reactions:
     """Static reaction emojis."""
@@ -141,3 +144,17 @@ class Secrets:
     MYSQL_USER = os.getenv("MYSQL_USER")
     MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+
+
+TIMEZONES = {
+    Reactions.UTC_MINUS_10_TO_9: -9,
+    Reactions.UTC_MINUS_8_TO_7: -7,
+    Reactions.UTC_MINUS_6_TO_5: -5,
+    Reactions.UTC_MINUS_4_TO_3: -3,
+    Reactions.UTC_MINUS_2_TO_1: -1,
+    Reactions.UTC_PLUS_1_TO_2: +2,
+    Reactions.UTC_PLUS_3_TO_4: +4,
+    Reactions.UTC_PLUS_5_TO_6: +6,
+    Reactions.UTC_PLUS_7_TO_8: +8,
+    Reactions.UTC_PLUS_9_TO_10: +10,
+}

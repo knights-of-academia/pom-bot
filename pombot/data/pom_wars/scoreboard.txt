@@ -1,0 +1,3 @@
+This will soon become your scoreboard!
+
+React with {join_button} to join the war!

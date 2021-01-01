@@ -124,7 +124,7 @@ class Reactions:
     WASTEBASKET = "🗑️"
 
     # Reactions related to pom war events
-    WAR_JOIN_REACTION = os.getenv("WAR_JOIN_REACTION")
+    WAR_JOIN_REACTION = "✅"  # dotenv does not read as Unicode.
     UTC_MINUS_10_TO_9 = "1️⃣"
     UTC_MINUS_8_TO_7 = "2️⃣"
     UTC_MINUS_6_TO_5 = "3️⃣"

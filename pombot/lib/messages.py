@@ -31,4 +31,4 @@ async def send_embed_message(
         coro = ctx.author.send if private_message else ctx.send
 
     # Allow the TypeError to bubble up when both ctx and _func are None.
-    await coro(embed=message)
+    return await coro(embed=message)

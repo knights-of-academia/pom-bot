@@ -4,16 +4,18 @@ import math
 import random
 import re
 from datetime import datetime, timedelta
-from functools import cache
+from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
 
+import discord.errors
+from discord.channel import TextChannel
 from discord.ext import commands
-from discord.ext.commands import Context
+from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
 from discord.user import User
 
-from pombot import errors
+import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
@@ -21,6 +23,8 @@ from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
+
+SCOREBOARD_CHANNELS: List[TextChannel] = []
 
 
 def _get_user_team(user: User) -> Team:
@@ -30,7 +34,7 @@ def _get_user_team(user: User) -> Team:
     ]
 
     if len(team_roles) != 1:
-        raise errors.InvalidNumberOfRolesError()
+        raise pombot.errors.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
 
@@ -377,6 +381,62 @@ class PomWarsUserCommands(commands.Cog):
         )
 
 
+class PomwarsEventListeners(Cog):
+    """Handle global events for the bot."""
+    def __init__(self, bot: Bot) -> None:
+        self.bot = bot
+
+    @Cog.listener()
+    async def on_ready(self):
+        """Cog startup procedure."""
+        for guild in self.bot.guilds:
+            for channel in guild.channels:
+                if channel.name == Pomwars.JOIN_CHANNEL_NAME:
+                    SCOREBOARD_CHANNELS.append(channel)
+
+        full_channels, restricted_channels = [], []
+
+        for channel in SCOREBOARD_CHANNELS:
+            history = channel.history(limit=1, oldest_first=True)
+
+            try:
+                message, = await history.flatten()
+            except ValueError:
+                if channel.guild.id in Pomwars.KNIGHT_ONLY_GUILDS:
+                    icon_url = Pomwars.IconUrls.KNIGHT
+                elif channel.guild.id in Pomwars.VIKING_ONLY_GUILDS:
+                    icon_url = Pomwars.IconUrls.VIKING
+                else:
+                    icon_url = Pomwars.IconUrls.SWORD
+
+                try:
+                    msg = await send_embed_message(
+                        None,
+                        title="Pom Wars Season 3!",
+                        description=Locations.SCOREBOARD_BODY.read_text("utf8").format(
+                            join_button=Reactions.WAR_JOIN_REACTION),
+                        icon_url=icon_url,
+                        colour=Pomwars.ACTION_COLOUR,
+                        _func=channel.send,
+                    )
+                    await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
+                except discord.errors.Forbidden:
+                    restricted_channels.append(channel)
+            except discord.errors.Forbidden:
+                restricted_channels.append(channel)
+            else:
+                if message.author != self.bot.user:
+                    full_channels.append(channel)
+
+        for channel in full_channels:
+            _log.error("Join channel '%s' on '%s' is not empty",
+                channel.name, channel.guild.name)
+
+        for channel in restricted_channels:
+            _log.error("Join channel '%s' on '%s' is not messagable (Missing Access)",
+                channel.name, channel.guild.name)
+
+
 class PomWarsAdminCommands(commands.Cog):
     """Commands used by admins during a Pom War."""
     def __init__(self, bot: Bot):
@@ -393,4 +453,5 @@ class PomWarsAdminCommands(commands.Cog):
 def setup(bot: Bot):
     """Required to load extension."""
     bot.add_cog(PomWarsUserCommands(bot))
+    bot.add_cog(PomwarsEventListeners(bot))
     bot.add_cog(PomWarsAdminCommands(bot))

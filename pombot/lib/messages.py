@@ -17,13 +17,20 @@ async def send_embed_message(
         _func: Callable = None,
 ):
     """Send an embedded message using the context."""
-    message = Embed(
-        description=description,
-        colour=colour,
-    ).set_author(
-        name=title,
-        icon_url=icon_url,
-    )
+    if (icon_url):
+        message = Embed(
+            description=description,
+            colour=colour,
+        ).set_author(
+            name=title,
+            icon_url=icon_url,
+        )
+    else:
+        message = Embed(
+            title=title,
+            description=description,
+            colour=colour,
+        )
 
     if ctx is None:
         coro = _func

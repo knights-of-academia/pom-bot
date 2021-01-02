@@ -106,6 +106,11 @@ class Pomwars:
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
 
+    class Emotes:
+        ATTACK = "<:attack:794694043015446530>"
+        CRITICAL = "<:criticalhit:794710983536672788>"
+        DEFEND = "<:defend:794694015861260308>"
+
 
 class Reactions:
     """Static reaction emojis."""

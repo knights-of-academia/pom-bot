@@ -72,13 +72,35 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You attack the {team} for {dmg:.2f} damage!".format(
-            team=f"{(~_get_user_team(user)).value}s",
+        action_msgs = [f"** **\n{Pomwars.Emotes.ATTACK} `{{dmg:.2f}} damage!`"]
+
+        if self.is_critical:
+            action_msgs += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
+
+        action = "\n".join(action_msgs).format(
             dmg=adjusted_damage or self.damage,
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
+
+    def get_title(self, user: User) -> str:
+        """Title that includes the name of the team user attacked
+        """
+        indicator = ""
+        if (self.is_heavy): indicator = "Heavy "
+
+        title = f"You have used {indicator}Attack against the {{team}}!".format(
+            team=f"{(~_get_user_team(user)).value}s",
+        )
+
+        return title
+
+    def get_color(self) -> str:
+        if (self.is_heavy):
+            return 0xFFD700
+        else:
+            return 0xec5c5b
 
 
 class Defend:
@@ -101,12 +123,21 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You help defend the {team}!".format(
+        action = f"** **\n{Pomwars.Emotes.DEFEND} `2% team damage reduction!`".format(
             team=f"{(_get_user_team(user)).value}s",
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
+
+    def get_title(self, user: User) -> str:
+        """Title that includes the name of the team user attacked
+        """
+        title = "You have used Defend against the {team}!".format(
+            team=f"{(~_get_user_team(user)).value}s",
+        )
+
+        return title
 
 
 def _load_actions(
@@ -326,10 +357,10 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="Attack successful!",
+            title=attack.get_title(ctx.author),
             description=attack.get_message(ctx.author, action["damage"]),
-            icon_url=Pomwars.IconUrls.SWORD,
-            colour=Pomwars.ACTION_COLOUR,
+            icon_url=None,
+            colour=attack.get_color(),
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
@@ -373,10 +404,10 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="Defend successful!",
+            title=defend.get_title(ctx.author),
             description=defend.get_message(ctx.author),
-            icon_url=Pomwars.IconUrls.SHIELD,
-            colour=Pomwars.ACTION_COLOUR,
+            colour=0x55aedd,
+            icon_url=None,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 

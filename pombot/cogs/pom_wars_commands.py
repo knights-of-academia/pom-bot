@@ -87,20 +87,19 @@ class Attack:
     def get_title(self, user: User) -> str:
         """Title that includes the name of the team user attacked
         """
-        indicator = ""
-        if (self.is_heavy): indicator = "Heavy "
 
-        title = f"You have used {indicator}Attack against the {{team}}!".format(
+        title = "You have used{indicator}Attack against the {team}!".format(
+            indicator = " Heavy " if self.is_heavy else " ",
             team=f"{(~_get_user_team(user)).value}s",
         )
 
         return title
 
-    def get_color(self) -> str:
+    def get_color(self) -> int:
         if (self.is_heavy):
-            return 0xFFD700
+            return Pomwars.HEAVY_COLOR
         else:
-            return 0xec5c5b
+            return Pomwars.NORMAL_COLOR
 
 
 class Defend:
@@ -123,21 +122,13 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = f"** **\n{Pomwars.Emotes.DEFEND} `2% team damage reduction!`".format(
-            team=f"{(_get_user_team(user)).value}s",
+        action = "** **\n{emt} `{dfn}% team damage reduction!`".format(
+            emt=Pomwars.Emotes.DEFEND,
+            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[Storage.get_user_by_id(user.id).defend_level],
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
-
-    def get_title(self, user: User) -> str:
-        """Title that includes the name of the team user attacked
-        """
-        title = "You have used Defend against the {team}!".format(
-            team=f"{(~_get_user_team(user)).value}s",
-        )
-
-        return title
 
 
 def _load_actions(
@@ -404,9 +395,11 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title=defend.get_title(ctx.author),
+            title="You have used Defend against the {team}!".format(
+                team=f"{(~_get_user_team(ctx.author)).value}s",
+            ),
             description=defend.get_message(ctx.author),
-            colour=0x55aedd,
+            colour=Pomwars.DEFEND_COLOR,
             icon_url=None,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )

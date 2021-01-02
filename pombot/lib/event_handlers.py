@@ -1,6 +1,8 @@
+import logging
 import random
 from datetime import timedelta, timezone
 
+import discord.errors
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.guild import Guild
@@ -11,6 +13,8 @@ from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
+
+_log = logging.getLogger(__name__)
 
 
 async def _create_roles_on_guild(roles: list, guild: Guild):
@@ -88,14 +92,20 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
                     dm_description = "It looks like your team has been swapped!"
                     Storage.update_user_team(payload.user_id, team)
 
-        await send_embed_message(
-            None,
-            title=f"Welcome to the {team}s, {payload.member.display_name}!",
-            description=dm_description,
-            colour=Pomwars.ACTION_COLOUR,
-            icon_url=team.get_icon(),
-            _func=payload.member.send,
-        )
+        try:
+            await send_embed_message(
+                None,
+                title=f"Welcome to the {team}s, {payload.member.display_name}!",
+                description=dm_description,
+                colour=Pomwars.ACTION_COLOUR,
+                icon_url=team.get_icon(),
+                _func=payload.member.send,
+            )
+        except discord.errors.Forbidden as exc:
+            # Discord has a user-defined permission to disallow DM from other
+            # server members. When this is set, they will not be able to
+            # receive !actions output either.
+            _log.exception(exc)
 
         role, = [r for r in guild.roles if r.name == team.value]
         await payload.member.add_roles(role)
@@ -110,7 +120,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
                 _func=payload.member.send
             )
             return
-        
+
         Storage.set_user_timezone(
                 payload.user_id,
                 timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))

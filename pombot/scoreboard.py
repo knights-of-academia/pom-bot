@@ -34,7 +34,7 @@ class Scoreboard:
 
         for action in team:
             if (action.raw_damage > 0):
-                damage += action.raw_damage/100
+                damage += int(action.raw_damage/100)
         
         return str(damage)
 
@@ -73,10 +73,9 @@ class Scoreboard:
 
         winner = ""
         if knight_dmg != viking_dmg: # To check for ties
-            winner = 'viking' if knight_dmg < viking_dmg else 'knight'
+            winner = 'viking' if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS)) else 'knight'
 
         for channel in self.scoreboard_channels:
-            print(channel)
             history = channel.history(limit=1, oldest_first=True)
 
             try:
@@ -85,7 +84,7 @@ class Scoreboard:
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=Pomwars.Emotes.WINNER if winner=='knight' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=knight_dmg,
@@ -99,7 +98,7 @@ class Scoreboard:
                     [
                         "{emt} Vikings{win}".format(
                             emt=Pomwars.Emotes.VIKING,
-                            win=Pomwars.Emotes.WINNER if winner=='viking' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=viking_dmg,
@@ -126,7 +125,7 @@ class Scoreboard:
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=Pomwars.Emotes.WINNER if winner=='knight' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=self.dmg(Team.KNIGHTS),
@@ -140,7 +139,7 @@ class Scoreboard:
                     [
                         "{emt} Vikings{win}".format(
                             emt=Pomwars.Emotes.VIKING,
-                            win=Pomwars.Emotes.WINNER if winner=='viking' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=self.dmg(Team.VIKINGS),

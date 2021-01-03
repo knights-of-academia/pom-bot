@@ -437,15 +437,15 @@ class PomwarsEventListeners(Cog):
             history = channel.history(limit=1, oldest_first=True)
             winner = ''
             if (score.dmg(Team.KNIGHTS) != score.dmg(Team.VIKINGS)):
-                winner = 'vikings' if score.dmg(Team.KNIGHTS) < score.dmg(Team.VIKINGS) else 'knights'
-
+                winner = 'viking' if int(score.dmg(Team.KNIGHTS)) < int(score.dmg(Team.VIKINGS)) else 'knight'
+                
             try:
                 message, = await history.flatten()
                 fields = [
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=Pomwars.Emotes.WINNER if winner=='knights' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=score.dmg(Team.KNIGHTS),
@@ -459,7 +459,7 @@ class PomwarsEventListeners(Cog):
                     [
                         "{emt} Vikings{win}".format(
                             emt=Pomwars.Emotes.VIKING,
-                            win=f"{Pomwars.Emotes.WINNER}" if winner=='vikings' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
                         "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                             dmg=score.dmg(Team.VIKINGS),
@@ -494,7 +494,7 @@ class PomwarsEventListeners(Cog):
                         [
                             "{emt} Knights{win}".format(
                                 emt=Pomwars.Emotes.KNIGHT,
-                                win=Pomwars.Emotes.WINNER if winner=='knights' else '',
+                                win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                             ),
                             "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                                 dmg=score.dmg(Team.KNIGHTS),
@@ -508,7 +508,7 @@ class PomwarsEventListeners(Cog):
                         [
                             "{emt} Vikings{win}".format(
                                 emt=Pomwars.Emotes.VIKING,
-                                win=Pomwars.Emotes.WINNER if winner=='vikings' else '',
+                                win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                             ),
                             "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
                                 dmg=score.dmg(Team.VIKINGS),

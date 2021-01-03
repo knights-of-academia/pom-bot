@@ -280,15 +280,19 @@ class PomWarsUserCommands(commands.Cog):
 
             description = "\n".join(d for d in descripts if d)
 
-        await send_embed_message(
-            ctx,
-            title=f"Actions for {date_range}",
-            description=description,
-            icon_url=Pomwars.IconUrls.SWORD,
-            colour=Pomwars.ACTION_COLOUR,
-            private_message=True,
-        )
-        await ctx.message.add_reaction(Reactions.CHECKMARK)
+        try:
+            await send_embed_message(
+                ctx,
+                title=f"Actions for {date_range}",
+                description=description,
+                icon_url=Pomwars.IconUrls.SWORD,
+                colour=Pomwars.ACTION_COLOUR,
+                private_message=True,
+            )
+            await ctx.message.add_reaction(Reactions.CHECKMARK)
+        except discord.errors.Forbidden:
+            # User disallows DM's from server members.
+            await ctx.message.add_reaction(Reactions.WARNING)
 
     @commands.command()
     async def attack(self, ctx: Context, *args):

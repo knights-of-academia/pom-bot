@@ -13,24 +13,32 @@ async def send_embed_message(
         description: str,
         colour=Config.EMBED_COLOUR,
         icon_url=Config.EMBED_IMAGE_URL,
+        fields: list = [],
         private_message: bool = False,
         _func: Callable = None,
 ):
     """Send an embedded message using the context."""
+    message = Embed(
+        description=description,
+        colour=colour,
+    )
     if (icon_url):
-        message = Embed(
-            description=description,
-            colour=colour,
-        ).set_author(
+        message.set_author(
             name=title,
             icon_url=icon_url,
         )
     else:
-        message = Embed(
-            title=title,
-            description=description,
-            colour=colour,
-        )
+        message.title=title
+        message.description=description
+        message.colour=colour
+
+    if (len(fields) > 0):
+        for field in fields:
+            message.add_field(
+                name=field[0],
+                value=field[1],
+                inline=field[2]
+            )
 
     if ctx is None:
         coro = _func

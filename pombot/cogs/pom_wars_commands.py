@@ -17,6 +17,7 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
+from pombot.scoreboard import Scoreboard
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
@@ -37,158 +38,6 @@ def _get_user_team(user: User) -> Team:
         raise pombot.errors.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
-
-class Scoreboard:
-    """Handle dynamic scoreboard"""
-    def __init__(self, bot: Bot) -> None:
-        self.bot = bot
-        self.knight_population, self.viking_population = Storage.get_team_populations()
-        self.knight_actions = Storage.get_actions(
-            team=Team.KNIGHTS,
-        )
-        self.viking_actions = Storage.get_actions(
-            team=Team.VIKINGS,
-        )
-
-    def population(self, team) -> str:
-        team = self.viking_population if team == Team.VIKINGS else self.knight_population
-
-        return str(team)
-
-    def dmg(self, team) -> str:
-        damage = 0
-        team = self.viking_actions if team == Team.VIKINGS else self.knight_actions
-
-        for action in team:
-            if (action.raw_damage > 0):
-                damage += action.raw_damage/100
-        
-        return str(damage)
-
-    def attack_count(self, team) -> str:
-        count = 0
-        prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
-
-        for action in prettyteam:
-            if (action.type == 'normal_attack' or action.type == 'heavy_attack'):
-                count += 1
-        
-        return str(count)
-
-    def favorite_attack(self, team) -> str:
-        normal_count = 0
-        heavy_count = 0
-
-        prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
-
-        for action in prettyteam:
-            if (action.type == 'normal_attack'):
-                normal_count += 1
-            elif (action.type == 'heavy_attack'):
-                heavy_count += 1
-
-        fav = 'Normal' if normal_count >= heavy_count else 'Heavy'
-        
-        return fav # In the rare case it's equal it will return as normal attack
-
-    async def create_msg(self) -> bool:
-        knight_dmg = self.dmg(Team.KNIGHTS)
-        viking_dmg = self.dmg(Team.VIKINGS)
-
-        knight_attacks = self.attack_count(Team.KNIGHTS)
-        viking_attacks = self.attack_count(Team.VIKINGS)
-
-        winner = ""
-        if knight_dmg != viking_dmg: # To check for ties
-            winner = 'viking' if knight_dmg < viking_dmg else 'knight'
-
-        for channel in SCOREBOARD_CHANNELS:
-            history = channel.history(limit=1, oldest_first=True)
-
-            try:
-                message, = await history.flatten()
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=Pomwars.Emotes.WINNER if winner=='knight' else '',
-                        ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
-                            dmg=knight_dmg,
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.KNIGHTS),
-                            attacks=knight_attacks,
-                            participants=self.population(Team.KNIGHTS),
-                        ),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=Pomwars.Emotes.WINNER if winner=='viking' else '',
-                        ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
-                            dmg=viking_dmg,
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.VIKINGS),
-                            attacks=viking_attacks,
-                            participants=self.population(Team.VIKINGS),
-                        ),
-                        True
-                    ]
-                ]
-                msg = await send_embed_message(
-                    None,
-                    title=None,
-                    description=None,
-                    icon_url=None,
-                    fields=fields,
-                    colour=Pomwars.ACTION_COLOUR,
-                    _func=message.edit,
-                )
-            except ValueError:
-                message, = await history.flatten()
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=Pomwars.Emotes.WINNER if winner=='knight' else '',
-                        ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
-                            dmg=self.dmg(Team.KNIGHTS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.KNIGHTS),
-                            attacks=self.attack_count(Team.KNIGHTS),
-                            participants=self.population(Team.KNIGHTS),
-                        ),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=Pomwars.Emotes.WINNER if winner=='viking' else '',
-                        ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
-                            dmg=self.dmg(Team.VIKINGS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.VIKINGS),
-                            attacks=self.attack_count(Team.VIKINGS),
-                            participants=self.population(Team.VIKINGS),
-                        ),
-                        True
-                    ]
-                ]
-                msg = await send_embed_message(
-                    None,
-                    title=None,
-                    description=None,
-                    icon_url=None,
-                    fields=fields,
-                    colour=Pomwars.ACTION_COLOUR,
-                    _func=message.send,
-                )
-
-        return True
 
 class Attack:
     """An attack action as specified by file and directory structure."""
@@ -444,7 +293,7 @@ class PomWarsUserCommands(commands.Cog):
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
 
-        score = Scoreboard(self.bot)
+        score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
 
         await score.create_msg()
 
@@ -522,7 +371,7 @@ class PomWarsUserCommands(commands.Cog):
         )
         await ctx.message.add_reaction(Reactions.TOMATO)
 
-        score = Scoreboard(self.bot)
+        score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
 
         await score.create_msg()
 
@@ -572,17 +421,18 @@ class PomwarsEventListeners(Cog):
     async def on_ready(self):
         """Cog startup procedure."""
 
-        score = Scoreboard(Bot)
-
-        global SCOREBOARD_CHANNELS
-
         for guild in self.bot.guilds:
             for channel in guild.channels:
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
                     SCOREBOARD_CHANNELS.append(channel)
 
+        score = Scoreboard(Bot, SCOREBOARD_CHANNELS)
+
         full_channels, restricted_channels = [], []
 
+        """
+        This is a duplicate of the Scoreboard.create_msg() function, but with added exception handling to tell what the error is, rather than simply giving up.
+        """
         for channel in SCOREBOARD_CHANNELS:
             history = channel.history(limit=1, oldest_first=True)
             winner = ''

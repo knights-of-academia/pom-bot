@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, List, Union
 
 import discord.errors
-from discord.channel import TextChannel
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
@@ -22,11 +21,9 @@ from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
+from pombot.state import State
 
 _log = logging.getLogger(__name__)
-
-SCOREBOARD_CHANNELS: List[TextChannel] = []
-
 
 def _get_user_team(user: User) -> Team:
     team_roles = [
@@ -99,10 +96,12 @@ class Attack:
         """
         Change the color if attack is heavy or not.
         """
+        color = Pomwars.NORMAL_COLOR
+
         if self.is_heavy:
-            return Pomwars.HEAVY_COLOR
-        else:
-            return Pomwars.NORMAL_COLOR
+            color = Pomwars.HEAVY_COLOR
+
+        return color
 
 
 class Defend:
@@ -298,10 +297,6 @@ class PomWarsUserCommands(commands.Cog):
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
 
-        score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
-
-        await score.create_msg()
-
         if len(description) > Config.DESCRIPTION_LIMIT:
             await ctx.message.add_reaction(Reactions.WARNING)
             await ctx.send(f"{ctx.author.mention}, your pom description must "
@@ -364,6 +359,10 @@ class PomWarsUserCommands(commands.Cog):
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
+        score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
+
+        await score.create_msg()
+
     @commands.command()
     async def defend(self, ctx: Context, *args):
         """Defend your team."""
@@ -375,10 +374,6 @@ class PomWarsUserCommands(commands.Cog):
             time_set=timestamp,
         )
         await ctx.message.add_reaction(Reactions.TOMATO)
-
-        score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
-
-        await score.create_msg()
 
         action = {
             "user":           ctx.author,
@@ -417,6 +412,10 @@ class PomWarsUserCommands(commands.Cog):
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
+        score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
+
+        await score.create_msg()
+
 class PomwarsEventListeners(Cog):
     """Handle global events for the bot."""
     def __init__(self, bot: Bot) -> None:
@@ -425,25 +424,48 @@ class PomwarsEventListeners(Cog):
     @Cog.listener()
     async def on_ready(self):
         """Cog startup procedure."""
-
         for guild in self.bot.guilds:
             for channel in guild.channels:
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                    SCOREBOARD_CHANNELS.append(channel)
+                    State.SCOREBOARD_CHANNELS.append(channel)
 
-        score = Scoreboard(Bot, SCOREBOARD_CHANNELS)
+        score = Scoreboard(Bot, State.SCOREBOARD_CHANNELS)
 
         full_channels, restricted_channels = [], []
 
         # This is a duplicate of the Scoreboard.create_msg() function
         # It has exception handling to tell what the error is, so we cannot use the class.
-        for channel in SCOREBOARD_CHANNELS:
+        for channel in State.SCOREBOARD_CHANNELS:
             history = channel.history(limit=1, oldest_first=True)
             winner = ''
             if score.dmg(Team.KNIGHTS) != score.dmg(Team.VIKINGS):
                 winner = ('viking'
                             if int(score.dmg(Team.KNIGHTS)) < int(score.dmg(Team.VIKINGS))
                             else 'knight')
+
+            lines = [
+                "{dmg} damage dealt {emt}",
+                "** **",
+                "`Attacks:` {attacks} attacks",
+                "`Favorite Attack:` {fav}",
+                "`Member Count:` {participants} participants",
+            ]
+
+            knight_values = {
+                "dmg": score.dmg(Team.KNIGHTS),
+                "emt": f"{Pomwars.Emotes.ATTACK}",
+                "fav": score.favorite_attack(Team.KNIGHTS),
+                "attacks": score.attack_count(Team.KNIGHTS),
+                "participants": score.population(Team.KNIGHTS),
+            }
+
+            viking_values = {
+                "dmg": score.dmg(Team.VIKINGS),
+                "emt": f"{Pomwars.Emotes.ATTACK}",
+                "fav": score.favorite_attack(Team.VIKINGS),
+                "attacks": score.attack_count(Team.VIKINGS),
+                "participants": score.population(Team.VIKINGS),
+            }
 
             try:
                 message, = await history.flatten()
@@ -453,17 +475,7 @@ class PomwarsEventListeners(Cog):
                             emt=Pomwars.Emotes.KNIGHT,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=score.dmg(Team.KNIGHTS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=score.favorite_attack(Team.KNIGHTS),
-                            attacks=score.attack_count(Team.KNIGHTS),
-                            participants=score.population(Team.KNIGHTS),
-                        ),
+                        "\n".join(lines).format(**knight_values),
                         True
                     ],
                     [
@@ -471,17 +483,7 @@ class PomwarsEventListeners(Cog):
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=score.dmg(Team.VIKINGS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=score.favorite_attack(Team.VIKINGS),
-                            attacks=score.attack_count(Team.VIKINGS),
-                            participants=score.population(Team.VIKINGS),
-                        ),
+                        "\n".join(lines).format(**viking_values),
                         True
                     ]
                 ]
@@ -503,17 +505,7 @@ class PomwarsEventListeners(Cog):
                                 emt=Pomwars.Emotes.KNIGHT,
                                 win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                             ),
-                            """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                                dmg=score.dmg(Team.KNIGHTS),
-                                emt=f"{Pomwars.Emotes.ATTACK}",
-                                fav=score.favorite_attack(Team.KNIGHTS),
-                                attacks=score.attack_count(Team.KNIGHTS),
-                                participants=score.population(Team.KNIGHTS),
-                            ),
+                            "\n".join(lines).format(**knight_values),
                             True
                         ],
                         [
@@ -521,17 +513,7 @@ class PomwarsEventListeners(Cog):
                                 emt=Pomwars.Emotes.VIKING,
                                 win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                             ),
-                            """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                                dmg=score.dmg(Team.VIKINGS),
-                                emt=f"{Pomwars.Emotes.ATTACK}",
-                                fav=score.favorite_attack(Team.VIKINGS),
-                                attacks=score.attack_count(Team.VIKINGS),
-                                participants=score.population(Team.VIKINGS),
-                            ),
+                            "\n".join(lines).format(**viking_values),
                             True
                         ]
                     ]

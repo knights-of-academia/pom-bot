@@ -1,21 +1,18 @@
 import random
 from datetime import timedelta, timezone
-from typing import List
 
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.guild import Guild
 from discord.message import Message
-from discord.channel import TextChannel
 
 import pombot.errors
+from pombot.state import State
 from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
 from pombot.scoreboard import Scoreboard
-
-SCOREBOARD_CHANNELS: List[TextChannel] = []
 
 async def _create_roles_on_guild(roles: list, guild: Guild):
     for role in roles:
@@ -104,12 +101,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         role, = [r for r in guild.roles if r.name == team.value]
         await payload.member.add_roles(role)
 
-        for guild in bot.guilds:
-            for channel in guild.channels:
-                if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                    SCOREBOARD_CHANNELS.append(channel)
-
-        score = Scoreboard(Bot, SCOREBOARD_CHANNELS)
+        score = Scoreboard(Bot, State.SCOREBOARD_CHANNELS)
         await score.create_msg()
 
     if payload.emoji.name in TIMEZONES:

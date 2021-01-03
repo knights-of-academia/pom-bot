@@ -1,13 +1,7 @@
-from typing import List
-
-from discord.channel import TextChannel
-
 from pombot.storage import Storage
 from pombot.lib.types import Team
 from pombot.config import Pomwars
 from pombot.lib.messages import send_embed_message
-
-SCOREBOARD_CHANNELS: List[TextChannel] = []
 
 class Scoreboard:
     """Handle dynamic scoreboard"""
@@ -51,7 +45,8 @@ class Scoreboard:
         prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in prettyteam:
-            if action.type == 'normal_attack' or action.type == 'heavy_attack':
+            action_was_attack = action.type == 'normal_attack' or action.type == 'heavy_attack'
+            if action.was_successful and action_was_attack == 1:
                 count += 1
 
         return str(count)
@@ -71,9 +66,11 @@ class Scoreboard:
             elif action.type == 'heavy_attack':
                 heavy_count += 1
 
-        fav = ('Normal'
-                if normal_count >= heavy_count
-                else 'Heavy')
+
+        if normal_count >= heavy_count:
+            fav = 'Normal'
+        else:
+            fav = 'Heavy'
 
         return fav # In the rare case it's equal it will return as normal attack
 
@@ -95,34 +92,48 @@ class Scoreboard:
 
         winner = ""
         if knight_dmg != viking_dmg: # To check for ties
-            winner = ('viking'
-                        if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS))
-                        else 'knight')
+            if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS)):
+                winner = 'viking'
+            else:
+                winner = 'knight'
 
         for channel in self.scoreboard_channels:
             history = channel.history(limit=1, oldest_first=True)
 
+            lines = [
+                "{dmg} damage dealt {emt}",
+                "** **",
+                "`Attacks:` {attacks} attacks",
+                "`Favorite Attack:` {fav}",
+                "`Member Count:` {participants} participants",
+            ]
+
+            knight_values = {
+                "dmg": knight_dmg,
+                "emt": f"{Pomwars.Emotes.ATTACK}",
+                "fav": self.favorite_attack(Team.KNIGHTS),
+                "attacks": knight_attacks,
+                "participants": self.population(Team.KNIGHTS),
+            }
+
+            viking_values = {
+                "dmg": viking_dmg,
+                "emt": f"{Pomwars.Emotes.ATTACK}",
+                "fav": self.favorite_attack(Team.VIKINGS),
+                "attacks": viking_attacks,
+                "participants": self.population(Team.VIKINGS),
+            }
+
             try:
                 message, = await history.flatten()
+
                 fields = [
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=(f" {Pomwars.Emotes.WINNER}"
-                                if winner=='knight'
-                                else ''),
+                            win=(f" {Pomwars.Emotes.WINNER}" if winner=='knight' else ''),
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=knight_dmg,
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.KNIGHTS),
-                            attacks=knight_attacks,
-                            participants=self.population(Team.KNIGHTS),
-                        ),
+                        "\n".join(lines).format(**knight_values),
                         True
                     ],
                     [
@@ -130,17 +141,7 @@ class Scoreboard:
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=viking_dmg,
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.VIKINGS),
-                            attacks=viking_attacks,
-                            participants=self.population(Team.VIKINGS),
-                        ),
+                        "\n".join(lines).format(**viking_values),
                         True
                     ]
                 ]
@@ -161,17 +162,7 @@ class Scoreboard:
                             emt=Pomwars.Emotes.KNIGHT,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=self.dmg(Team.KNIGHTS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.KNIGHTS),
-                            attacks=self.attack_count(Team.KNIGHTS),
-                            participants=self.population(Team.KNIGHTS),
-                        ),
+                        "\n".join(lines).format(**knight_values),
                         True
                     ],
                     [
@@ -179,17 +170,7 @@ class Scoreboard:
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        """{dmg} damage dealt {emt}
-** **
-`Attacks:` {attacks} attacks
-`Favorite Attack:` {fav}
-`Member Count:` {participants} participants""".format(
-                            dmg=self.dmg(Team.VIKINGS),
-                            emt=f"{Pomwars.Emotes.ATTACK}",
-                            fav=self.favorite_attack(Team.VIKINGS),
-                            attacks=self.attack_count(Team.VIKINGS),
-                            participants=self.population(Team.VIKINGS),
-                        ),
+                        "\n".join(lines).format(**viking_values),
                         True
                     ]
                 ]

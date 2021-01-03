@@ -13,7 +13,7 @@ async def send_embed_message(
         description: str,
         colour=Config.EMBED_COLOUR,
         icon_url=Config.EMBED_IMAGE_URL,
-        fields: list = [],
+        fields: list = None,
         private_message: bool = False,
         _func: Callable = None,
 ):
@@ -32,7 +32,7 @@ async def send_embed_message(
         message.description=description
         message.colour=colour
 
-    if len(fields) > 0:
+    if fields and len(fields) > 0:
         for field in fields:
             message.add_field(
                 name=field[0],

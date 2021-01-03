@@ -110,6 +110,7 @@ class Pomwars:
     MAXIMUM_TEAM_DEFENCE = 0.25
 
     class Emotes:
+        """Emotes for use in embeds."""
         KNIGHT = "<:knights:622832507766702100>"
         VIKING = "<:vikings:705822896978919594>"
         WINNER = "<a:winner:794655540956364811>"

@@ -113,7 +113,7 @@ class Pomwars:
         """Emotes for use in embeds."""
         KNIGHT = "<:knights:622832507766702100>"
         VIKING = "<:vikings:705822896978919594>"
-        WINNER = "<a:winner:794655540956364811>"
+        WINNER = "<a:winner:795418467908976671>"
         ATTACK = "<:attack:794694043015446530>"
         CRITICAL = "<:criticalhit:794710983536672788>"
         DEFEND = "<:defend:794694015861260308>"

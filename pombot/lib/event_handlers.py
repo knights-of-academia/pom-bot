@@ -105,9 +105,9 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         await payload.member.add_roles(role)
 
         for guild in bot.guilds:
-                for channel in guild.channels:
-                    if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                        SCOREBOARD_CHANNELS.append(channel)
+            for channel in guild.channels:
+                if channel.name == Pomwars.JOIN_CHANNEL_NAME:
+                    SCOREBOARD_CHANNELS.append(channel)
 
         score = Scoreboard(Bot, SCOREBOARD_CHANNELS)
         await score.create_msg()
@@ -117,12 +117,12 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         if not user:
             await send_embed_message(
                 None,
-                title=f"Oops! Looks like i had some problem setting your timezone.",
+                title=f"Oops! Looks like I had some problem setting your timezone.",
                 description="You first need to join the event",
                 _func=payload.member.send
             )
             return
-        
+
         Storage.set_user_timezone(
                 payload.user_id,
                 timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))

@@ -110,8 +110,8 @@ class Pomwars:
     MAXIMUM_TEAM_DEFENCE = 0.25
 
     class Emotes:
-        KNIGHT = "<:Knight:794654973086007337>"
-        VIKING = "<:Viking:794654929280827442>"
+        KNIGHT = "<:knights:622832507766702100>"
+        VIKING = "<:vikings:705822896978919594>"
         WINNER = "<a:winner:794655540956364811>"
         ATTACK = "<:attack:794694043015446530>"
         CRITICAL = "<:criticalhit:794710983536672788>"

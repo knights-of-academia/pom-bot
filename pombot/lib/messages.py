@@ -22,7 +22,7 @@ async def send_embed_message(
         description=description,
         colour=colour,
     )
-    if (icon_url):
+    if icon_url:
         message.set_author(
             name=title,
             icon_url=icon_url,
@@ -32,7 +32,7 @@ async def send_embed_message(
         message.description=description
         message.colour=colour
 
-    if (len(fields) > 0):
+    if len(fields) > 0:
         for field in fields:
             message.add_field(
                 name=field[0],

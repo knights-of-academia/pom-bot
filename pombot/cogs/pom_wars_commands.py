@@ -68,7 +68,7 @@ class Attack:
         """The configured base weighted-chance for this action."""
         return self.chance_for_this_action
 
-    def get_message(self, user: User, adjusted_damage: int = None) -> str:
+    def get_message(self, adjusted_damage: int = None) -> str:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
@@ -96,7 +96,10 @@ class Attack:
         return title
 
     def get_color(self) -> int:
-        if (self.is_heavy):
+        """
+        Change the color if attack is heavy or not.
+        """
+        if self.is_heavy:
             return Pomwars.HEAVY_COLOR
         else:
             return Pomwars.NORMAL_COLOR
@@ -124,7 +127,9 @@ class Defend:
         """
         action = "** **\n{emt} `{dfn}% team damage reduction!`".format(
             emt=Pomwars.Emotes.DEFEND,
-            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[Storage.get_user_by_id(user.id).defend_level],
+            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[
+                Storage.get_user_by_id(user.id).defend_level
+                ],
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
@@ -353,7 +358,7 @@ class PomWarsUserCommands(commands.Cog):
         await send_embed_message(
             None,
             title=attack.get_title(ctx.author),
-            description=attack.get_message(ctx.author, action["damage"]),
+            description=attack.get_message(action["damage"]),
             icon_url=None,
             colour=attack.get_color(),
             _func=partial(ctx.channel.send, content=ctx.author.mention),
@@ -430,15 +435,16 @@ class PomwarsEventListeners(Cog):
 
         full_channels, restricted_channels = [], []
 
-        """
-        This is a duplicate of the Scoreboard.create_msg() function, but with added exception handling to tell what the error is, rather than simply giving up.
-        """
+        # This is a duplicate of the Scoreboard.create_msg() function
+        # It has exception handling to tell what the error is, so we cannot use the class.
         for channel in SCOREBOARD_CHANNELS:
             history = channel.history(limit=1, oldest_first=True)
             winner = ''
-            if (score.dmg(Team.KNIGHTS) != score.dmg(Team.VIKINGS)):
-                winner = 'viking' if int(score.dmg(Team.KNIGHTS)) < int(score.dmg(Team.VIKINGS)) else 'knight'
-                
+            if score.dmg(Team.KNIGHTS) != score.dmg(Team.VIKINGS):
+                winner = ('viking'
+                            if int(score.dmg(Team.KNIGHTS)) < int(score.dmg(Team.VIKINGS))
+                            else 'knight')
+
             try:
                 message, = await history.flatten()
                 fields = [
@@ -447,7 +453,11 @@ class PomwarsEventListeners(Cog):
                             emt=Pomwars.Emotes.KNIGHT,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=score.dmg(Team.KNIGHTS),
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=score.favorite_attack(Team.KNIGHTS),
@@ -461,7 +471,11 @@ class PomwarsEventListeners(Cog):
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=score.dmg(Team.VIKINGS),
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=score.favorite_attack(Team.VIKINGS),
@@ -482,13 +496,6 @@ class PomwarsEventListeners(Cog):
                     ,
                 )
             except ValueError:
-                if channel.guild.id in Pomwars.KNIGHT_ONLY_GUILDS:
-                    icon_url = Pomwars.IconUrls.KNIGHT
-                elif channel.guild.id in Pomwars.VIKING_ONLY_GUILDS:
-                    icon_url = Pomwars.IconUrls.VIKING
-                else:
-                    icon_url = Pomwars.IconUrls.SWORD
-
                 try:
                     fields = [
                         [
@@ -496,7 +503,11 @@ class PomwarsEventListeners(Cog):
                                 emt=Pomwars.Emotes.KNIGHT,
                                 win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                             ),
-                            "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                            """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                                 dmg=score.dmg(Team.KNIGHTS),
                                 emt=f"{Pomwars.Emotes.ATTACK}",
                                 fav=score.favorite_attack(Team.KNIGHTS),
@@ -510,7 +521,11 @@ class PomwarsEventListeners(Cog):
                                 emt=Pomwars.Emotes.VIKING,
                                 win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                             ),
-                            "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                            """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                                 dmg=score.dmg(Team.VIKINGS),
                                 emt=f"{Pomwars.Emotes.ATTACK}",
                                 fav=score.favorite_attack(Team.VIKINGS),

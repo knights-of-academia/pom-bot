@@ -1,11 +1,10 @@
-
-from discord.ext.commands.bot import Bot
-from discord.channel import TextChannel
 from typing import List
+
+from discord.channel import TextChannel
 
 from pombot.storage import Storage
 from pombot.lib.types import Team
-from pombot.config import Config, Pomwars
+from pombot.config import Pomwars
 from pombot.lib.messages import send_embed_message
 
 SCOREBOARD_CHANNELS: List[TextChannel] = []
@@ -24,47 +23,70 @@ class Scoreboard:
         )
 
     def population(self, team) -> str:
+        """
+        Returns a string of the population of a team
+        """
         team = self.viking_population if team == Team.VIKINGS else self.knight_population
 
         return str(team)
 
     def dmg(self, team) -> str:
+        """
+        Returns a string of the total damage done by a team
+        """
         damage = 0
         team = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in team:
-            if (action.raw_damage > 0):
+            if action.raw_damage > 0:
                 damage += int(action.raw_damage/100)
-        
+
         return str(damage)
 
     def attack_count(self, team) -> str:
+        """
+        Returns a string of the total attacks (whether successful or not) of a team
+        """
         count = 0
         prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in prettyteam:
-            if (action.type == 'normal_attack' or action.type == 'heavy_attack'):
+            if action.type == 'normal_attack' or action.type == 'heavy_attack':
                 count += 1
-        
+
         return str(count)
 
     def favorite_attack(self, team) -> str:
+        """
+        Returns a string of the most common attack done by a team
+        """
         normal_count = 0
         heavy_count = 0
 
         prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in prettyteam:
-            if (action.type == 'normal_attack'):
+            if action.type == 'normal_attack':
                 normal_count += 1
-            elif (action.type == 'heavy_attack'):
+            elif action.type == 'heavy_attack':
                 heavy_count += 1
 
-        fav = 'Normal' if normal_count >= heavy_count else 'Heavy'
-        
+        fav = ('Normal'
+                if normal_count >= heavy_count
+                else 'Heavy')
+
         return fav # In the rare case it's equal it will return as normal attack
 
     async def create_msg(self) -> bool:
+        """
+        Updates (or creates) the live scoreboards of all the guilds the bot is in.
+        - Differentiates teams
+        - Displays current winner
+        - Shows amount of damage done by each team
+        - Shows number of attacks done by each team
+        - Shows populations
+        - Shows favorite attacks
+        """
         knight_dmg = self.dmg(Team.KNIGHTS)
         viking_dmg = self.dmg(Team.VIKINGS)
 
@@ -73,7 +95,9 @@ class Scoreboard:
 
         winner = ""
         if knight_dmg != viking_dmg: # To check for ties
-            winner = 'viking' if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS)) else 'knight'
+            winner = ('viking'
+                        if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS))
+                        else 'knight')
 
         for channel in self.scoreboard_channels:
             history = channel.history(limit=1, oldest_first=True)
@@ -84,9 +108,15 @@ class Scoreboard:
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
+                            win=(f" {Pomwars.Emotes.WINNER}"
+                                if winner=='knight'
+                                else ''),
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=knight_dmg,
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=self.favorite_attack(Team.KNIGHTS),
@@ -100,7 +130,11 @@ class Scoreboard:
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=viking_dmg,
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=self.favorite_attack(Team.VIKINGS),
@@ -110,7 +144,7 @@ class Scoreboard:
                         True
                     ]
                 ]
-                msg = await send_embed_message(
+                await send_embed_message(
                     None,
                     title=None,
                     description=None,
@@ -127,7 +161,11 @@ class Scoreboard:
                             emt=Pomwars.Emotes.KNIGHT,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=self.dmg(Team.KNIGHTS),
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=self.favorite_attack(Team.KNIGHTS),
@@ -141,7 +179,11 @@ class Scoreboard:
                             emt=Pomwars.Emotes.VIKING,
                             win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
                         ),
-                        "{dmg} damage dealt {emt}\n** **\n`Attacks:` {attacks} attacks\n`Favorite Attack:` {fav}\n`Member Count:` {participants} participants".format(
+                        """{dmg} damage dealt {emt}
+** **
+`Attacks:` {attacks} attacks
+`Favorite Attack:` {fav}
+`Member Count:` {participants} participants""".format(
                             dmg=self.dmg(Team.VIKINGS),
                             emt=f"{Pomwars.Emotes.ATTACK}",
                             fav=self.favorite_attack(Team.VIKINGS),
@@ -151,7 +193,7 @@ class Scoreboard:
                         True
                     ]
                 ]
-                msg = await send_embed_message(
+                await send_embed_message(
                     None,
                     title=None,
                     description=None,

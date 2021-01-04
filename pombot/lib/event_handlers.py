@@ -14,7 +14,8 @@ from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
-from pombot.scoreboard import Scoreboard
+
+_log = logging.getLogger(__name__)
 
 async def _create_roles_on_guild(roles: list, guild: Guild):
     for role in roles:

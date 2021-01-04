@@ -1,11 +1,11 @@
+from collections import Counter
+
 import discord.errors
 
 from pombot.storage import Storage
 from pombot.lib.types import ActionType, Team
 from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
-
-from collections import Counter
 
 class Scoreboard:
     """A representation of the scoreboard in join channels."""
@@ -59,13 +59,14 @@ class Scoreboard:
         """
         Returns a string of the total attacks (whether successful or not) of a team
         """
-        
+
         self.update_vars()
 
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         attack_counts = Counter([
-            action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK] and action.was_successful
+            (action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK]
+            and action.was_successful)
             for action in team_actions
         ])
 
@@ -75,7 +76,7 @@ class Scoreboard:
         """
         Returns a string of the most common attack done by a team
         """
-        
+
         self.update_vars()
 
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
@@ -99,9 +100,9 @@ class Scoreboard:
         - Shows populations
         - Shows favorite attacks
         """
-        
+
         self.update_vars()
-        
+
         full_channels, restricted_channels = [], []
 
         knight_dmg = self.dmg(Team.KNIGHTS)
@@ -112,10 +113,10 @@ class Scoreboard:
 
         winner = ""
         if knight_dmg != viking_dmg: # To check for ties
-            if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS)):
-                winner = Team.KNIGHTS
-            else:
+            if self.dmg(Team.KNIGHTS) < self.dmg(Team.VIKINGS):
                 winner = Team.VIKINGS
+            else:
+                winner = Team.KNIGHTS
 
         for channel in self.scoreboard_channels:
             history = channel.history(limit=1, oldest_first=True)
@@ -212,8 +213,4 @@ class Scoreboard:
                 if message.author != self.bot.user:
                     full_channels.append(channel)
 
-        if handle_exceptions:
-            return [full_channels, restricted_channels]
-        else:
-            return True
-            
+        return [full_channels, restricted_channels] if handle_exceptions else True

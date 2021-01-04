@@ -12,6 +12,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
 from discord.user import User
+import discord.errors
 
 import pombot.errors
 from pombot.config import Config, Pomwars, Reactions

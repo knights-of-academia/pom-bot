@@ -56,21 +56,14 @@ class Scoreboard:
         return damage
 
     def attack_count(self, team) -> int:
-        """
-        Returns a string of the total attacks (whether successful or not) of a team
-        """
-
+        """Return the total attacks (whether successful or not) of a team."""
         self.update_vars()
 
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
+        attack_types = [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK]
+        count = len([a for a in team_actions if a.type in attack_types and a.was_successful])
 
-        attack_counts = Counter([
-            (action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK]
-            and action.was_successful)
-            for action in team_actions
-        ])
-
-        return attack_counts[1] # Only the actions that were attacks and were successful
+        return count
 
     def favorite_attack(self, team) -> str:
         """
@@ -90,7 +83,7 @@ class Scoreboard:
 
         return fav
 
-    async def update_msg(self, handle_exceptions=False):
+    async def update_msg(self):
         """
         Updates (or creates) the live scoreboards of all the guilds the bot is in.
         - Differentiates teams
@@ -213,4 +206,4 @@ class Scoreboard:
                 if message.author != self.bot.user:
                     full_channels.append(channel)
 
-        return [full_channels, restricted_channels] if handle_exceptions else True
+        return [full_channels, restricted_channels]

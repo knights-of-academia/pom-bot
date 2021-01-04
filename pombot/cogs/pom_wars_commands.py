@@ -85,7 +85,7 @@ class Attack:
         """Title that includes the name of the team user attacked
         """
 
-        title = "You have used{indicator}Attack against the {team}!".format(
+        title = "You have used{indicator}Attack against {team}!".format(
             indicator = " Heavy " if self.is_heavy else " ",
             team=f"{(~_get_user_team(user)).value}s",
         )
@@ -405,7 +405,7 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="You have used Defend against the {team}!".format(
+            title="You have used Defend against {team}!".format(
                 team=f"{(~_get_user_team(ctx.author)).value}s",
             ),
             description=defend.get_message(ctx.author),
@@ -429,7 +429,7 @@ class PomwarsEventListeners(Cog):
 
         State.score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
 
-        full_channels, restricted_channels = await State.score.update_msg(True)
+        full_channels, restricted_channels = await State.score.update_msg()
 
         for channel in full_channels:
             _log.error("Join channel '%s' on '%s' is not empty",

@@ -8,12 +8,11 @@ from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
 
-import discord.errors
-from discord.channel import TextChannel
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
 from discord.user import User
+import discord.errors
 
 import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
@@ -21,11 +20,10 @@ from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
+from pombot.state import State
+from pombot.scoreboard import Scoreboard
 
 _log = logging.getLogger(__name__)
-
-SCOREBOARD_CHANNELS: List[TextChannel] = []
-
 
 def _get_user_team(user: User) -> Team:
     team_roles = [
@@ -37,7 +35,6 @@ def _get_user_team(user: User) -> Team:
         raise pombot.errors.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
-
 
 class Attack:
     """An attack action as specified by file and directory structure."""
@@ -68,17 +65,43 @@ class Attack:
         """The configured base weighted-chance for this action."""
         return self.chance_for_this_action
 
-    def get_message(self, user: User, adjusted_damage: int = None) -> str:
+    def get_message(self, adjusted_damage: int = None) -> str:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You attack the {team} for {dmg:.2f} damage!".format(
-            team=f"{(~_get_user_team(user)).value}s",
+        action_msgs = [f"** **\n{Pomwars.Emotes.ATTACK} `{{dmg:.2f}} damage!`"]
+
+        if self.is_critical:
+            action_msgs += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
+
+        action = "\n".join(action_msgs).format(
             dmg=adjusted_damage or self.damage,
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
+
+    def get_title(self, user: User) -> str:
+        """Title that includes the name of the team user attacked
+        """
+
+        title = "You have used{indicator}Attack against {team}!".format(
+            indicator = " Heavy " if self.is_heavy else " ",
+            team=f"{(~_get_user_team(user)).value}s",
+        )
+
+        return title
+
+    def get_colour(self) -> int:
+        """
+        Change the colour if attack is heavy or not.
+        """
+        colour = Pomwars.NORMAL_COLOUR
+
+        if self.is_heavy:
+            colour = Pomwars.HEAVY_COLOUR
+
+        return colour
 
 
 class Defend:
@@ -101,8 +124,11 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "You help defend the {team}!".format(
-            team=f"{(_get_user_team(user)).value}s",
+        action = "** **\n{emt} `{dfn}% team damage reduction!`".format(
+            emt=Pomwars.Emotes.DEFEND,
+            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[
+                Storage.get_user_by_id(user.id).defend_level
+            ]
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
@@ -330,12 +356,14 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="Attack successful!",
-            description=attack.get_message(ctx.author, action["damage"]),
-            icon_url=Pomwars.IconUrls.SWORD,
-            colour=Pomwars.ACTION_COLOUR,
+            title=attack.get_title(ctx.author),
+            description=attack.get_message(action["damage"]),
+            icon_url=None,
+            colour=attack.get_colour(),
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
+
+        await State.score.update_msg()
 
     @commands.command()
     async def defend(self, ctx: Context, *args):
@@ -377,13 +405,14 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="Defend successful!",
+            title="You have used Defend against {team}!".format(
+                team=f"{(~_get_user_team(ctx.author)).value}s",
+            ),
             description=defend.get_message(ctx.author),
-            icon_url=Pomwars.IconUrls.SHIELD,
-            colour=Pomwars.ACTION_COLOUR,
+            colour=Pomwars.DEFEND_COLOUR,
+            icon_url=None,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
-
 
 class PomwarsEventListeners(Cog):
     """Handle global events for the bot."""
@@ -396,41 +425,11 @@ class PomwarsEventListeners(Cog):
         for guild in self.bot.guilds:
             for channel in guild.channels:
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                    SCOREBOARD_CHANNELS.append(channel)
+                    State.SCOREBOARD_CHANNELS.append(channel)
 
-        full_channels, restricted_channels = [], []
+        State.score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
 
-        for channel in SCOREBOARD_CHANNELS:
-            history = channel.history(limit=1, oldest_first=True)
-
-            try:
-                message, = await history.flatten()
-            except ValueError:
-                if channel.guild.id in Pomwars.KNIGHT_ONLY_GUILDS:
-                    icon_url = Pomwars.IconUrls.KNIGHT
-                elif channel.guild.id in Pomwars.VIKING_ONLY_GUILDS:
-                    icon_url = Pomwars.IconUrls.VIKING
-                else:
-                    icon_url = Pomwars.IconUrls.SWORD
-
-                try:
-                    msg = await send_embed_message(
-                        None,
-                        title="Pom Wars Season 3!",
-                        description=Locations.SCOREBOARD_BODY.read_text("utf8").format(
-                            join_button=Reactions.WAR_JOIN_REACTION),
-                        icon_url=icon_url,
-                        colour=Pomwars.ACTION_COLOUR,
-                        _func=channel.send,
-                    )
-                    await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
-                except discord.errors.Forbidden:
-                    restricted_channels.append(channel)
-            except discord.errors.Forbidden:
-                restricted_channels.append(channel)
-            else:
-                if message.author != self.bot.user:
-                    full_channels.append(channel)
+        full_channels, restricted_channels = await State.score.update_msg()
 
         for channel in full_channels:
             _log.error("Join channel '%s' on '%s' is not empty",

@@ -81,7 +81,10 @@ class Pomwars:
     BASE_CHANCE_FOR_CRITICAL = 0.20
     SUCCESSFUL_ATTACK_EMOTE = os.getenv("SUCCESSFUL_ATTACK_EMOTE")
     SUCCESSFUL_DEFEND_EMOTE = os.getenv("SUCCESSFUL_DEFEND_EMOTE")
-    ACTION_COLOUR = 0x00ff00
+    ACTION_COLOUR = 0xF5F5DC
+    HEAVY_COLOUR = 0xFFD700
+    NORMAL_COLOUR = 0xec5c5b # Normal attack
+    DEFEND_COLOUR = 0x55aedd
 
     JOIN_CHANNEL_NAME = os.getenv("JOIN_CHANNEL_NAME").lstrip("#")
     KNIGHT_ONLY_GUILDS = [
@@ -105,6 +108,15 @@ class Pomwars:
 
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
+
+    class Emotes:
+        """Emotes for use in embeds."""
+        KNIGHT = "<:knights:622832507766702100>"
+        VIKING = "<:vikings:705822896978919594>"
+        WINNER = "<a:winner:795418467908976671>"
+        ATTACK = "<:attack:794694043015446530>"
+        CRITICAL = "<:criticalhit:794710983536672788>"
+        DEFEND = "<:defend:794694015861260308>"
 
 
 class Reactions:

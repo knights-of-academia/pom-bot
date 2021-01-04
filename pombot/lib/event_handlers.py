@@ -9,13 +9,13 @@ from discord.guild import Guild
 from discord.message import Message
 
 import pombot.errors
+from pombot.state import State
 from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import Team
 from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
-
 
 async def _create_roles_on_guild(roles: list, guild: Guild):
     for role in roles:
@@ -110,12 +110,14 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         role, = [r for r in guild.roles if r.name == team.value]
         await payload.member.add_roles(role)
 
+        await State.score.update_msg()
+
     if payload.emoji.name in TIMEZONES:
         user = Storage.get_user_by_id(payload.user_id)
         if not user:
             await send_embed_message(
                 None,
-                title=f"Oops! Looks like i had some problem setting your timezone.",
+                title=f"Oops! Looks like I had some problem setting your timezone.",
                 description="You first need to join the event",
                 _func=payload.member.send
             )

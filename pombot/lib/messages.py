@@ -13,6 +13,7 @@ async def send_embed_message(
         description: str,
         colour=Config.EMBED_COLOUR,
         icon_url=Config.EMBED_IMAGE_URL,
+        fields: list = None,
         private_message: bool = False,
         _func: Callable = None,
 ):
@@ -20,10 +21,21 @@ async def send_embed_message(
     message = Embed(
         description=description,
         colour=colour,
-    ).set_author(
-        name=title,
-        icon_url=icon_url,
     )
+    if icon_url:
+        message.set_author(
+            name=title,
+            icon_url=icon_url,
+        )
+    else:
+        message.title=title
+        message.description=description
+        message.colour=colour
+
+    if fields:
+        for field in fields:
+            name, value, inline = field
+            message.add_field(name=name, value=value, inline=inline)
 
     if ctx is None:
         coro = _func

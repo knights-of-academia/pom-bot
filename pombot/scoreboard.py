@@ -1,10 +1,12 @@
+import discord.errors
+
 from pombot.storage import Storage
-from pombot.lib.types import Team
-from pombot.config import Pomwars
+from pombot.lib.types import ActionType, Team
+from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
 
 class Scoreboard:
-    """Handle dynamic scoreboard"""
+    """A representation of the scoreboard in join channels."""
     def __init__(self, bot, scoreboard_channels) -> None:
         self.bot = bot
         self.scoreboard_channels = scoreboard_channels
@@ -37,19 +39,19 @@ class Scoreboard:
 
         return str(damage)
 
-    def attack_count(self, team) -> str:
+    def attack_count(self, team) -> int:
         """
         Returns a string of the total attacks (whether successful or not) of a team
         """
         count = 0
-        prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
+        team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
-        for action in prettyteam:
-            action_was_attack = action.type == 'normal_attack' or action.type == 'heavy_attack'
-            if action.was_successful and action_was_attack == 1:
+        for action in team_actions:
+            was_attack = action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK]
+            if action.was_successful and was_attack:
                 count += 1
 
-        return str(count)
+        return count
 
     def favorite_attack(self, team) -> str:
         """
@@ -58,9 +60,9 @@ class Scoreboard:
         normal_count = 0
         heavy_count = 0
 
-        prettyteam = self.viking_actions if team == Team.VIKINGS else self.knight_actions
+        team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
-        for action in prettyteam:
+        for action in team_actions:
             if action.type == 'normal_attack':
                 normal_count += 1
             elif action.type == 'heavy_attack':
@@ -72,9 +74,9 @@ class Scoreboard:
         else:
             fav = 'Heavy'
 
-        return fav # In the rare case it's equal it will return as normal attack
+        return fav
 
-    async def create_msg(self) -> bool:
+    async def update_msg(self, handle_exceptions=False):
         """
         Updates (or creates) the live scoreboards of all the guilds the bot is in.
         - Differentiates teams
@@ -84,6 +86,8 @@ class Scoreboard:
         - Shows populations
         - Shows favorite attacks
         """
+        full_channels, restricted_channels = [], []
+
         knight_dmg = self.dmg(Team.KNIGHTS)
         viking_dmg = self.dmg(Team.VIKINGS)
 
@@ -154,34 +158,48 @@ class Scoreboard:
                     colour=Pomwars.ACTION_COLOUR,
                     _func=message.edit,
                 )
+                print(channel)
             except ValueError:
-                message, = await history.flatten()
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
-                        ),
-                        "\n".join(lines).format(**knight_values),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
-                        ),
-                        "\n".join(lines).format(**viking_values),
-                        True
+                try:
+                    message, = await history.flatten()
+                    fields = [
+                        [
+                            "{emt} Knights{win}".format(
+                                emt=Pomwars.Emotes.KNIGHT,
+                                win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
+                            ),
+                            "\n".join(lines).format(**knight_values),
+                            True
+                        ],
+                        [
+                            "{emt} Vikings{win}".format(
+                                emt=Pomwars.Emotes.VIKING,
+                                win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
+                            ),
+                            "\n".join(lines).format(**viking_values),
+                            True
+                        ]
                     ]
-                ]
-                await send_embed_message(
-                    None,
-                    title=None,
-                    description=None,
-                    icon_url=None,
-                    fields=fields,
-                    colour=Pomwars.ACTION_COLOUR,
-                    _func=message.send,
-                )
+                    msg = await send_embed_message(
+                        None,
+                        title=None,
+                        description=None,
+                        icon_url=None,
+                        fields=fields,
+                        colour=Pomwars.ACTION_COLOUR,
+                        _func=message.send,
+                    )
+                    await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
+                except discord.errors.Forbidden:
+                    restricted_channels.append(channel)
+            except discord.errors.Forbidden:
+                restricted_channels.append(channel)
+            else:
+                if message.author != self.bot.user:
+                    full_channels.append(channel)
 
-        return True
+        if handle_exceptions:
+            return [full_channels, restricted_channels]
+        else:
+            return True
+            

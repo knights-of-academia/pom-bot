@@ -11,3 +11,4 @@ class State:  # pylint: disable=too-few-public-methods
     """
     goal_reached = False
     SCOREBOARD_CHANNELS: List[TextChannel] = []
+    score = None

@@ -101,8 +101,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         role, = [r for r in guild.roles if r.name == team.value]
         await payload.member.add_roles(role)
 
-        score = Scoreboard(Bot, State.SCOREBOARD_CHANNELS)
-        await score.create_msg()
+        await State.score.update_msg()
 
     if payload.emoji.name in TIMEZONES:
         user = Storage.get_user_by_id(payload.user_id)

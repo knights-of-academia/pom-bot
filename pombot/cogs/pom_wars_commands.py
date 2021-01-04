@@ -8,7 +8,6 @@ from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
 
-import discord.errors
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
@@ -16,12 +15,12 @@ from discord.user import User
 
 import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
-from pombot.scoreboard import Scoreboard
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
 from pombot.state import State
+from pombot.scoreboard import Scoreboard
 
 _log = logging.getLogger(__name__)
 
@@ -92,16 +91,16 @@ class Attack:
 
         return title
 
-    def get_color(self) -> int:
+    def get_colour(self) -> int:
         """
-        Change the color if attack is heavy or not.
+        Change the colour if attack is heavy or not.
         """
-        color = Pomwars.NORMAL_COLOR
+        colour = Pomwars.NORMAL_COLOUR
 
         if self.is_heavy:
-            color = Pomwars.HEAVY_COLOR
+            colour = Pomwars.HEAVY_COLOUR
 
-        return color
+        return colour
 
 
 class Defend:
@@ -128,7 +127,7 @@ class Defend:
             emt=Pomwars.Emotes.DEFEND,
             dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[
                 Storage.get_user_by_id(user.id).defend_level
-                ],
+            ]
         )
         story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
 
@@ -355,13 +354,11 @@ class PomWarsUserCommands(commands.Cog):
             title=attack.get_title(ctx.author),
             description=attack.get_message(action["damage"]),
             icon_url=None,
-            colour=attack.get_color(),
+            colour=attack.get_colour(),
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
-        score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
-
-        await score.create_msg()
+        await State.score.update_msg()
 
     @commands.command()
     async def defend(self, ctx: Context, *args):
@@ -407,14 +404,10 @@ class PomWarsUserCommands(commands.Cog):
                 team=f"{(~_get_user_team(ctx.author)).value}s",
             ),
             description=defend.get_message(ctx.author),
-            colour=Pomwars.DEFEND_COLOR,
+            colour=Pomwars.DEFEND_COLOUR,
             icon_url=None,
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
-
-        score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
-
-        await score.create_msg()
 
 class PomwarsEventListeners(Cog):
     """Handle global events for the bot."""
@@ -429,111 +422,9 @@ class PomwarsEventListeners(Cog):
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
                     State.SCOREBOARD_CHANNELS.append(channel)
 
-        score = Scoreboard(Bot, State.SCOREBOARD_CHANNELS)
+        State.score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
 
-        full_channels, restricted_channels = [], []
-
-        # This is a duplicate of the Scoreboard.create_msg() function
-        # It has exception handling to tell what the error is, so we cannot use the class.
-        for channel in State.SCOREBOARD_CHANNELS:
-            history = channel.history(limit=1, oldest_first=True)
-            winner = ''
-            if score.dmg(Team.KNIGHTS) != score.dmg(Team.VIKINGS):
-                winner = ('viking'
-                            if int(score.dmg(Team.KNIGHTS)) < int(score.dmg(Team.VIKINGS))
-                            else 'knight')
-
-            lines = [
-                "{dmg} damage dealt {emt}",
-                "** **",
-                "`Attacks:` {attacks} attacks",
-                "`Favorite Attack:` {fav}",
-                "`Member Count:` {participants} participants",
-            ]
-
-            knight_values = {
-                "dmg": score.dmg(Team.KNIGHTS),
-                "emt": f"{Pomwars.Emotes.ATTACK}",
-                "fav": score.favorite_attack(Team.KNIGHTS),
-                "attacks": score.attack_count(Team.KNIGHTS),
-                "participants": score.population(Team.KNIGHTS),
-            }
-
-            viking_values = {
-                "dmg": score.dmg(Team.VIKINGS),
-                "emt": f"{Pomwars.Emotes.ATTACK}",
-                "fav": score.favorite_attack(Team.VIKINGS),
-                "attacks": score.attack_count(Team.VIKINGS),
-                "participants": score.population(Team.VIKINGS),
-            }
-
-            try:
-                message, = await history.flatten()
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
-                        ),
-                        "\n".join(lines).format(**knight_values),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
-                        ),
-                        "\n".join(lines).format(**viking_values),
-                        True
-                    ]
-                ]
-                msg = await send_embed_message(
-                    None,
-                    title=None,
-                    description=None,
-                    icon_url=None,
-                    fields=fields,
-                    colour=Pomwars.ACTION_COLOUR,
-                    _func=message.edit
-                    ,
-                )
-            except ValueError:
-                try:
-                    fields = [
-                        [
-                            "{emt} Knights{win}".format(
-                                emt=Pomwars.Emotes.KNIGHT,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
-                            ),
-                            "\n".join(lines).format(**knight_values),
-                            True
-                        ],
-                        [
-                            "{emt} Vikings{win}".format(
-                                emt=Pomwars.Emotes.VIKING,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
-                            ),
-                            "\n".join(lines).format(**viking_values),
-                            True
-                        ]
-                    ]
-                    msg = await send_embed_message(
-                        None,
-                        title=None,
-                        description=None,
-                        icon_url=None,
-                        fields=fields,
-                        colour=Pomwars.ACTION_COLOUR,
-                        _func=channel.send,
-                    )
-                    await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
-                except discord.errors.Forbidden:
-                    restricted_channels.append(channel)
-            except discord.errors.Forbidden:
-                restricted_channels.append(channel)
-            else:
-                if message.author != self.bot.user:
-                    full_channels.append(channel)
+        full_channels, restricted_channels = await State.score.update_msg(True)
 
         for channel in full_channels:
             _log.error("Join channel '%s' on '%s' is not empty",

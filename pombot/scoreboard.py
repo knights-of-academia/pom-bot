@@ -158,7 +158,6 @@ class Scoreboard:
                     colour=Pomwars.ACTION_COLOUR,
                     _func=message.edit,
                 )
-                print(channel)
             except ValueError:
                 try:
                     message, = await history.flatten()

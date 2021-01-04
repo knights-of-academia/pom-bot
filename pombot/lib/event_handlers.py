@@ -16,8 +16,6 @@ from pombot.lib.types import Team
 from pombot.storage import Storage
 from pombot.scoreboard import Scoreboard
 
-_log = logging.getLogger(__name__)
-
 async def _create_roles_on_guild(roles: list, guild: Guild):
     for role in roles:
         if role in (r.name for r in guild.roles):

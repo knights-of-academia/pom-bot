@@ -32,13 +32,10 @@ async def send_embed_message(
         message.description=description
         message.colour=colour
 
-    if fields and len(fields) > 0:
+    if fields:
         for field in fields:
-            message.add_field(
-                name=field[0],
-                value=field[1],
-                inline=field[2]
-            )
+            name, value, inline = field
+            message.add_field(name=name, value=value, inline=inline)
 
     if ctx is None:
         coro = _func

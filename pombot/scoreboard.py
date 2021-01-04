@@ -5,6 +5,8 @@ from pombot.lib.types import ActionType, Team
 from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
 
+from collections import Counter
+
 class Scoreboard:
     """A representation of the scoreboard in join channels."""
     def __init__(self, bot, scoreboard_channels) -> None:
@@ -28,7 +30,7 @@ class Scoreboard:
             team=Team.VIKINGS,
         )
 
-    def population(self, team) -> str:
+    def population(self, team) -> int:
         """
         Returns a string of the population of a team
         """
@@ -36,9 +38,9 @@ class Scoreboard:
 
         team = self.viking_population if team == Team.VIKINGS else self.knight_population
 
-        return str(team)
+        return team
 
-    def dmg(self, team) -> str:
+    def dmg(self, team) -> int:
         """
         Returns a string of the total damage done by a team
         """
@@ -51,7 +53,7 @@ class Scoreboard:
             if action.raw_damage > 0:
                 damage += int(action.raw_damage/100)
 
-        return str(damage)
+        return damage
 
     def attack_count(self, team) -> int:
         """
@@ -60,15 +62,14 @@ class Scoreboard:
         
         self.update_vars()
 
-        count = 0
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
-        for action in team_actions:
-            was_attack = action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK]
-            if action.was_successful and was_attack:
-                count += 1
+        attack_counts = Counter([
+            action.type in [ActionType.NORMAL_ATTACK, ActionType.HEAVY_ATTACK] and action.was_successful
+            for action in team_actions
+        ])
 
-        return count
+        return attack_counts[1] # Only the actions that were attacks and were successful
 
     def favorite_attack(self, team) -> str:
         """
@@ -77,19 +78,11 @@ class Scoreboard:
         
         self.update_vars()
 
-        normal_count = 0
-        heavy_count = 0
-
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
-        for action in team_actions:
-            if action.type == 'normal_attack':
-                normal_count += 1
-            elif action.type == 'heavy_attack':
-                heavy_count += 1
+        type_counts = Counter([action.type for action in team_actions])
 
-
-        if normal_count >= heavy_count:
+        if type_counts['normal_attack'] >= type_counts['heavy_attack']:
             fav = 'Normal'
         else:
             fav = 'Heavy'
@@ -120,9 +113,9 @@ class Scoreboard:
         winner = ""
         if knight_dmg != viking_dmg: # To check for ties
             if int(self.dmg(Team.KNIGHTS)) < int(self.dmg(Team.VIKINGS)):
-                winner = 'viking'
+                winner = Team.KNIGHTS
             else:
-                winner = 'knight'
+                winner = Team.VIKINGS
 
         for channel in self.scoreboard_channels:
             history = channel.history(limit=1, oldest_first=True)
@@ -158,7 +151,7 @@ class Scoreboard:
                     [
                         "{emt} Knights{win}".format(
                             emt=Pomwars.Emotes.KNIGHT,
-                            win=(f" {Pomwars.Emotes.WINNER}" if winner=='knight' else ''),
+                            win=(f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else ''),
                         ),
                         "\n".join(lines).format(**knight_values),
                         True
@@ -166,7 +159,7 @@ class Scoreboard:
                     [
                         "{emt} Vikings{win}".format(
                             emt=Pomwars.Emotes.VIKING,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
+                            win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
                         ),
                         "\n".join(lines).format(**viking_values),
                         True
@@ -187,7 +180,7 @@ class Scoreboard:
                         [
                             "{emt} Knights{win}".format(
                                 emt=Pomwars.Emotes.KNIGHT,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner=='knight' else '',
+                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else '',
                             ),
                             "\n".join(lines).format(**knight_values),
                             True
@@ -195,7 +188,7 @@ class Scoreboard:
                         [
                             "{emt} Vikings{win}".format(
                                 emt=Pomwars.Emotes.VIKING,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner=='viking' else '',
+                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
                             ),
                             "\n".join(lines).format(**viking_values),
                             True

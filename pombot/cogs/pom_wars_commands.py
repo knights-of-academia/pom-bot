@@ -95,7 +95,7 @@ class Attack:
         """
         Change the colour if attack is heavy or not.
         """
-        colour = Pomwars.EMBED_COLOUR
+        colour = Pomwars.NORMAL_COLOUR
 
         if self.is_heavy:
             colour = Pomwars.HEAVY_COLOUR

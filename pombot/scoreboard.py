@@ -18,10 +18,22 @@ class Scoreboard:
             team=Team.VIKINGS,
         )
 
+    def update_vars(self) -> None:
+        """Updates variables"""
+        self.knight_population, self.viking_population = Storage.get_team_populations()
+        self.knight_actions = Storage.get_actions(
+            team=Team.KNIGHTS,
+        )
+        self.viking_actions = Storage.get_actions(
+            team=Team.VIKINGS,
+        )
+
     def population(self, team) -> str:
         """
         Returns a string of the population of a team
         """
+        self.update_vars()
+
         team = self.viking_population if team == Team.VIKINGS else self.knight_population
 
         return str(team)
@@ -30,6 +42,8 @@ class Scoreboard:
         """
         Returns a string of the total damage done by a team
         """
+        self.update_vars()
+
         damage = 0
         team = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
@@ -43,6 +57,9 @@ class Scoreboard:
         """
         Returns a string of the total attacks (whether successful or not) of a team
         """
+        
+        self.update_vars()
+
         count = 0
         team_actions = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
@@ -57,6 +74,9 @@ class Scoreboard:
         """
         Returns a string of the most common attack done by a team
         """
+        
+        self.update_vars()
+
         normal_count = 0
         heavy_count = 0
 
@@ -86,6 +106,9 @@ class Scoreboard:
         - Shows populations
         - Shows favorite attacks
         """
+        
+        self.update_vars()
+        
         full_channels, restricted_channels = [], []
 
         knight_dmg = self.dmg(Team.KNIGHTS)
@@ -160,7 +183,6 @@ class Scoreboard:
                 )
             except ValueError:
                 try:
-                    message, = await history.flatten()
                     fields = [
                         [
                             "{emt} Knights{win}".format(
@@ -186,7 +208,7 @@ class Scoreboard:
                         icon_url=None,
                         fields=fields,
                         colour=Pomwars.ACTION_COLOUR,
-                        _func=message.send,
+                        _func=channel.send,
                     )
                     await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
                 except discord.errors.Forbidden:

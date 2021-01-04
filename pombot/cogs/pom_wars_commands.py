@@ -95,7 +95,7 @@ class Attack:
         """
         Change the colour if attack is heavy or not.
         """
-        colour = Pomwars.NORMAL_COLOUR
+        colour = Pomwars.EMBED_COLOUR
 
         if self.is_heavy:
             colour = Pomwars.HEAVY_COLOUR
@@ -426,7 +426,7 @@ class PomwarsEventListeners(Cog):
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
                     State.SCOREBOARD_CHANNELS.append(channel)
 
-        State.score = Scoreboard(self.bot, SCOREBOARD_CHANNELS)
+        State.score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
 
         full_channels, restricted_channels = await State.score.update_msg(True)
 

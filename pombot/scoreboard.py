@@ -50,7 +50,7 @@ class Scoreboard:
         team = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in team:
-            if action.raw_damage > 0:
+            if action.raw_damage and action.raw_damage > 0:
                 damage += int(action.raw_damage/100)
 
         return damage
@@ -138,62 +138,48 @@ class Scoreboard:
                 "participants": self.population(Team.VIKINGS),
             }
 
+            msg_fields = [
+                [
+                    "{emt} Knights{win}".format(
+                        emt=Pomwars.Emotes.KNIGHT,
+                        win=f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else '',
+                    ),
+                    "\n".join(lines).format(**knight_values),
+                    True
+                ],
+                [
+                    "{emt} Vikings{win}".format(
+                        emt=Pomwars.Emotes.VIKING,
+                        win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
+                    ),
+                    "\n".join(lines).format(**viking_values),
+                    True
+                ]
+            ]
+
+            msg_title = "Pom War Season 3 Warboard"
+            msg_footer = f"React with {Reactions.WAR_JOIN_REACTION} to join a team!"
+
             try:
                 message, = await history.flatten()
 
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=(f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else ''),
-                        ),
-                        "\n".join(lines).format(**knight_values),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
-                        ),
-                        "\n".join(lines).format(**viking_values),
-                        True
-                    ]
-                ]
                 await send_embed_message(
                     None,
-                    title=None,
+                    title=msg_title,
                     description=None,
-                    icon_url=None,
-                    fields=fields,
+                    fields=msg_fields,
+                    footer=msg_footer,
                     colour=Pomwars.ACTION_COLOUR,
                     _func=message.edit,
                 )
             except ValueError:
                 try:
-                    fields = [
-                        [
-                            "{emt} Knights{win}".format(
-                                emt=Pomwars.Emotes.KNIGHT,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else '',
-                            ),
-                            "\n".join(lines).format(**knight_values),
-                            True
-                        ],
-                        [
-                            "{emt} Vikings{win}".format(
-                                emt=Pomwars.Emotes.VIKING,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
-                            ),
-                            "\n".join(lines).format(**viking_values),
-                            True
-                        ]
-                    ]
                     msg = await send_embed_message(
                         None,
-                        title=None,
+                        title=msg_title,
                         description=None,
-                        icon_url=None,
-                        fields=fields,
+                        fields=msg_fields,
+                        footer=msg_footer,
                         colour=Pomwars.ACTION_COLOUR,
                         _func=channel.send,
                     )

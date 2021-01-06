@@ -184,7 +184,30 @@ def _is_action_successful(
 
     @cache
     def _get_heavy_attack_success_chance(num_poms: int):
-        return 0.25 * _delayed_exponential_drop(num_poms)
+        botuser = Storage.get_user_by_id(user.id)
+        pity_levels = Pomwars.HEAVY_ATTACK_LEVEL_VALIANT_ATTEMPT_CONDOLENCE_REWARDS
+        min_chance, max_chance = pity_levels[botuser.heavy_attack_level]
+
+        # Do not add the +1 to max_chance because it's defaulted to later.
+        pity_range = range(*(int(x * 100) for x in (
+            min_chance,
+            max_chance,
+            Pomwars.HEAVY_PITY_INCREMENT,
+        )))
+
+        # A modified reducer because functools.reduce() won't break after some
+        # condition is met.
+        num_misses = 0
+        for action in reversed(Storage.get_actions(user=user)):
+            if action.was_successful:
+                break
+            num_misses += 1
+
+        base_chance = dict(enumerate(pity_range)).get(num_misses, max_chance * 100)
+
+        y = base_chance / 100 * _delayed_exponential_drop(num_poms)
+        _log.info(f"missed attacks: {num_misses}. chance for this attack: {y}.")
+        return y
 
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)
@@ -197,7 +220,9 @@ def _is_action_successful(
         date_from_time("%Y-%m-%d 23:59:59"),
     )))
 
-    return random.random() <= chance_func(this_pom_number)
+    success = random.random() <= chance_func(this_pom_number)
+    _log.info("success!" if success else "failed!")
+    return success
 
 
 def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:

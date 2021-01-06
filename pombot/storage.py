@@ -2,7 +2,7 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime as dt
 from datetime import time, timezone
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import mysql.connector
 from discord.user import User as DiscordUser
@@ -375,7 +375,7 @@ class Storage:
         return tuple([int(row) for row in rows[0]])
 
     @staticmethod
-    def get_user_by_id(user_id: int) -> PombotUser:
+    def get_user_by_id(user_id: int) -> Optional[PombotUser]:
         """Return a single user by its userID."""
         query = f"""
             SELECT * FROM {Config.USERS_TABLE}
@@ -385,6 +385,9 @@ class Storage:
         with _mysql_database_cursor() as cursor:
             cursor.execute(query, (user_id,))
             row = cursor.fetchone()
+
+        if not row:
+            raise pombot.errors.UserDoesNotExistError()
 
         return PombotUser(*row)
 

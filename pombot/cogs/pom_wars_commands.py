@@ -182,6 +182,7 @@ def _is_action_successful(
     def _get_normal_attack_success_chance(num_poms: int):
         return 1.0 * _delayed_exponential_drop(num_poms)
 
+    # FIXME: It's going to cache the wrong thing since num_misses is not being passed in!
     @cache
     def _get_heavy_attack_success_chance(num_poms: int):
         botuser = Storage.get_user_by_id(user.id)
@@ -205,9 +206,7 @@ def _is_action_successful(
 
         base_chance = dict(enumerate(pity_range)).get(num_misses, max_chance * 100)
 
-        y = base_chance / 100 * _delayed_exponential_drop(num_poms)
-        _log.info(f"missed attacks: {num_misses}. chance for this attack: {y}.")
-        return y
+        return base_chance / 100 * _delayed_exponential_drop(num_poms)
 
     chance_func = (_get_heavy_attack_success_chance
                    if is_heavy_attack else _get_normal_attack_success_chance)
@@ -220,9 +219,7 @@ def _is_action_successful(
         date_from_time("%Y-%m-%d 23:59:59"),
     )))
 
-    success = random.random() <= chance_func(this_pom_number)
-    _log.info("success!" if success else "failed!")
-    return success
+    return random.random() <= chance_func(this_pom_number)
 
 
 def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:

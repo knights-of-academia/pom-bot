@@ -14,6 +14,7 @@ async def send_embed_message(
         colour=Config.EMBED_COLOUR,
         icon_url=Config.EMBED_IMAGE_URL,
         fields: list = None,
+        footer: str = None,
         private_message: bool = False,
         _func: Callable = None,
 ):
@@ -36,6 +37,9 @@ async def send_embed_message(
         for field in fields:
             name, value, inline = field
             message.add_field(name=name, value=value, inline=inline)
+
+    if footer:
+        message.set_footer(text=footer)
 
     if ctx is None:
         coro = _func

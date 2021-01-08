@@ -50,7 +50,7 @@ class Scoreboard:
         team = self.viking_actions if team == Team.VIKINGS else self.knight_actions
 
         for action in team:
-            if action.raw_damage > 0:
+            if action.raw_damage:
                 damage += int(action.raw_damage/100)
 
         return damage
@@ -138,72 +138,50 @@ class Scoreboard:
                 "participants": self.population(Team.VIKINGS),
             }
 
-            try:
-                message, = await history.flatten()
-
-                fields = [
-                    [
-                        "{emt} Knights{win}".format(
-                            emt=Pomwars.Emotes.KNIGHT,
-                            win=(f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else ''),
-                        ),
-                        "\n".join(lines).format(**knight_values),
-                        True
-                    ],
-                    [
-                        "{emt} Vikings{win}".format(
-                            emt=Pomwars.Emotes.VIKING,
-                            win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
-                        ),
-                        "\n".join(lines).format(**viking_values),
-                        True
-                    ]
+            team_fields_inline = True
+            msg_fields = [
+                [
+                    "{emt} Knights{win}".format(
+                        emt=Pomwars.Emotes.KNIGHT,
+                        win=f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else '',
+                    ),
+                    "\n".join(lines).format(**knight_values),
+                    team_fields_inline
+                ],
+                [
+                    "{emt} Vikings{win}".format(
+                        emt=Pomwars.Emotes.VIKING,
+                        win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
+                    ),
+                    "\n".join(lines).format(**viking_values),
+                    team_fields_inline
                 ]
-                await send_embed_message(
+            ]
+
+            msg_title = "Pom War Season 3 Warboard"
+            msg_footer = f"React with {Reactions.WAR_JOIN_REACTION} to join a team!"
+
+            channel_messages = await history.flatten()
+            scoreboard_msg = None
+            if channel_messages:
+                scoreboard_msg = channel_messages[0]
+                if scoreboard_msg.author != self.bot.user:
+                    full_channels.append(channel)
+                    continue
+
+            try:
+                new_msg = await send_embed_message(
                     None,
-                    title=None,
+                    title=msg_title,
                     description=None,
-                    icon_url=None,
-                    fields=fields,
+                    fields=msg_fields,
+                    footer=msg_footer,
                     colour=Pomwars.ACTION_COLOUR,
-                    _func=message.edit,
+                    _func=scoreboard_msg.edit if scoreboard_msg else channel.send
                 )
-            except ValueError:
-                try:
-                    fields = [
-                        [
-                            "{emt} Knights{win}".format(
-                                emt=Pomwars.Emotes.KNIGHT,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.KNIGHTS else '',
-                            ),
-                            "\n".join(lines).format(**knight_values),
-                            True
-                        ],
-                        [
-                            "{emt} Vikings{win}".format(
-                                emt=Pomwars.Emotes.VIKING,
-                                win=f" {Pomwars.Emotes.WINNER}" if winner==Team.VIKINGS else '',
-                            ),
-                            "\n".join(lines).format(**viking_values),
-                            True
-                        ]
-                    ]
-                    msg = await send_embed_message(
-                        None,
-                        title=None,
-                        description=None,
-                        icon_url=None,
-                        fields=fields,
-                        colour=Pomwars.ACTION_COLOUR,
-                        _func=channel.send,
-                    )
-                    await msg.add_reaction(Reactions.WAR_JOIN_REACTION)
-                except discord.errors.Forbidden:
-                    restricted_channels.append(channel)
+                if new_msg:
+                    await new_msg.add_reaction(Reactions.WAR_JOIN_REACTION)
             except discord.errors.Forbidden:
                 restricted_channels.append(channel)
-            else:
-                if message.author != self.bot.user:
-                    full_channels.append(channel)
 
         return [full_channels, restricted_channels]

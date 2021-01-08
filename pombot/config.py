@@ -106,6 +106,16 @@ class Pomwars:
         SWORD = "https://cdn.discordapp.com/attachments/791201687410835497/794620213374877696/image0.png"
     # pylint: enable=line-too-long
 
+    HEAVY_ATTACK_LEVEL_VALIANT_ATTEMPT_CONDOLENCE_REWARDS = {
+        # Level: (Min chance, Max chance)
+        1:       (0.25,       0.75),
+        2:       (0.30,       0.80),
+        3:       (0.30,       0.80),
+        4:       (0.33,       0.83),
+        5:       (0.37,       0.87),
+    }
+    HEAVY_PITY_INCREMENT = 0.10
+
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25
 

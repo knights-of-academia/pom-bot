@@ -15,7 +15,7 @@ test:
 	@echo "Testing..."
 	@${PYTHON} -m pytest -x --ff tests
 
-build: lint test
+build: test lint
 
 dev: build
 	@echo "Launching..."

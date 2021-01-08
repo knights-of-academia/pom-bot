@@ -28,3 +28,7 @@ class UserAlreadyExistsError(PomWarsError):
     def __init__(self, team, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.team = team
+
+
+class UserDoesNotExistError(PomWarsError):
+    """Specified user dow not exist in database."""

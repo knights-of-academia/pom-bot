@@ -169,11 +169,6 @@ class Scoreboard:
                     full_channels.append(channel)
                     continue
 
-            if scoreboard_msg:
-                func = scoreboard_msg.edit
-            else:
-                func = channel.send
-
             try:
                 new_msg = await send_embed_message(
                     None,
@@ -182,7 +177,7 @@ class Scoreboard:
                     fields=msg_fields,
                     footer=msg_footer,
                     colour=Pomwars.ACTION_COLOUR,
-                    _func=func,
+                    _func=scoreboard_msg.edit if scoreboard_msg else channel.send
                 )
                 if new_msg:
                     await new_msg.add_reaction(Reactions.WAR_JOIN_REACTION)

@@ -1,1 +1,1 @@
-```User ${USERNAME} (${USERNAME}#${TAG}]) running "!bribe" hit: Command raised an exception: HTTP Error 451. Please try again later.```
+```User ${USERNAME} (${USERNAME}#${TAG}) running "!bribe" hit: Command raised an exception: HTTP Error 451. Please try again later.```

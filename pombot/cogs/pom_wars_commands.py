@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
+from string import Template
 
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
@@ -134,6 +135,33 @@ class Defend:
 
         return "\n\n".join([action, story.strip()])
 
+class Bribe:
+    """Fun replies when users try and bribe the bot."""
+    def __init__(self, directory: Path):
+        self.name = directory.name
+        self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
+        self._meta = (directory / Locations.META).read_text(encoding="utf8")
+
+        self.chance_for_this_action = None
+        for key, val in json.loads(self._meta).items():
+            setattr(self, key, val)
+
+    @property
+    def weight(self):
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
+
+    def get_message(self, user: User) -> str:
+        """The markdown-formatted version of the message.txt from the
+        action's directory, and its result, as a string.
+        """
+
+        story = Template(re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message.strip()))
+
+        username, tag = str(user).split('#')   
+
+        return story.safe_substitute(USERNAME=username, TAG=tag)
+
 
 def _load_actions_directories(
     location: Path,
@@ -149,9 +177,13 @@ def _load_actions_directories(
         if action_dir.name.startswith("~"):
             continue
 
-        actions.append(
-            Attack(action_dir, is_heavy, is_critical) if type_ ==
-            Attack else Defend(action_dir))
+        if type_ == Attack:
+            actions.append(Attack(action_dir, is_heavy, is_critical))
+        elif type_ == Defend:
+            actions.append(Defend(action_dir))
+        else:
+            actions.append(Bribe(action_dir))
+
 
     return actions
 
@@ -319,6 +351,16 @@ class PomWarsUserCommands(commands.Cog):
         except discord.errors.Forbidden:
             # User disallows DM's from server members.
             await ctx.message.add_reaction(Reactions.WARNING)
+
+
+    @commands.command()
+    async def bribe(self, ctx: Context):
+        """Gives a funny reply as an easter egg when the user attempts to bribe the bot."""
+        bribes = _load_actions_directories(Locations.BRIBES_DIR, type_=Bribe)
+        weights = [bribe.weight for bribe in bribes]
+        bribe, = random.choices(bribes, weights=weights)
+
+        await ctx.send(bribe.get_message(ctx.author))
 
     @commands.command()
     async def attack(self, ctx: Context, *args):

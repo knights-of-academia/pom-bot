@@ -122,6 +122,7 @@ class ActionType(str, Enum):
     HEAVY_ATTACK = 'heavy_attack'
     DEFEND = 'defend'
     BRIBE = 'bribe'
+    TIMER = 'timer'
 
 
 @dataclass(frozen=True)

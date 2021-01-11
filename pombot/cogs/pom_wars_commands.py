@@ -23,6 +23,7 @@ from pombot.lib.types import DateRange, Team, ActionType
 from pombot.storage import Storage
 from pombot.state import State
 from pombot.scoreboard import Scoreboard
+from pombot.timer import Timer
 
 _log = logging.getLogger(__name__)
 
@@ -383,6 +384,42 @@ class PomWarsUserCommands(commands.Cog):
         Storage.add_pom_war_action(**action)
 
         await ctx.send(bribe.get_message(ctx.author, self.bot))
+
+
+    @commands.command()
+    async def timer(self, ctx: Context, *args):
+        """Start a timer using the bot that will ping you when it's through."""
+        await ctx.message.add_reaction(Reactions.TIMER)
+        title = " ".join(args)
+        if len(title) > Config.TITLE_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send(f"{ctx.author.mention}, your timer description must "
+                           f"be fewer than {Config.TITLE_LIMIT} characters.")
+            return
+        
+        timestamp = datetime.now()
+
+        action = {
+            "user":           ctx.author,
+            "team":           _get_user_team(ctx.author),
+            "action_type":    ActionType.TIMER,
+            "was_successful": True,
+            "was_critical":   None,
+            "items_dropped":  "",
+            "damage":         None,
+            "time_set":       timestamp,
+        }
+
+        Storage.add_pom_war_action(**action)
+
+        timer = Timer(
+            bot=self.bot,
+            user=ctx.author,
+            title = title,
+            channel=ctx.channel
+        )
+
+        await timer.start_timer()
 
     @commands.command()
     async def attack(self, ctx: Context, *args):

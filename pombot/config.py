@@ -31,7 +31,9 @@ class Config:
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
+    TITLE_LIMIT = 30
     MULTILINE_DESCRIPTION_DISABLED = True
+    POM_TIME = 25
 
     # Embeds
     EMBED_COLOUR = 0xff6347
@@ -144,6 +146,7 @@ class Reactions:
     UNDO = "↩"
     WARNING = "⚠️"
     WASTEBASKET = "🗑️"
+    TIMER = "🕐"
 
     # Reactions related to pom war events
     WAR_JOIN_REACTION = "✅"  # dotenv does not read as Unicode.

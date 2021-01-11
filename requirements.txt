@@ -3,3 +3,4 @@ mysql-connector-python>=8.0.20
 pylint==2.6.0
 pytest==6.1.2
 python-dotenv>=0.10.5
+python-crontab>=2.5.1

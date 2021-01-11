@@ -1,0 +1,1 @@
+```User ${DISPLAY_NAME} (${DISPLAY_NAME}#${DISCRIMINATOR}) offered ${BOTNAME} a cup of coffee and hit: Command raised exception: HTTP Error 418. I'm a teapot.```

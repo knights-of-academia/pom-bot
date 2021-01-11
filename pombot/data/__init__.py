@@ -16,6 +16,7 @@ class Locations:  # pylint: disable=too-few-public-methods
     NORMAL_ATTACKS_DIR = POM_WARS_DATA_DIR / "normal_attacks"
     HEAVY_ATTACKS_DIR = POM_WARS_DATA_DIR / "heavy_attacks"
     DEFENDS_DIR = POM_WARS_DATA_DIR / "defends"
+    BRIBES_DIR = POM_WARS_DATA_DIR / "bribes"
 
 
 # Check sanity to discover errors in folder structure during developement.

@@ -39,7 +39,11 @@ def _mysql_database_cursor():
 
 
 def _replace_further_occurances(text: str, old: str, new: str) -> str:
-    offset = text.index(old) + 1
+    try:
+        offset = text.index(old) + 1
+    except ValueError:
+        return text
+
     return text[:offset] + text[offset:].replace(old, new)
 
 

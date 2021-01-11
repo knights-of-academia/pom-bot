@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
+from string import Template
 
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
@@ -134,10 +135,39 @@ class Defend:
 
         return "\n\n".join([action, story.strip()])
 
+class Bribe:
+    """Fun replies when users try and bribe the bot."""
+    def __init__(self, directory: Path):
+        self.name = directory.name
+        self._message = (directory / Locations.MESSAGE).read_text(encoding="utf8")
+        self._meta = (directory / Locations.META).read_text(encoding="utf8")
+
+        self.chance_for_this_action = None
+        for key, val in json.loads(self._meta).items():
+            setattr(self, key, val)
+
+    @property
+    def weight(self):
+        """The configured base weighted-chance for this action."""
+        return self.chance_for_this_action
+
+    def get_message(self, user: User, bot: Bot) -> str:
+        """The markdown-formatted version of the message.txt from the
+        action's directory, and its result, as a string.
+        """
+
+        story = Template(re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message.strip()))
+
+        return story.safe_substitute(
+            DISPLAY_NAME=user.display_name,
+            DISCRIMINATOR=user.discriminator,
+            BOTNAME=bot.user.name
+        )
+
 
 def _load_actions_directories(
     location: Path,
-    type_: Union[Attack, Defend],
+    type_: Union[Attack, Defend, Bribe],
     *,
     is_heavy: bool = False,
     is_critical: bool = False,
@@ -149,9 +179,18 @@ def _load_actions_directories(
         if action_dir.name.startswith("~"):
             continue
 
-        actions.append(
-            Attack(action_dir, is_heavy, is_critical) if type_ ==
-            Attack else Defend(action_dir))
+        if type_ == Attack:
+            actions.append(Attack(action_dir, is_heavy, is_critical))
+        elif type_ == Defend:
+            actions.append(Defend(action_dir))
+        elif type_ == Bribe:
+            actions.append(Bribe(action_dir))
+        else:
+            raise ValueError('Unknown action.')
+
+        # Tech debt:
+            # see #56 / https://github.com/knights-of-academia/pom-bot/pull/56#discussion_r554639639
+
 
     return actions
 
@@ -319,6 +358,31 @@ class PomWarsUserCommands(commands.Cog):
         except discord.errors.Forbidden:
             # User disallows DM's from server members.
             await ctx.message.add_reaction(Reactions.WARNING)
+
+
+    @commands.command(hidden=True)
+    async def bribe(self, ctx: Context):
+        """What? I don't take bribes..."""
+        bribes = _load_actions_directories(Locations.BRIBES_DIR, type_=Bribe)
+        weights = [bribe.weight for bribe in bribes]
+        bribe, = random.choices(bribes, weights=weights)
+
+        timestamp = datetime.now()
+
+        action = {
+            "user":           ctx.author,
+            "team":           _get_user_team(ctx.author),
+            "action_type":    ActionType.BRIBE,
+            "was_successful": True,
+            "was_critical":   None,
+            "items_dropped":  "",
+            "damage":         None,
+            "time_set":       timestamp,
+        }
+
+        Storage.add_pom_war_action(**action)
+
+        await ctx.send(bribe.get_message(ctx.author, self.bot))
 
     @commands.command()
     async def attack(self, ctx: Context, *args):

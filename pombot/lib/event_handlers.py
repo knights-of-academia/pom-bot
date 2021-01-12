@@ -71,7 +71,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         dm_description = "Enjoy the Pom War event! Good luck and have fun!"
 
         try:
-            Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team)
+            Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team.value)
         except pombot.errors.UserAlreadyExistsError as exc:
             dm_description = "You're already on a team! :open_mouth:"
             user_roles = [r.name for r in payload.member.roles]
@@ -90,7 +90,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
 
                 if team != exc.team:
                     dm_description = "It looks like your team has been swapped!"
-                    Storage.update_user_team(payload.user_id, team)
+                    Storage.update_user_team(payload.user_id, team.value)
 
         try:
             await send_embed_message(
@@ -110,7 +110,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         role, = [r for r in guild.roles if r.name == team.value]
         await payload.member.add_roles(role)
 
-        await State.score.update_msg()
+        await State.scoreboard.update()
 
     if payload.emoji.name in TIMEZONES:
         user = Storage.get_user_by_id(payload.user_id)
@@ -142,11 +142,11 @@ def _get_guild_team_or_random(guild_id: int) -> Team:
     elif guild_id in Pomwars.VIKING_ONLY_GUILDS:
         assigned_team = Team.VIKINGS
     else:
-        knights_count, vikings_count = Storage.get_team_populations()
+        num_knights, num_vikings = Team.KNIGHTS.population, Team.VIKINGS.population
 
-        if knights_count > vikings_count:
+        if num_knights > num_vikings:
             assigned_team = Team.VIKINGS
-        elif vikings_count > knights_count:
+        elif num_vikings > num_knights:
             assigned_team = Team.KNIGHTS
         else:
             assigned_team = random.choice([Team.KNIGHTS, Team.VIKINGS])

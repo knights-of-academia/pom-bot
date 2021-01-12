@@ -1,14 +1,10 @@
-from typing import List
+from pombot.scoreboard import Scoreboard
 
-from discord.channel import TextChannel
 
 class State:  # pylint: disable=too-few-public-methods
-    """In-memory state of whether or not the goal of the ongoing-event has
-    been reached.
+    """In-memory bot state."""
+    # Scoreboard
+    scoreboard: Scoreboard = None
 
-    Techdebt: This value should be stored in the DB and this file should not
-    exist.
-    """
+    # Tech debt: this should be in the database.
     goal_reached = False
-    SCOREBOARD_CHANNELS: List[TextChannel] = []
-    score = None

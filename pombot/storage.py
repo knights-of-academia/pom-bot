@@ -2,14 +2,14 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime as dt
 from datetime import time, timezone
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Set
 
 import mysql.connector
 from discord.user import User as DiscordUser
 
 import pombot.errors
 from pombot.config import Config, Secrets
-from pombot.lib.types import Action, ActionType, DateRange, Event, Pom, Team
+from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
 from pombot.lib.types import User as PombotUser
 
 _log = logging.getLogger(__name__)
@@ -309,7 +309,7 @@ class Storage:
             cursor.execute(query, (name, ))
 
     @staticmethod
-    def add_user(user_id: str, zone: timezone, team: Team):
+    def add_user(user_id: str, zone: timezone, team: str):
         """Add a user into the users table."""
         query = f"""
             INSERT INTO {Config.USERS_TABLE} (
@@ -321,11 +321,10 @@ class Storage:
         """
 
         zone_str = time(tzinfo=zone).strftime('%z')
-        team_str = team.value
 
         with _mysql_database_cursor() as cursor:
             try:
-                cursor.execute(query, (user_id, zone_str, team_str))
+                cursor.execute(query, (user_id, zone_str, team))
             except mysql.connector.errors.IntegrityError as exc:
                 user = Storage.get_user_by_id(user_id)
                 raise pombot.errors.UserAlreadyExistsError(user.team) from exc
@@ -345,7 +344,7 @@ class Storage:
             cursor.execute(query, (zone_str, user_id))
 
     @staticmethod
-    def update_user_team(user_id: str, team: Team):
+    def update_user_team(user_id: str, team: str):
         """Set the user team."""
         query = f"""
             UPDATE {Config.USERS_TABLE}
@@ -354,29 +353,7 @@ class Storage:
         """
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (team.value, user_id))
-
-    @staticmethod
-    def get_team_populations() -> Tuple[int, int]:
-        """Get the number of players on each team.
-
-        @return Two numbers, the number of users on Knights and the number of users on Vikings
-        """
-        query = f"""
-            SELECT
-                SUM(IF(team = '{Team.KNIGHTS}', 1, 0)),
-                SUM(IF(team = '{Team.VIKINGS}', 1, 0))
-            FROM {Config.USERS_TABLE};
-        """
-
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query)
-            rows = cursor.fetchall()
-
-        if None in rows[0]:
-            return 0, 0
-
-        return tuple([int(row) for row in rows[0]])
+            cursor.execute(query, (team, user_id))
 
     @staticmethod
     def get_user_by_id(user_id: int) -> Optional[PombotUser]:
@@ -424,7 +401,7 @@ class Storage:
     @staticmethod
     def add_pom_war_action(
         user: DiscordUser,
-        team: Team,
+        team: str,
         action_type: ActionType,
         was_successful: bool,
         was_critical: bool,
@@ -446,7 +423,7 @@ class Storage:
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (user.id, team.value, action_type.value, was_successful,
+        values = (user.id, team, action_type.value, was_successful,
                   was_critical, items_dropped, (damage or 0) * 100, time_set)
 
         with _mysql_database_cursor() as cursor:
@@ -457,11 +434,14 @@ class Storage:
         *,
         action_type: ActionType = None,
         user: DiscordUser = None,
-        team: Team = None,
+        team: str = None,
         was_successful = None,
         date_range: DateRange = None,
     ) -> List[Action]:
         """Get a list of actions from storage matching certain criteria.
+
+        This function has the potential to return a large list of actions, so
+        it is recommended to provide a date_range.
 
         @param user Only match actions for this user.
         @param date_range Only match actions within this date range.
@@ -480,7 +460,7 @@ class Storage:
 
         if team:
             query += [f"WHERE team=%s"]
-            values += [team.value]
+            values += [team]
 
         if was_successful:
             query += [f"WHERE was_successful=%s"]
@@ -496,5 +476,61 @@ class Storage:
             cursor.execute(query_str, values)
             rows = cursor.fetchall()
 
-
         return [Action(*row) for row in rows]
+
+    @staticmethod
+    def count_rows_in_table(
+        table: str,
+        *,
+        action_type: ActionType = None,
+        team: str = None,
+    ) -> int:
+        """Get number of users on a team.
+
+        The team parameter is a string here to avoid a circular reference.
+
+        @param table The table from which to count.
+        @param action_type Consider only these types of actions.
+        @param team Team name as a string.
+        @return Count of users on this team.
+        """
+        query = [f"SELECT COUNT(NULL) FROM {table}"]
+        values = []
+
+        if action_type:
+            query += [f"WHERE action_type=%s"]
+            values += [action_type.value]
+
+        if team:
+            query += [f"WHERE team=%s"]
+            values += [team]
+
+        query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query_str, values)
+            row = cursor.fetchone()
+
+        # FIXME is there only 1 value? not a list of len(1)
+        return int(row)  # FIXME is this already an int?
+
+    @staticmethod
+    def sum_team_damage(team: str) -> int:
+        """Get sum of the damage column for a team.
+
+        The team parameter is a string here to avoid a circular reference.
+
+        @param team Team name as a string.
+        @return Sum of the damage that the team has done thus far.
+        """
+        query = f"""
+            SELECT SUM(damage) FROM {Config.ACTIONS_TABLE}
+            WHERE team=%s;
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query, team)
+            row = cursor.fetchone()
+
+        # FIXME is there only 1 value? not a list of len(1)
+        return int(row)  # FIXME is this already an int?

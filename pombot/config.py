@@ -115,6 +115,7 @@ class Pomwars:
         5:       (0.37,       0.87),
     }
     HEAVY_PITY_INCREMENT = 0.10
+    HEAVY_QUALIFIERS = ["heavy", "hard", "sharp", "strong"]
 
     DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
     MAXIMUM_TEAM_DEFENCE = 0.25

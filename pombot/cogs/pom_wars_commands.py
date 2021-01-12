@@ -19,7 +19,8 @@ import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
-from pombot.lib.types import DateRange, Team, ActionType
+from pombot.lib.types import DateRange, ActionType
+from pombot.lib.team import Team
 from pombot.storage import Storage
 from pombot.state import State
 from pombot.scoreboard import Scoreboard
@@ -36,7 +37,7 @@ def _get_user_team(user: User) -> str:
     if len(team_roles) != 1:
         raise pombot.errors.InvalidNumberOfRolesError()
 
-    return Team(team_roles[0].name).value
+    return Team(team_roles[0].name)
 
 
 class Attack:
@@ -204,6 +205,9 @@ def _is_action_successful(
     is_heavy_attack: bool = False,
 ) -> bool:
     # Tech debt: This function is getting hairy.
+    date_from_time = lambda x: datetime.strptime(
+        datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
+
     def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
 
@@ -264,9 +268,6 @@ def _is_action_successful(
     else:
         chance_func = _get_normal_attack_success_chance
 
-    date_from_time = lambda x: datetime.strptime(
-        datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
-
     this_pom_number = len(Storage.get_actions(user=user, date_range=DateRange(
         date_from_time("%Y-%m-%d 00:00:00"),
         date_from_time("%Y-%m-%d 23:59:59"),
@@ -275,7 +276,7 @@ def _is_action_successful(
     return random.random() <= chance_func(this_pom_number)
 
 
-def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
+def _get_defensive_multiplier(team: str, timestamp: datetime) -> float:
     defend_actions = Storage.get_actions(
         action_type=ActionType.DEFEND,
         team=team,
@@ -378,7 +379,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.BRIBE,
             "was_successful": True,
             "was_critical":   None,
@@ -414,7 +415,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.HEAVY_ATTACK if heavy_attack
                               else ActionType.NORMAL_ATTACK,
             "was_successful": False,
@@ -444,7 +445,7 @@ class PomWarsUserCommands(commands.Cog):
         attack, = random.choices(attacks, weights=weights)
 
         defensive_multiplier = _get_defensive_multiplier(
-            team=~_get_user_team(ctx.author),
+            team=(~_get_user_team(ctx.author)).value,
             timestamp=timestamp)
 
         action["damage"] = attack.damage - attack.damage * defensive_multiplier
@@ -475,7 +476,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.DEFEND,
             "was_successful": False,
             "was_critical":   None,

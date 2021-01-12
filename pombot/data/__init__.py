@@ -7,7 +7,7 @@ POM_WARS_DATA_DIR = THIS_DIR / "pom_wars"
 _log = logging.getLogger(__name__)
 
 
-class Locations:  # pylint: disable=too-few-public-methods
+class Locations:
     """Path-like locations of data for the bot."""
     MESSAGE = "message.txt"
     META = "meta.json"

@@ -1,7 +1,7 @@
 from pombot.scoreboard import Scoreboard
 
 
-class State:  # pylint: disable=too-few-public-methods
+class State:
     """In-memory bot state."""
     # Scoreboard
     scoreboard: Scoreboard = None

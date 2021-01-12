@@ -24,7 +24,7 @@ class Team(str, Enum):
     @property
     def damage(self) -> int:
         """The team's total damage."""
-        return Storage.sum_team_damage(self.value) / 100.0
+        return int(Storage.sum_team_damage(self.value) / 100.0)
 
     @property
     def favorite_action(self) -> ActionType:
@@ -32,12 +32,7 @@ class Team(str, Enum):
         count_actions = lambda type_: Storage.count_rows_in_table(
             Config.ACTIONS_TABLE, action_type=type_, team=self.value)
 
-        # Tech debt: As beautiful as this line is, it's calling the DB one time
-        # per ActionType, per Team. It's only downloading a single byte, but if
-        # connections are a problem, then we need to figure out a SQL one-liner
-        # to get all four bytes in one call per team.
-        # https://stackoverflow.com/a/12789493/5161663
-        return max({typ: count_actions(typ.value) for typ in ActionType})
+        return max({typ: count_actions(typ) for typ in ActionType})
 
     @property
     def attack_count(self) -> int:

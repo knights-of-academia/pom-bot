@@ -5,7 +5,7 @@ from discord.channel import ChannelType
 
 from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
-from pombot.lib.types import Team
+from pombot.lib.team import Team
 
 
 class Scoreboard:

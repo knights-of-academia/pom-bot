@@ -3,10 +3,6 @@ from typing import Any
 
 import dotenv
 
-# This file consists of memoized objects with run-time static constants. There
-# should be no need for public methods on any class.
-# pylint: disable=too-few-public-methods
-
 dotenv.load_dotenv(override=True)
 
 

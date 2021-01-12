@@ -494,11 +494,11 @@ class Storage:
         @param team Team name as a string.
         @return Count of users on this team.
         """
-        query = [f"SELECT COUNT(NULL) FROM {table}"]
+        query = [f"SELECT COUNT(1) FROM {table}"]
         values = []
 
         if action_type:
-            query += [f"WHERE action_type=%s"]
+            query += [f"WHERE type=%s"]
             values += [action_type.value]
 
         if team:
@@ -509,10 +509,9 @@ class Storage:
 
         with _mysql_database_cursor() as cursor:
             cursor.execute(query_str, values)
-            row = cursor.fetchone()
+            row, = cursor.fetchone()
 
-        # FIXME is there only 1 value? not a list of len(1)
-        return int(row)  # FIXME is this already an int?
+        return int(row)
 
     @staticmethod
     def sum_team_damage(team: str) -> int:
@@ -529,8 +528,7 @@ class Storage:
         """
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, team)
-            row = cursor.fetchone()
+            cursor.execute(query, (team,))
+            row, = cursor.fetchone()
 
-        # FIXME is there only 1 value? not a list of len(1)
-        return int(row)  # FIXME is this already an int?
+        return int(row or 0)

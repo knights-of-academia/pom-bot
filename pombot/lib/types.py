@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 
-from pombot.lib.team import Team
-
 
 @dataclass
 class DateRange:
@@ -116,7 +114,7 @@ class User:
     """A user, as described, in order, from the database."""
     user_id: int
     timezone: timezone
-    team: Team
+    team: str
     inventory_string: str
     player_level: int
     attack_level: int

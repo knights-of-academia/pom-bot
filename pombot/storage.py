@@ -440,13 +440,13 @@ class Storage:
         knight_fav = ''
         viking_fav = ''
         query = f"""
-            (SELECT
+            SELECT
                 COUNT(type) AS typecount, type
             FROM {Config.ACTIONS_TABLE}
             WHERE team = '{Team.KNIGHTS}' AND was_successful
             GROUP BY type
             ORDER BY typecount DESC
-            LIMIT 1)
+            LIMIT 1;
         """
 
         with _mysql_database_cursor() as cursor:
@@ -457,13 +457,13 @@ class Storage:
             knight_fav = rows[0][1]
 
         query = f"""
-            (SELECT
+            SELECT
                 COUNT(type) AS typecount, type
             FROM {Config.ACTIONS_TABLE}
             WHERE team = '{Team.VIKINGS}' AND was_successful
             GROUP BY type
             ORDER BY typecount DESC
-            LIMIT 1)
+            LIMIT 1;
         """
 
         with _mysql_database_cursor() as cursor:

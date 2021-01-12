@@ -379,6 +379,102 @@ class Storage:
         return tuple([int(row) for row in rows[0]])
 
     @staticmethod
+    def get_team_damages() -> Tuple[int, int]:
+        """ Get the number of damage done on each team.
+
+        @return Two integers, the damage done by Knights and the damage done by Vikings
+        """
+        query = f"""
+            SELECT
+                SUM(IF(team = '{Team.KNIGHTS}', damage, 0)),
+                SUM(IF(team = '{Team.VIKINGS}', damage, 0))
+            FROM {Config.ACTIONS_TABLE};
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        if None in rows[0]:
+            return 0, 0
+
+        return tuple([int(row / 100) for row in rows[0]])
+
+    @staticmethod
+    def get_team_attack_counts() -> Tuple[int, int]:
+        """ Get the number of attacks done on each team. Both normal and heavy
+        attacks are counted.
+
+        @return Two integers, the number of attacks done by Knights and the
+        number of attacks done by Vikings
+        """
+        query = f"""
+            SELECT
+                SUM(IF(team = '{Team.KNIGHTS}', 1, 0)),
+                SUM(IF(team = '{Team.VIKINGS}', 1, 0))
+            FROM {Config.ACTIONS_TABLE}
+            WHERE type IN ('normal_attack', 'heavy_attack') AND was_successful;
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        if None in rows[0]:
+            return 0, 0
+
+        return tuple([int(row) for row in rows[0]])
+
+    @staticmethod
+    def get_team_fav_attacks() -> Tuple[str, str]:
+        """ Get the favorite attacks for each team. A team's favorite attack
+        is the one that holds the greatest number of successful attacks. Both
+        normal and heavy attacks are counted.
+
+        @return Two strings, the favorite attack of the Knights and the
+        favorite attack of the Vikings. The strings returned will match those
+        specified in pombot.lib.types.ActionType, as they were used to set these
+        values when the data was created.
+        """
+        knight_fav = ''
+        viking_fav = ''
+        query = f"""
+            (SELECT
+                COUNT(type) AS typecount, type
+            FROM {Config.ACTIONS_TABLE}
+            WHERE team = '{Team.KNIGHTS}' AND was_successful
+            GROUP BY type
+            ORDER BY typecount DESC
+            LIMIT 1)
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        if rows:
+            knight_fav = rows[0][1]
+
+        query = f"""
+            (SELECT
+                COUNT(type) AS typecount, type
+            FROM {Config.ACTIONS_TABLE}
+            WHERE team = '{Team.VIKINGS}' AND was_successful
+            GROUP BY type
+            ORDER BY typecount DESC
+            LIMIT 1)
+        """
+
+        with _mysql_database_cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+        if rows:
+            viking_fav = rows[0][1]
+
+        return knight_fav, viking_fav
+
+    @staticmethod
     def get_user_by_id(user_id: int) -> Optional[PombotUser]:
         """Return a single user by its userID."""
         query = f"""

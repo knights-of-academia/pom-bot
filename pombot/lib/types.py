@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 
-from pombot.config import Pomwars
-
 
 @dataclass
 class DateRange:
@@ -103,19 +101,6 @@ class Event:
     end_date: datetime
 
 
-class Team(str, Enum):
-    """Team that a user can be on."""
-    KNIGHTS = Pomwars.KNIGHT_ROLE
-    VIKINGS = Pomwars.VIKING_ROLE
-
-    def __invert__(self):
-        return self.VIKINGS if self == self.KNIGHTS else self.KNIGHTS
-
-    def get_icon(self):
-        """Return the team's configured IconUrl."""
-        return Pomwars.IconUrls.KNIGHT if self == self.KNIGHTS else Pomwars.IconUrls.VIKING
-
-
 class ActionType(str, Enum):
     """Type of an action in the actions table of the database."""
     NORMAL_ATTACK = 'normal_attack'
@@ -129,7 +114,7 @@ class User:
     """A user, as described, in order, from the database."""
     user_id: int
     timezone: timezone
-    team: Team
+    team: str
     inventory_string: str
     player_level: int
     attack_level: int
@@ -153,7 +138,10 @@ class Action:
     @property
     def damage(self) -> float:
         """The real damage of this action."""
-        return self.raw_damage / 100.0
+        if self.raw_damage:
+            return self.raw_damage / 100.0
+
+        return 0
 
     @property
     def is_defend(self) -> bool:

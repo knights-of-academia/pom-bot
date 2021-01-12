@@ -19,14 +19,16 @@ import pombot.errors
 from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
-from pombot.lib.types import DateRange, Team, ActionType
+from pombot.lib.types import DateRange, ActionType
+from pombot.lib.team import Team
 from pombot.storage import Storage
 from pombot.state import State
 from pombot.scoreboard import Scoreboard
 
 _log = logging.getLogger(__name__)
 
-def _get_user_team(user: User) -> Team:
+
+def _get_user_team(user: User) -> str:
     team_roles = [
         role for role in user.roles
         if role.name in [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
@@ -36,6 +38,7 @@ def _get_user_team(user: User) -> Team:
         raise pombot.errors.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
+
 
 class Attack:
     """An attack action as specified by file and directory structure."""
@@ -135,6 +138,7 @@ class Defend:
 
         return "\n\n".join([action, story.strip()])
 
+
 class Bribe:
     """Fun replies when users try and bribe the bot."""
     def __init__(self, directory: Path):
@@ -201,6 +205,9 @@ def _is_action_successful(
     is_heavy_attack: bool = False,
 ) -> bool:
     # Tech debt: This function is getting hairy.
+    date_from_time = lambda x: datetime.strptime(
+        datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
+
     def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
 
@@ -219,6 +226,8 @@ def _is_action_successful(
         return function(num_poms)
 
     def _get_heavy_attack_base_chance(user_id: int) -> float:
+        nonlocal date_from_time
+
         botuser = Storage.get_user_by_id(user_id)
         pity_levels = Pomwars.HEAVY_ATTACK_LEVEL_VALIANT_ATTEMPT_CONDOLENCE_REWARDS
         min_chance, max_chance = pity_levels[botuser.heavy_attack_level]
@@ -230,10 +239,15 @@ def _is_action_successful(
             Pomwars.HEAVY_PITY_INCREMENT,
         )))
 
+        actions = Storage.get_actions(user=user, date_range=DateRange(
+            date_from_time("%Y-%m-%d 00:00:00"),
+            date_from_time("%Y-%m-%d 23:59:59"),
+        ))
+
         # A modified reducer because functools.reduce() won't break after some
         # condition is met.
         num_misses = 0
-        for action in reversed(Storage.get_actions(user=user)):
+        for action in reversed(actions):
             if action.was_successful:
                 break
             num_misses += 1
@@ -254,9 +268,6 @@ def _is_action_successful(
     else:
         chance_func = _get_normal_attack_success_chance
 
-    date_from_time = lambda x: datetime.strptime(
-        datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
-
     this_pom_number = len(Storage.get_actions(user=user, date_range=DateRange(
         date_from_time("%Y-%m-%d 00:00:00"),
         date_from_time("%Y-%m-%d 23:59:59"),
@@ -265,7 +276,7 @@ def _is_action_successful(
     return random.random() <= chance_func(this_pom_number)
 
 
-def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
+def _get_defensive_multiplier(team: str, timestamp: datetime) -> float:
     defend_actions = Storage.get_actions(
         action_type=ActionType.DEFEND,
         team=team,
@@ -283,8 +294,6 @@ def _get_defensive_multiplier(team: Team, timestamp: datetime) -> float:
 
 class PomWarsUserCommands(commands.Cog):
     """Commands used by users during a Pom War."""
-    HEAVY_QUALIFIERS = ["heavy", "hard", "sharp", "strong"]
-
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -359,7 +368,6 @@ class PomWarsUserCommands(commands.Cog):
             # User disallows DM's from server members.
             await ctx.message.add_reaction(Reactions.WARNING)
 
-
     @commands.command(hidden=True)
     async def bribe(self, ctx: Context):
         """What? I don't take bribes..."""
@@ -371,7 +379,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.BRIBE,
             "was_successful": True,
             "was_critical":   None,
@@ -387,7 +395,7 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
-        heavy_attack = bool(args) and args[0].casefold() in self.HEAVY_QUALIFIERS
+        heavy_attack = bool(args) and args[0].casefold() in Pomwars.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
 
@@ -407,7 +415,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.HEAVY_ATTACK if heavy_attack
                               else ActionType.NORMAL_ATTACK,
             "was_successful": False,
@@ -437,7 +445,7 @@ class PomWarsUserCommands(commands.Cog):
         attack, = random.choices(attacks, weights=weights)
 
         defensive_multiplier = _get_defensive_multiplier(
-            team=~_get_user_team(ctx.author),
+            team=(~_get_user_team(ctx.author)).value,
             timestamp=timestamp)
 
         action["damage"] = attack.damage - attack.damage * defensive_multiplier
@@ -452,7 +460,7 @@ class PomWarsUserCommands(commands.Cog):
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
-        await State.score.update_msg()
+        await State.scoreboard.update()
 
     @commands.command()
     async def defend(self, ctx: Context, *args):
@@ -468,7 +476,7 @@ class PomWarsUserCommands(commands.Cog):
 
         action = {
             "user":           ctx.author,
-            "team":           _get_user_team(ctx.author),
+            "team":           _get_user_team(ctx.author).value,
             "action_type":    ActionType.DEFEND,
             "was_successful": False,
             "was_critical":   None,
@@ -511,14 +519,16 @@ class PomwarsEventListeners(Cog):
     @Cog.listener()
     async def on_ready(self):
         """Cog startup procedure."""
+        channels = []
+
         for guild in self.bot.guilds:
             for channel in guild.channels:
                 if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                    State.SCOREBOARD_CHANNELS.append(channel)
+                    channels.append(channel)
 
-        State.score = Scoreboard(self.bot, State.SCOREBOARD_CHANNELS)
+        State.scoreboard = Scoreboard(self.bot, channels)
 
-        full_channels, restricted_channels = await State.score.update_msg()
+        full_channels, restricted_channels = await State.scoreboard.update()
 
         for channel in full_channels:
             _log.error("Join channel '%s' on '%s' is not empty",

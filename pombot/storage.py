@@ -434,7 +434,8 @@ class Storage:
         @return Two strings, the favorite attack of the Knights and the
         favorite attack of the Vikings. The strings returned will match those
         specified in pombot.lib.types.ActionType, as they were used to set these
-        values when the data was created.
+        values when the data was created. If there are no actions for a team
+        yet, their team returns an empty string.
         """
         knight_fav = ''
         viking_fav = ''

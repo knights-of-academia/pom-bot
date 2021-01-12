@@ -1,5 +1,3 @@
-from collections import Counter
-
 import discord.errors
 
 from pombot.storage import Storage

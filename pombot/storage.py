@@ -360,7 +360,8 @@ class Storage:
     def get_team_populations() -> Tuple[int, int]:
         """Get the number of players on each team.
 
-        @return Two numbers, the number of users on Knights and the number of users on Vikings
+        @return Two numbers, the number of users on
+        Knights and the number of users on Vikings
         """
         query = f"""
             SELECT
@@ -382,7 +383,8 @@ class Storage:
     def get_team_damages() -> Tuple[int, int]:
         """ Get the number of damage done on each team.
 
-        @return Two integers, the damage done by Knights and the damage done by Vikings
+        @return Two integers, the damage done by Knights and
+        the damage done by Vikings
         """
         query = f"""
             SELECT

@@ -4,13 +4,14 @@ from datetime import timedelta, timezone
 
 import discord.errors
 from discord import RawReactionActionEvent
+from discord.channel import DMChannel
 from discord.ext.commands import Bot
 from discord.guild import Guild
 from discord.message import Message
 
 import pombot.errors
 from pombot.state import State
-from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
+from pombot.config import Config, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.team import Team
 from pombot.storage import Storage
@@ -35,12 +36,9 @@ async def on_message_handler(bot: Bot, message: Message):
     use of spaces after symbols, only alphanumeric characters. This is a
     workaround.
     """
-    try:
-        if Config.POM_CHANNEL_NAMES:
-            if message.channel.name not in Config.POM_CHANNEL_NAMES:
-                return
-    except AttributeError:
-        if message.guild is None and not Debug.RESPOND_TO_DM:
+    if Config.POM_CHANNEL_NAMES:
+        if not isinstance(message.channel, DMChannel) and \
+            message.channel.name not in Config.POM_CHANNEL_NAMES:
             return
 
     if message.content.startswith(Config.PREFIX + " "):

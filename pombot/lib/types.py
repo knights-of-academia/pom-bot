@@ -113,13 +113,18 @@ class ActionType(str, Enum):
 class User:
     """A user, as described, in order, from the database."""
     user_id: int
-    timezone: timezone
+    timezone_str: str
     team: str
     inventory_string: str
     player_level: int
     attack_level: int
     heavy_attack_level: int
     defend_level: int
+
+    @property
+    def timezone(self) -> timezone:
+        """A timezone object representing the user's timezone."""
+        return datetime.strptime(self.timezone_str, '%z').tzinfo
 
 
 @dataclass

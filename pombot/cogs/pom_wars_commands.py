@@ -3,12 +3,13 @@ import logging
 import math
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, List, Union
 from string import Template
 
+from discord.channel import DMChannel
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from discord.ext.commands.bot import Bot
@@ -300,6 +301,9 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def actions(self, ctx: Context, *args):
         """Get your current, previous, or specific day's actions."""
+        if isinstance(ctx.channel, DMChannel):
+            return
+
         date_range = None
         today = datetime.today().strftime("%B %d").split()
         yesterday = (datetime.today() -
@@ -368,9 +372,68 @@ class PomWarsUserCommands(commands.Cog):
             # User disallows DM's from server members.
             await ctx.message.add_reaction(Reactions.WARNING)
 
+    @commands.command()
+    async def timezone(self, ctx: Context, *args):
+        """Set timezone through bot DM command."""
+        if not isinstance(ctx.channel, DMChannel):
+            return
+
+        try:
+            user = Storage.get_user_by_id(ctx.author.id)
+        except pombot.errors.UserDoesNotExistError:
+            await send_embed_message(
+                None,
+                title="I was unable to manage your timezone!",
+                description="Please join the war first.",
+                _func=ctx.author.send
+            )
+            return
+
+        if not args:
+            await send_embed_message(
+                None,
+                title="Timezone Preference",
+                description=f"Your currently set timezone is {user.timezone}.",
+                _func=ctx.author.send
+            )
+            return
+
+        try:
+            offset = int(args[0])
+            utc_min_offset = -12
+            utc_max_offset = 14
+            if offset not in range(utc_min_offset, utc_max_offset + 1):
+                await send_embed_message(
+                    None,
+                    title="Invalid offset",
+                    description="UTC offset must be in between " \
+                        f"{utc_min_offset} and {utc_max_offset}.",
+                    _func=ctx.author.send
+                )
+        except ValueError:
+            await send_embed_message(
+                None,
+                title="Invalid input",
+                description="That is not a valid UTC offset.",
+                _func=ctx.author.send
+            )
+            return
+
+        new_timezone = timezone(timedelta(hours=offset))
+        Storage.set_user_timezone(ctx.author.id, new_timezone)
+        await send_embed_message(
+            None,
+            title="Timezone updated",
+            description=f"Your timezone has been updated to {new_timezone}.",
+            _func=ctx.author.send
+        )
+
     @commands.command(hidden=True)
     async def bribe(self, ctx: Context):
         """What? I don't take bribes..."""
+        if isinstance(ctx.channel, DMChannel):
+            return
+
         bribes = _load_actions_directories(Locations.BRIBES_DIR, type_=Bribe)
         weights = [bribe.weight for bribe in bribes]
         bribe, = random.choices(bribes, weights=weights)
@@ -395,6 +458,9 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
+        if isinstance(ctx.channel, DMChannel):
+            return
+
         heavy_attack = bool(args) and args[0].casefold() in Pomwars.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
@@ -465,6 +531,9 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def defend(self, ctx: Context, *args):
         """Defend your team."""
+        if isinstance(ctx.channel, DMChannel):
+            return
+
         timestamp = datetime.now()
         Storage.add_poms_to_user_session(
             ctx.author,

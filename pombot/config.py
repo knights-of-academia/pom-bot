@@ -63,7 +63,6 @@ class Config:
 
 class Debug:
     """Debugging options."""
-    RESPOND_TO_DM = _str2bool(os.getenv("RESPOND_TO_DM", "no"))
     DROP_TABLES_ON_RESTART = _str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
 
 

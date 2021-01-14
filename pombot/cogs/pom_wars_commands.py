@@ -40,6 +40,9 @@ def _get_user_team(user: User) -> str:
 
     return Team(team_roles[0].name)
 
+def _offset_by_tz(original_dt: datetime, offset_tz: timezone) -> datetime:
+    """Offset a datetime by a specified timezone, and return the new datetime."""
+    return original_dt.replace(tzinfo=timezone.utc).astimezone(offset_tz)
 
 class Attack:
     """An attack action as specified by file and directory structure."""
@@ -208,6 +211,7 @@ def _is_action_successful(
     # Tech debt: This function is getting hairy.
     date_from_time = lambda x: datetime.strptime(
         datetime.strftime(timestamp, x), "%Y-%m-%d %H:%M:%S")
+    botuser = Storage.get_user_by_id(user.id)
 
     def _delayed_exponential_drop(num_poms: int):
         operand = lambda x: math.pow(math.e, ((-(x - 9)**2) / 2)) / (math.sqrt(2 * math.pi))
@@ -226,10 +230,10 @@ def _is_action_successful(
 
         return function(num_poms)
 
-    def _get_heavy_attack_base_chance(user_id: int) -> float:
+    def _get_heavy_attack_base_chance() -> float:
         nonlocal date_from_time
+        nonlocal botuser
 
-        botuser = Storage.get_user_by_id(user_id)
         pity_levels = Pomwars.HEAVY_ATTACK_LEVEL_VALIANT_ATTEMPT_CONDOLENCE_REWARDS
         min_chance, max_chance = pity_levels[botuser.heavy_attack_level]
 
@@ -241,8 +245,8 @@ def _is_action_successful(
         )))
 
         actions = Storage.get_actions(user=user, date_range=DateRange(
-            date_from_time("%Y-%m-%d 00:00:00"),
-            date_from_time("%Y-%m-%d 23:59:59"),
+            _offset_by_tz(date_from_time("%Y-%m-%d 00:00:00"), botuser.timezone),
+            _offset_by_tz(date_from_time("%Y-%m-%d 23:59:59"), botuser.timezone),
         ))
 
         # A modified reducer because functools.reduce() won't break after some
@@ -264,14 +268,14 @@ def _is_action_successful(
         return base_chance * _delayed_exponential_drop(num_poms)
 
     if is_heavy_attack:
-        base_chance = _get_heavy_attack_base_chance(user.id)
+        base_chance = _get_heavy_attack_base_chance()
         chance_func = lambda x: _get_heavy_attack_success_chance(x, base_chance)
     else:
         chance_func = _get_normal_attack_success_chance
 
     this_pom_number = len(Storage.get_actions(user=user, date_range=DateRange(
-        date_from_time("%Y-%m-%d 00:00:00"),
-        date_from_time("%Y-%m-%d 23:59:59"),
+        _offset_by_tz(date_from_time("%Y-%m-%d 00:00:00"), botuser.timezone),
+        _offset_by_tz(date_from_time("%Y-%m-%d 23:59:59"), botuser.timezone),
     )))
 
     return random.random() <= chance_func(this_pom_number)
@@ -304,10 +308,16 @@ class PomWarsUserCommands(commands.Cog):
         if isinstance(ctx.channel, DMChannel):
             return
 
+        try:
+            user = Storage.get_user_by_id(ctx.author.id)
+        except pombot.errors.UserDoesNotExistError:
+            return
+
         date_range = None
-        today = datetime.today().strftime("%B %d").split()
-        yesterday = (datetime.today() -
-                     timedelta(days=1)).strftime("%B %d").split()
+        today = _offset_by_tz(datetime.today(),
+                user.timezone).strftime("%B %d").split()
+        yesterday = _offset_by_tz(datetime.today() - timedelta(days=1),
+                    user.timezone).strftime("%B %d").split()
 
         descriptive_dates = {
             "today": DateRange(*today, *today),

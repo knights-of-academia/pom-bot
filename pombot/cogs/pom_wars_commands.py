@@ -128,7 +128,7 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "** **\n{emt} `{dfn}% team damage reduction!`".format(
+        action = "** **\n{emt} `{dfn:.0f}% team damage reduction!`".format(
             emt=Pomwars.Emotes.DEFEND,
             dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[
                 Storage.get_user_by_id(user.id).defend_level
@@ -282,14 +282,15 @@ def _get_defensive_multiplier(team: str, timestamp: datetime) -> float:
         team=team,
         was_successful=True,
         date_range=DateRange(
-            timestamp - timedelta(minutes=10),
+            timestamp - timedelta(minutes=Pomwars.DEFNED_DURATION_MINUTES),
             timestamp,
         ),
     )
     defenders = Storage.get_users_by_id([a.user_id for a in defend_actions])
     multipliers = [Pomwars.DEFEND_LEVEL_MULTIPLIERS[d.defend_level] for d in defenders]
+    multiplier = min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
 
-    return min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
+    return 1 - multiplier
 
 
 class PomWarsUserCommands(commands.Cog):
@@ -448,7 +449,7 @@ class PomWarsUserCommands(commands.Cog):
             team=(~_get_user_team(ctx.author)).value,
             timestamp=timestamp)
 
-        action["damage"] = attack.damage - attack.damage * defensive_multiplier
+        action["damage"] = attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
 
         await send_embed_message(
@@ -465,10 +466,18 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def defend(self, ctx: Context, *args):
         """Defend your team."""
+        description = " ".join(args)
         timestamp = datetime.now()
+
+        if len(description) > Config.DESCRIPTION_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send(f"{ctx.author.mention}, your pom description must "
+                           f"be fewer than {Config.DESCRIPTION_LIMIT} characters.")
+            return
+
         Storage.add_poms_to_user_session(
             ctx.author,
-            descript=" ".join(args),
+            descript=description,
             count=1,
             time_set=timestamp,
         )
@@ -502,8 +511,8 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="You have used Defend against {team}!".format(
-                team=f"{(~_get_user_team(ctx.author)).value}s",
+            title="You have used Defend against {team}s!".format(
+                team=(~_get_user_team(ctx.author)).value,
             ),
             description=defend.get_message(ctx.author),
             colour=Pomwars.DEFEND_COLOUR,

@@ -40,6 +40,10 @@ def _get_user_team(user: User) -> str:
     return Team(team_roles[0].name)
 
 
+def _normalize_newlines(text: str):
+    return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+
+
 class Attack:
     """An attack action as specified by file and directory structure."""
     def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
@@ -62,7 +66,7 @@ class Attack:
         if self.is_heavy:
             base_damage = Pomwars.BASE_DAMAGE_FOR_HEAVY_ATTACKS
 
-        return int(base_damage * self.damage_multiplier)
+        return base_damage * self.damage_multiplier
 
     @property
     def weight(self):
@@ -73,17 +77,17 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action_msgs = [f"** **\n{Pomwars.Emotes.ATTACK} `{{dmg:.2f}} damage!`"]
+        dmg = adjusted_damage or self.damage
+        dmg_str = f"{dmg:.1f}" if dmg % 1 else str(int(dmg))
+        message_lines = [f"** **\n{Pomwars.Emotes.ATTACK} `{dmg_str} damage!`"]
 
         if self.is_critical:
-            action_msgs += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
+            message_lines += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
 
-        action = "\n".join(action_msgs).format(
-            dmg=adjusted_damage or self.damage,
-        )
-        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
+        action_result = "\n".join(message_lines)
+        formatted_story = "*" + _normalize_newlines(self._message) + "*"
 
-        return "\n\n".join([action, story.strip()])
+        return "\n\n".join([action_result, formatted_story])
 
     def get_title(self, user: User) -> str:
         """Title that includes the name of the team user attacked
@@ -134,7 +138,7 @@ class Defend:
                 Storage.get_user_by_id(user.id).defend_level
             ]
         )
-        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
+        story = "*" + _normalize_newlines(self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
 
@@ -160,7 +164,7 @@ class Bribe:
         action's directory, and its result, as a string.
         """
 
-        story = Template(re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message.strip()))
+        story = Template(_normalize_newlines(self._message))
 
         return story.safe_substitute(
             DISPLAY_NAME=user.display_name,
@@ -194,7 +198,6 @@ def _load_actions_directories(
 
         # Tech debt:
             # see #56 / https://github.com/knights-of-academia/pom-bot/pull/56#discussion_r554639639
-
 
     return actions
 

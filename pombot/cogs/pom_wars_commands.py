@@ -285,7 +285,7 @@ def _get_defensive_multiplier(team: str, timestamp: datetime) -> float:
         team=team,
         was_successful=True,
         date_range=DateRange(
-            timestamp - timedelta(minutes=Pomwars.DEFNED_DURATION_MINUTES),
+            timestamp - timedelta(minutes=Pomwars.DEFEND_DURATION_MINUTES),
             timestamp,
         ),
     )

@@ -113,7 +113,8 @@ class Pomwars:
     HEAVY_PITY_INCREMENT = 0.10
     HEAVY_QUALIFIERS = ["heavy", "hard", "sharp", "strong"]
 
-    DEFEND_LEVEL_MULTIPLIERS = {1: 0.02, 2: 0.03, 3: 0.04, 4: 0.05, 5: 0.07}
+    DEFEND_LEVEL_MULTIPLIERS = {1: 0.05, 2: 0.08, 3: 0.07, 4: 0.08, 5: 0.09}
+    DEFEND_DURATION_MINUTES = 30
     MAXIMUM_TEAM_DEFENCE = 0.25
 
     class Emotes:

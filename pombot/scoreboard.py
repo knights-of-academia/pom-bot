@@ -37,16 +37,16 @@ class Scoreboard:
 
         stats = {
             knights: {
-                "damage":      knights.damage,
-                "fav_attack":  knights.favorite_action,
-                "population":  knights.population,
-                "num_attacks": knights.attack_count,
+                "damage":      await knights.damage,
+                "fav_attack":  await knights.favorite_action,
+                "population":  await knights.population,
+                "num_attacks": await knights.attack_count,
             },
             vikings: {
-                "damage":      vikings.damage,
-                "fav_attack":  vikings.favorite_action,
-                "population":  vikings.population,
-                "num_attacks": vikings.attack_count,
+                "damage":      await vikings.damage,
+                "fav_attack":  await vikings.favorite_action,
+                "population":  await vikings.population,
+                "num_attacks": await vikings.attack_count,
             }
         }
 

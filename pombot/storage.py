@@ -1,41 +1,40 @@
 import logging
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime as dt
 from datetime import time, timezone
 from typing import List, Optional, Set
 
-import mysql.connector
+import aiomysql
 from discord.user import User as DiscordUser
 
 import pombot.errors
 from pombot.config import Config, Secrets
 from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
 from pombot.lib.types import User as PombotUser
+from pombot.state import State
 
 _log = logging.getLogger(__name__)
 
 
-@contextmanager
-def _mysql_database_cursor():
+@asynccontextmanager
+async def _mysql_database_cursor():
     db_config = {
+        "db": Secrets.MYSQL_DATABASE,
         "host": Secrets.MYSQL_HOST,
         "user": Secrets.MYSQL_USER,
         "password": Secrets.MYSQL_PASSWORD,
-        "database": Secrets.MYSQL_DATABASE,
+        "loop": State.event_loop,
     }
 
-    if Config.MYSQL_CONNECTION_POOL_SIZE:
-        db_config.update({"pool_size": Config.MYSQL_CONNECTION_POOL_SIZE})
-
-    db_connection = mysql.connector.connect(**db_config)
-    cursor = db_connection.cursor(buffered=True)
+    pool: aiomysql.Pool = await aiomysql.create_pool(**db_config)
 
     try:
-        yield cursor
+        async with pool.acquire() as connection:
+            async with connection.cursor() as cursor:
+                yield cursor
     finally:
-        db_connection.commit()
-        cursor.close()
-        db_connection.close()
+        pool.close()
+        await pool.wait_closed()
 
 
 def _replace_further_occurances(text: str, old: str, new: str) -> str:
@@ -113,30 +112,30 @@ class Storage:
     ]
 
     @classmethod
-    def create_tables_if_not_exists(cls):
+    async def create_tables_if_not_exists(cls):
         """Create predefined DB tables if they don't already exist."""
         for table in cls.TABLES:
             table_name, table_create_query = table.values()
             _log.info('Creating "%s" table, if it does not exist', table_name)
 
-            with _mysql_database_cursor() as cursor:
-                cursor.execute(table_create_query)
+            async with _mysql_database_cursor() as cursor:
+                await cursor.execute(table_create_query)
 
     @classmethod
-    def delete_all_rows_from_all_tables(cls):
+    async def delete_all_rows_from_all_tables(cls):
         """Delete all rows from all tables.
 
         This is a dangerous function and should only be run by developers on
         development machines.
         """
         _log.info("Deleting tables... ")
-        with _mysql_database_cursor() as cursor:
+        async with _mysql_database_cursor() as cursor:
             for table_name in (table["name"] for table in cls.TABLES):
-                cursor.execute(f"DELETE FROM {table_name};")
+                await cursor.execute(f"DELETE FROM {table_name};")
         _log.info("Tables deleted.")
 
     @staticmethod
-    def add_poms_to_user_session(
+    async def add_poms_to_user_session(
         user: DiscordUser,
         descript: str,
         count: int,
@@ -157,11 +156,11 @@ class Storage:
         time_set = time_set or dt.now()
         poms = [(user.id, descript, time_set, True) for _ in range(count)]
 
-        with _mysql_database_cursor() as cursor:
-            cursor.executemany(query, poms)
+        async with _mysql_database_cursor() as cursor:
+            await cursor.executemany(query, poms)
 
     @staticmethod
-    def clear_user_session_poms(user: DiscordUser):
+    async def clear_user_session_poms(user: DiscordUser):
         """Set all active session poms to be non-active."""
         query = f"""
             UPDATE  {Config.POMS_TABLE}
@@ -170,22 +169,22 @@ class Storage:
             AND current_session = 1;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user.id, ))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (user.id, ))
 
     @staticmethod
-    def delete_all_user_poms(user: DiscordUser):
+    async def delete_all_user_poms(user: DiscordUser):
         """Remove all poms for user."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
             WHERE userID=%s;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user.id, ))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (user.id, ))
 
     @staticmethod
-    def delete_most_recent_user_poms(user: DiscordUser, count: int):
+    async def delete_most_recent_user_poms(user: DiscordUser, count: int):
         """Delete `count` most recent poms for `user`."""
         query = f"""
             DELETE FROM {Config.POMS_TABLE}
@@ -194,11 +193,11 @@ class Storage:
             LIMIT %s;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user.id, count))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (user.id, count))
 
     @staticmethod
-    def get_ongoing_events() -> List[Event]:
+    async def get_ongoing_events() -> List[Event]:
         """Return a list of ongoing Events."""
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
@@ -208,20 +207,20 @@ class Storage:
 
         current_date = dt.now()
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (current_date, current_date))
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (current_date, current_date))
+            rows = await cursor.fetchall()
 
         return [Event(*row) for row in rows]
 
     @staticmethod
-    def get_poms(*,
+    async def get_poms(*,
                  user: DiscordUser = None,
                  date_range: DateRange = None) -> List[Pom]:
         """Get a list of poms from storage matching certain criteria.
 
         @param user Only match poms for this user.
-        @param date_range Only match poms within this date range.
+        @param date_range Only match poms async within this date range.
         @return List of Pom objects.
         """
         query = [f"SELECT * FROM {Config.POMS_TABLE}"]
@@ -237,14 +236,14 @@ class Storage:
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query_str, args)
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query_str, args)
+            rows = await cursor.fetchall()
 
         return [Pom(*row) for row in rows]
 
     @staticmethod
-    def add_new_event(name: str, goal: int, date_range: DateRange):
+    async def add_new_event(name: str, goal: int, date_range: DateRange):
         """Add a new event row."""
         query = f"""
             INSERT INTO {Config.EVENTS_TABLE} (
@@ -257,30 +256,30 @@ class Storage:
         """
         args = name, goal, date_range.start_date, date_range.end_date
 
-        with _mysql_database_cursor() as cursor:
+        async with _mysql_database_cursor() as cursor:
             try:
-                cursor.execute(query, args)
-            except mysql.connector.DatabaseError as exc:
+                await cursor.execute(query, args)
+            except Exception as exc:  # FIXME
                 # Give a nicer error message than the mysql default.
-                raise pombot.errors.EventCreationError(exc.msg)
+                raise pombot.errors.EventCreationError(exc)
 
     @staticmethod
-    def get_all_events() -> List[Event]:
+    async def get_all_events() -> List[Event]:
         """Return a list of all events."""
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             ORDER BY start_date;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query)
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query)
+            rows = await cursor.fetchall()
 
         return [Event(*row) for row in rows]
 
     @staticmethod
-    def get_overlapping_events(date_range: DateRange) -> List[Event]:
-        """Return a list of events in the database which overlap with the
+    async def get_overlapping_events(date_range: DateRange) -> List[Event]:
+        """Return a list of events in the database which overlap async with the
         dates specified.
         """
         query = f"""
@@ -289,14 +288,14 @@ class Storage:
             AND %s > start_date;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (date_range.start_date, date_range.end_date))
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (date_range.start_date, date_range.end_date))
+            rows = await cursor.fetchall()
 
         return [Event(*row) for row in rows]
 
     @staticmethod
-    def delete_event(name: str):
+    async def delete_event(name: str):
         """Delete the named event from the DB."""
         query = f"""
             DELETE FROM {Config.EVENTS_TABLE}
@@ -305,11 +304,11 @@ class Storage:
             LIMIT 1;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (name, ))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (name, ))
 
-    @staticmethod
-    def add_user(user_id: str, zone: timezone, team: str):
+    @classmethod
+    async def add_user(cls, user_id: str, zone: timezone, team: str):
         """Add a user into the users table."""
         query = f"""
             INSERT INTO {Config.USERS_TABLE} (
@@ -322,15 +321,15 @@ class Storage:
 
         zone_str = time(tzinfo=zone).strftime('%z')
 
-        with _mysql_database_cursor() as cursor:
+        async with _mysql_database_cursor() as cursor:
             try:
-                cursor.execute(query, (user_id, zone_str, team))
-            except mysql.connector.errors.IntegrityError as exc:
-                user = Storage.get_user_by_id(user_id)
+                await cursor.execute(query, (user_id, zone_str, team))
+            except Exception as exc:  # FIXME
+                user = await cls.get_user_by_id(user_id)
                 raise pombot.errors.UserAlreadyExistsError(user.team) from exc
 
     @staticmethod
-    def set_user_timezone(user_id: str, zone: timezone):
+    async def set_user_timezone(user_id: str, zone: timezone):
         """Set the user timezone."""
         query = f"""
             UPDATE {Config.USERS_TABLE}
@@ -340,11 +339,11 @@ class Storage:
 
         zone_str = time(tzinfo=zone).strftime('%z')
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (zone_str, user_id))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (zone_str, user_id))
 
     @staticmethod
-    def update_user_team(user_id: str, team: str):
+    async def update_user_team(user_id: str, team: str):
         """Set the user team."""
         query = f"""
             UPDATE {Config.USERS_TABLE}
@@ -352,20 +351,20 @@ class Storage:
             WHERE userID=%s
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (team, user_id))
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (team, user_id))
 
     @staticmethod
-    def get_user_by_id(user_id: int) -> Optional[PombotUser]:
+    async def get_user_by_id(user_id: int) -> Optional[PombotUser]:
         """Return a single user by its userID."""
         query = f"""
             SELECT * FROM {Config.USERS_TABLE}
             WHERE userID=%s;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (user_id,))
-            row = cursor.fetchone()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (user_id,))
+            row = await cursor.fetchone()
 
         if not row:
             raise pombot.errors.UserDoesNotExistError()
@@ -373,7 +372,7 @@ class Storage:
         return PombotUser(*row)
 
     @staticmethod
-    def get_users_by_id(user_ids: List[int]) -> Set[PombotUser]:
+    async def get_users_by_id(user_ids: List[int]) -> Set[PombotUser]:
         """Return a list of users from a list of userID's.
 
         This is a small optimization function to call the storage a single
@@ -392,14 +391,14 @@ class Storage:
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "OR")
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query_str, values)
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query_str, values)
+            rows = await cursor.fetchall()
 
         return {PombotUser(*r) for r in rows}
 
     @staticmethod
-    def add_pom_war_action(
+    async def add_pom_war_action(
         user: DiscordUser,
         team: str,
         action_type: ActionType,
@@ -426,11 +425,11 @@ class Storage:
         values = (user.id, team, action_type.value, was_successful,
                   was_critical, items_dropped, (damage or 0) * 100, time_set)
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, values)
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, values)
 
     @staticmethod
-    def get_actions(
+    async def get_actions(
         *,
         action_type: ActionType = None,
         user: DiscordUser = None,
@@ -444,7 +443,7 @@ class Storage:
         it is recommended to provide a date_range.
 
         @param user Only match actions for this user.
-        @param date_range Only match actions within this date range.
+        @param date_range Only match actions async within this date range.
         @return List of Action objects.
         """
         query = [f"SELECT * FROM {Config.ACTIONS_TABLE}"]
@@ -472,14 +471,14 @@ class Storage:
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query_str, values)
-            rows = cursor.fetchall()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query_str, values)
+            rows = await cursor.fetchall()
 
         return [Action(*row) for row in rows]
 
     @staticmethod
-    def count_rows_in_table(
+    async def count_rows_in_table(
         table: str,
         *,
         action_type: ActionType = None,
@@ -507,14 +506,14 @@ class Storage:
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query_str, values)
-            row, = cursor.fetchone()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query_str, values)
+            row, = await cursor.fetchone()
 
         return int(row)
 
     @staticmethod
-    def sum_team_damage(team: str) -> int:
+    async def sum_team_damage(team: str) -> int:
         """Get sum of the damage column for a team.
 
         The team parameter is a string here to avoid a circular reference.
@@ -527,8 +526,8 @@ class Storage:
             WHERE team=%s;
         """
 
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (team,))
-            row, = cursor.fetchone()
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute(query, (team,))
+            row, = await cursor.fetchone()
 
         return int(row or 0)

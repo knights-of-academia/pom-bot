@@ -51,8 +51,6 @@ class Config:
     EVENTS_TABLE = "events"
     USERS_TABLE = "users"
     ACTIONS_TABLE = "actions"
-    MYSQL_CONNECTION_POOL_SIZE = _positive_int(
-        os.getenv("MYSQL_CONNECTION_POOL_SIZE"))
 
     # Restrictions
     POM_CHANNEL_NAMES = [

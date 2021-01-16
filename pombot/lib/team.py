@@ -22,24 +22,27 @@ class Team(str, Enum):
         return icons[self]
 
     @property
-    def damage(self) -> int:
+    async def damage(self) -> int:
         """The team's total damage."""
-        return int(Storage.sum_team_damage(self.value) / 100.0)
+        return int(await Storage.sum_team_damage(self.value) / 100.0)
 
     @property
-    def favorite_action(self) -> ActionType:
+    async def favorite_action(self) -> ActionType:
         """The team's most-used action."""
-        count_actions = lambda type_: Storage.count_rows_in_table(
-            Config.ACTIONS_TABLE, action_type=type_, team=self.value)
+        async def _count_actions(typ: ActionType):
+            await Storage.count_rows_in_table(Config.ACTIONS_TABLE,
+                action_type=typ,
+                team=self.value,
+            )
 
-        return max({typ: count_actions(typ) for typ in ActionType})
+        return max({typ: await _count_actions(typ) for typ in ActionType})
 
     @property
-    def attack_count(self) -> int:
+    async def attack_count(self) -> int:
         """The team's total number of actions."""
-        return Storage.count_rows_in_table(Config.ACTIONS_TABLE, team=self.value)
+        return await Storage.count_rows_in_table(Config.ACTIONS_TABLE, team=self.value)
 
     @property
-    def population(self) -> int:
+    async def population(self) -> int:
         """The team's population."""
-        return Storage.count_rows_in_table(Config.USERS_TABLE, team=self.value)
+        return await Storage.count_rows_in_table(Config.USERS_TABLE, team=self.value)

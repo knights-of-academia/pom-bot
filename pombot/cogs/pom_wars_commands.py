@@ -44,6 +44,10 @@ def _offset_by_tz(original_dt: datetime, offset_tz: timezone) -> datetime:
     """Offset a datetime by a specified timezone, and return the new datetime."""
     return original_dt.replace(tzinfo=timezone.utc).astimezone(offset_tz)
 
+def _normalize_newlines(text: str):
+    return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+
+
 class Attack:
     """An attack action as specified by file and directory structure."""
     def __init__(self, directory: Path, is_heavy: bool, is_critical: bool):
@@ -66,7 +70,7 @@ class Attack:
         if self.is_heavy:
             base_damage = Pomwars.BASE_DAMAGE_FOR_HEAVY_ATTACKS
 
-        return int(base_damage * self.damage_multiplier)
+        return base_damage * self.damage_multiplier
 
     @property
     def weight(self):
@@ -77,17 +81,17 @@ class Attack:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action_msgs = [f"** **\n{Pomwars.Emotes.ATTACK} `{{dmg:.2f}} damage!`"]
+        dmg = adjusted_damage or self.damage
+        dmg_str = f"{dmg:.1f}" if dmg % 1 else str(int(dmg))
+        message_lines = [f"** **\n{Pomwars.Emotes.ATTACK} `{dmg_str} damage!`"]
 
         if self.is_critical:
-            action_msgs += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
+            message_lines += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
 
-        action = "\n".join(action_msgs).format(
-            dmg=adjusted_damage or self.damage,
-        )
-        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
+        action_result = "\n".join(message_lines)
+        formatted_story = "*" + _normalize_newlines(self._message) + "*"
 
-        return "\n\n".join([action, story.strip()])
+        return "\n\n".join([action_result, formatted_story])
 
     def get_title(self, user: User) -> str:
         """Title that includes the name of the team user attacked
@@ -132,13 +136,13 @@ class Defend:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        action = "** **\n{emt} `{dfn}% team damage reduction!`".format(
+        action = "** **\n{emt} `{dfn:.0f}% team damage reduction!`".format(
             emt=Pomwars.Emotes.DEFEND,
             dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[
                 Storage.get_user_by_id(user.id).defend_level
             ]
         )
-        story = "*" + re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message) + "*"
+        story = "*" + _normalize_newlines(self._message) + "*"
 
         return "\n\n".join([action, story.strip()])
 
@@ -164,7 +168,7 @@ class Bribe:
         action's directory, and its result, as a string.
         """
 
-        story = Template(re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", self._message.strip()))
+        story = Template(_normalize_newlines(self._message))
 
         return story.safe_substitute(
             DISPLAY_NAME=user.display_name,
@@ -198,7 +202,6 @@ def _load_actions_directories(
 
         # Tech debt:
             # see #56 / https://github.com/knights-of-academia/pom-bot/pull/56#discussion_r554639639
-
 
     return actions
 
@@ -287,14 +290,15 @@ def _get_defensive_multiplier(team: str, timestamp: datetime) -> float:
         team=team,
         was_successful=True,
         date_range=DateRange(
-            timestamp - timedelta(minutes=10),
+            timestamp - timedelta(minutes=Pomwars.DEFEND_DURATION_MINUTES),
             timestamp,
         ),
     )
     defenders = Storage.get_users_by_id([a.user_id for a in defend_actions])
     multipliers = [Pomwars.DEFEND_LEVEL_MULTIPLIERS[d.defend_level] for d in defenders]
+    multiplier = min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
 
-    return min([sum(multipliers), Pomwars.MAXIMUM_TEAM_DEFENCE])
+    return 1 - multiplier
 
 
 class PomWarsUserCommands(commands.Cog):
@@ -537,7 +541,7 @@ class PomWarsUserCommands(commands.Cog):
             team=(~_get_user_team(ctx.author)).value,
             timestamp=timestamp)
 
-        action["damage"] = attack.damage - attack.damage * defensive_multiplier
+        action["damage"] = attack.damage * defensive_multiplier
         Storage.add_pom_war_action(**action)
 
         await send_embed_message(
@@ -557,10 +561,18 @@ class PomWarsUserCommands(commands.Cog):
         if isinstance(ctx.channel, DMChannel):
             return
 
+        description = " ".join(args)
         timestamp = datetime.now()
+
+        if len(description) > Config.DESCRIPTION_LIMIT:
+            await ctx.message.add_reaction(Reactions.WARNING)
+            await ctx.send(f"{ctx.author.mention}, your pom description must "
+                           f"be fewer than {Config.DESCRIPTION_LIMIT} characters.")
+            return
+
         Storage.add_poms_to_user_session(
             ctx.author,
-            descript=" ".join(args),
+            descript=description,
             count=1,
             time_set=timestamp,
         )
@@ -594,8 +606,8 @@ class PomWarsUserCommands(commands.Cog):
 
         await send_embed_message(
             None,
-            title="You have used Defend against {team}!".format(
-                team=f"{(~_get_user_team(ctx.author)).value}s",
+            title="You have used Defend against {team}s!".format(
+                team=(~_get_user_team(ctx.author)).value,
             ),
             description=defend.get_message(ctx.author),
             colour=Pomwars.DEFEND_COLOUR,

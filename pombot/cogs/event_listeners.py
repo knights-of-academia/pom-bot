@@ -55,7 +55,7 @@ class EventListeners(Cog):
             for line in debug_enabled_message.split("\n"):
                 _log.info(line)
 
-        Storage.create_tables_if_not_exists()
+        await Storage.create_tables_if_not_exists()
 
         if Debug.DROP_TABLES_ON_RESTART:
             if not __debug__:
@@ -66,7 +66,7 @@ class EventListeners(Cog):
                 await self.bot.close()
                 raise RuntimeError(msg)
 
-            Storage.delete_all_rows_from_all_tables()
+            await Storage.delete_all_rows_from_all_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)
 

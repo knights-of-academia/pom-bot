@@ -17,24 +17,40 @@ _log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def _mysql_database_cursor():
+async def _mysql_database_connection():
     db_config = {
         "db": Secrets.MYSQL_DATABASE,
         "host": Secrets.MYSQL_HOST,
         "user": Secrets.MYSQL_USER,
         "password": Secrets.MYSQL_PASSWORD,
         "loop": State.event_loop,
+        "charset": "utf8",
     }
-
-    pool: aiomysql.Pool = await aiomysql.create_pool(**db_config)
+    connection: aiomysql.Connection = await aiomysql.connect(**db_config)
 
     try:
-        async with pool.acquire() as connection:
-            async with connection.cursor() as cursor:
-                yield cursor
+        yield connection
+    except aiomysql.Error:
+        connection.rollback()
+
+        # Handle error at callsite.
+        raise
+    else:
+        await connection.commit()
     finally:
-        pool.close()
-        await pool.wait_closed()
+        # aiomysql.Connection.close() returns None, not a coro.
+        connection.close()
+
+
+@asynccontextmanager
+async def _mysql_database_cursor():
+    async with _mysql_database_connection() as connection:
+        cursor: aiomysql.Cursor =  await connection.cursor()
+
+        try:
+            yield cursor
+        finally:
+            await cursor.close()
 
 
 def _replace_further_occurances(text: str, old: str, new: str) -> str:
@@ -118,6 +134,9 @@ class Storage:
             table_name, table_create_query = table.values()
             _log.info('Creating "%s" table, if it does not exist', table_name)
 
+            # Tech debt: aiomysql will print a warning using the logging.info
+            # interface when a table already exists. Find a way to disable this
+            # warning as we already have an "IF NOT EXISTS" guard.
             async with _mysql_database_cursor() as cursor:
                 await cursor.execute(table_create_query)
 
@@ -259,9 +278,11 @@ class Storage:
         async with _mysql_database_cursor() as cursor:
             try:
                 await cursor.execute(query, args)
-            except Exception as exc:  # FIXME
-                # Give a nicer error message than the mysql default.
-                raise pombot.errors.EventCreationError(exc)
+            except aiomysql.DataError as exc:
+                # Give a nicer error message than the mysql default. This has
+                # been tested to handle "event name too long" and "pom_goal"
+                # out of range.
+                raise pombot.errors.EventCreationError(exc.args[-1]) from exc
 
     @staticmethod
     async def get_all_events() -> List[Event]:
@@ -324,7 +345,7 @@ class Storage:
         async with _mysql_database_cursor() as cursor:
             try:
                 await cursor.execute(query, (user_id, zone_str, team))
-            except Exception as exc:  # FIXME
+            except aiomysql.IntegrityError as exc:
                 user = await cls.get_user_by_id(user_id)
                 raise pombot.errors.UserAlreadyExistsError(user.team) from exc
 

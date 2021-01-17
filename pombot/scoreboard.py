@@ -50,7 +50,7 @@ class Scoreboard:
             }
         }
 
-        if stats[knights] != stats[vikings]:
+        if stats[knights]["damage"] != stats[vikings]["damage"]:
             winner = knights if stats[vikings]["damage"] < stats[knights]["damage"] else vikings
 
         for channel in self.scoreboard_channels:

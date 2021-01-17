@@ -77,14 +77,14 @@ class UserCommands(commands.Cog):
             await ctx.send("Multi-line pom descriptions are disabled.")
             return
 
-        Storage.add_poms_to_user_session(ctx.author, description, count)
+        await Storage.add_poms_to_user_session(ctx.author, description, count)
         await ctx.message.add_reaction(Reactions.TOMATO)
 
         if State.goal_reached:
             return
 
         try:
-            ongoing_event, *other_ongoing_events = Storage.get_ongoing_events()
+            ongoing_event, *other_ongoing_events = await Storage.get_ongoing_events()
         except ValueError:
             # No ongoing events.
             return
@@ -93,7 +93,7 @@ class UserCommands(commands.Cog):
             msg = "Only one ongoing event supported."
             raise pombot.errors.TooManyEventsError(msg)
 
-        current_poms_for_event = Storage.get_poms(date_range=DateRange(
+        current_poms_for_event = await Storage.get_poms(date_range=DateRange(
             ongoing_event.start_date, ongoing_event.end_date))
 
         if len(current_poms_for_event) >= ongoing_event.pom_goal:
@@ -113,7 +113,7 @@ class UserCommands(commands.Cog):
 
         See details for your tracked poms and the current session.
         """
-        poms = Storage.get_poms(user=ctx.author)
+        poms = await Storage.get_poms(user=ctx.author)
         title = f"Pom statistics for {ctx.author.display_name}"
 
         if not poms:
@@ -161,7 +161,7 @@ class UserCommands(commands.Cog):
             await ctx.send("You must specify a description to search for.")
             return
 
-        poms = Storage.get_poms(user=ctx.author)
+        poms = await Storage.get_poms(user=ctx.author)
         matching_poms = [pom for pom in poms if pom.descript == description]
 
         if not matching_poms:
@@ -200,7 +200,7 @@ class UserCommands(commands.Cog):
                                f"{Config.POM_TRACK_LIMIT} poms at once.")
                 return
 
-        Storage.delete_most_recent_user_poms(ctx.author, _count)
+        await Storage.delete_most_recent_user_poms(ctx.author, _count)
         await ctx.message.add_reaction(Reactions.UNDO)
 
     @commands.command()
@@ -210,7 +210,7 @@ class UserCommands(commands.Cog):
         Hide the details of your previously tracked poms and start a new
         session.
         """
-        Storage.clear_user_session_poms(ctx.author)
+        await Storage.clear_user_session_poms(ctx.author)
 
         await ctx.send("A new session will be started when you track your "
                        f"next pom, <@!{ctx.author.id}>")
@@ -219,7 +219,7 @@ class UserCommands(commands.Cog):
     @commands.command(hidden=True)
     async def reset(self, ctx: Context):
         """Permanently deletes all of your poms. This cannot be undone."""
-        Storage.delete_all_user_poms(ctx.author)
+        await Storage.delete_all_user_poms(ctx.author)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
 
     @commands.command()
@@ -228,7 +228,7 @@ class UserCommands(commands.Cog):
         reported_events = []
 
         try:
-            ongoing_event, *_ = Storage.get_ongoing_events()
+            ongoing_event, *_ = await Storage.get_ongoing_events()
         except ValueError:
             pass
         else:
@@ -246,9 +246,11 @@ class UserCommands(commands.Cog):
 
             reported_events.append(ongoing_event)
 
+        all_events = await Storage.get_all_events()
+
         try:
             upcoming_event, *_ = [
-                event for event in Storage.get_all_events()
+                event for event in all_events
                 if event.start_date > datetime.now()
             ]
         except ValueError:

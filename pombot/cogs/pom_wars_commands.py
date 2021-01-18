@@ -398,62 +398,36 @@ class PomWarsUserCommands(commands.Cog):
         try:
             user = Storage.get_user_by_id(ctx.author.id)
         except pombot.errors.UserDoesNotExistError:
+            await ctx.send("Please join the war first!")
             await ctx.message.add_reaction(Reactions.WARNING)
-            await send_embed_message(
-                ctx,
-                title="I was unable to manage your timezone!",
-                description="Please join the war first.",
-                _func=ctx.send,
-                private_message=True
-            )
             return
 
         if not args:
-            await send_embed_message(
-                ctx,
-                title="Your timezone",
-                description=f"Your timezone is currently set to {user.timezone}.",
-                _func=ctx.send,
-                private_message=True
-            )
+            await ctx.send(f"Your timezone is currently set to {user.timezone}.")
             return
 
         try:
             offset = int(args[0])
-            if offset not in range(utc_min_offset, utc_max_offset + 1):
-                await ctx.message.add_reaction(Reactions.WARNING)
-                await send_embed_message(
-                    ctx,
-                    title="Invalid offset",
-                    description="That is not a valid UTC offset. Please specify a " \
-                        f"number in between {utc_min_offset} and {utc_max_offset}.",
-                    _func=ctx.send,
-                    private_message=True
-                )
-                return
         except ValueError:
+            await ctx.send("Invalid UTC offset.")
             await ctx.message.add_reaction(Reactions.WARNING)
-            await send_embed_message(
-                ctx,
-                title="Invalid offset",
-                description="That is not a valid UTC offset. Please specify a " \
-                    f"number in between {utc_min_offset} and {utc_max_offset}.",
-                _func=ctx.send,
-                private_message=True
-            )
+            return
+
+        if offset not in range(utc_min_offset, utc_max_offset + 1):
+            await ctx.send("Invalid UTC offset.")
+            await ctx.message.add_reaction(Reactions.WARNING)
             return
 
         new_timezone = timezone(timedelta(hours=offset))
-        Storage.set_user_timezone(ctx.author.id, new_timezone)
+        Storage.update_user(ctx.author.id, zone=new_timezone)
 
-        await ctx.message.add_reaction(Reactions.CLOCK)
         await send_embed_message(
-            ctx,
+            None,
             title="Timezone updated",
             description=f"Your timezone has been updated to {new_timezone}.",
-            _func=ctx.send,
-            private_message=True
+            _func=ctx.send
         )
+        await ctx.message.add_reaction(Reactions.CLOCK)
 
     @commands.command(hidden=True)
     async def bribe(self, ctx: Context):

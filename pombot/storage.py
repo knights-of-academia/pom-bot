@@ -330,30 +330,29 @@ class Storage:
                 raise pombot.errors.UserAlreadyExistsError(user.team) from exc
 
     @staticmethod
-    def set_user_timezone(user_id: str, zone: timezone):
-        """Set the user timezone."""
-        query = f"""
-            UPDATE {Config.USERS_TABLE}
-            SET timezone=%s
-            WHERE userID=%s
-        """
+    def update_user(
+        user_id: str,
+        *,
+        team: str = None,
+        zone: timezone = None
+    ):
+        """Update values of a specified user."""
+        query = [f"UPDATE {Config.USERS_TABLE}"]
+        values = []
 
-        zone_str = time(tzinfo=zone).strftime('%z')
+        if team:
+            query += [f"SET team=%s"]
+            values += [team]
+
+        if zone:
+            query += [f"SET timezone=%s"]
+            values += [time(tzinfo=zone).strftime('%z')]
+
+        query += [f"WHERE userID={user_id}"]
+        query_str = _replace_further_occurances(" ".join(query), "SET", ",")
 
         with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (zone_str, user_id))
-
-    @staticmethod
-    def update_user_team(user_id: str, team: str):
-        """Set the user team."""
-        query = f"""
-            UPDATE {Config.USERS_TABLE}
-            SET team=%s
-            WHERE userID=%s
-        """
-
-        with _mysql_database_cursor() as cursor:
-            cursor.execute(query, (team, user_id))
+            cursor.execute(query_str, values)
 
     @staticmethod
     def get_user_by_id(user_id: int) -> Optional[PombotUser]:

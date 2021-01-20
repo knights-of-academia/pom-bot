@@ -59,11 +59,17 @@ class Config:
         channel.lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
+    # Commands that are always allowed in DMs
+    DM_COMMAND_WHITELIST = [
+        "timezone"
+    ]
+
 
 
 class Debug:
     """Debugging options."""
     DROP_TABLES_ON_RESTART = _str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
+    RESPOND_TO_DM = _str2bool(os.getenv("RESPOND_TO_DM", "no"))
 
 
 class Pomwars:

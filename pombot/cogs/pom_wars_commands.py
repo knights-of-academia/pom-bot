@@ -309,9 +309,6 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def actions(self, ctx: Context, *args):
         """Get your current, previous, or specific day's actions."""
-        if isinstance(ctx.channel, DMChannel):
-            return
-
         try:
             user = Storage.get_user_by_id(ctx.author.id)
         except pombot.errors.UserDoesNotExistError:
@@ -432,9 +429,6 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command(hidden=True)
     async def bribe(self, ctx: Context):
         """What? I don't take bribes..."""
-        if isinstance(ctx.channel, DMChannel):
-            return
-
         bribes = _load_actions_directories(Locations.BRIBES_DIR, type_=Bribe)
         weights = [bribe.weight for bribe in bribes]
         bribe, = random.choices(bribes, weights=weights)
@@ -459,9 +453,6 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def attack(self, ctx: Context, *args):
         """Attack the other team."""
-        if isinstance(ctx.channel, DMChannel):
-            return
-
         heavy_attack = bool(args) and args[0].casefold() in Pomwars.HEAVY_QUALIFIERS
         description = " ".join(args[1:] if heavy_attack else args)
         timestamp = datetime.now()
@@ -532,9 +523,6 @@ class PomWarsUserCommands(commands.Cog):
     @commands.command()
     async def defend(self, ctx: Context, *args):
         """Defend your team."""
-        if isinstance(ctx.channel, DMChannel):
-            return
-
         description = " ".join(args)
         timestamp = datetime.now()
 

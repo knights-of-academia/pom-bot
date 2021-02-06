@@ -19,12 +19,12 @@ import pombot.errors
 from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
+from pombot.lib.pomwars import setup_pomwar_scoreboard
 from pombot.lib.team import Team
 from pombot.lib.tiny_tools import daterange_from_timestamp
 from pombot.lib.types import DateRange, ActionType
 from pombot.storage import Storage
 from pombot.state import State
-from pombot.scoreboard import Scoreboard
 
 _log = logging.getLogger(__name__)
 
@@ -515,6 +515,7 @@ class PomWarsUserCommands(commands.Cog):
             _func=partial(ctx.channel.send, content=ctx.author.mention),
         )
 
+
 class PomwarsEventListeners(Cog):
     """Handle global events for the bot."""
     def __init__(self, bot: Bot) -> None:
@@ -523,24 +524,7 @@ class PomwarsEventListeners(Cog):
     @Cog.listener()
     async def on_ready(self):
         """Cog startup procedure."""
-        channels = []
-
-        for guild in self.bot.guilds:
-            for channel in guild.channels:
-                if channel.name == Pomwars.JOIN_CHANNEL_NAME:
-                    channels.append(channel)
-
-        State.scoreboard = Scoreboard(self.bot, channels)
-
-        full_channels, restricted_channels = await State.scoreboard.update()
-
-        for channel in full_channels:
-            _log.error("Join channel '%s' on '%s' is not empty",
-                channel.name, channel.guild.name)
-
-        for channel in restricted_channels:
-            _log.error("Join channel '%s' on '%s' is not messagable (Missing Access)",
-                channel.name, channel.guild.name)
+        await setup_pomwar_scoreboard(self.bot)
 
 
 class PomWarsAdminCommands(commands.Cog):

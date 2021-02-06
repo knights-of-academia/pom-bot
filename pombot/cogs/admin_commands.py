@@ -8,6 +8,7 @@ from discord.ext.commands.bot import Bot
 import pombot.errors
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
+from pombot.lib.pomwars import setup_pomwar_scoreboard
 from pombot.lib.types import DateRange
 from pombot.state import State
 from pombot.storage import Storage
@@ -190,6 +191,9 @@ class AdminCommands(commands.Cog):
         """Manually load the pombot.cogs.pom_wars_commands."""
         await ctx.send("Loading cog.")
         self.bot.load_extension("pombot.cogs.pom_wars_commands")
+        # When the extension is loaded dynamically, the on_ready event is not
+        # triggered, so set up the Scoreboard explicitly.
+        await setup_pomwar_scoreboard(self.bot)
 
 
 def setup(bot: Bot):

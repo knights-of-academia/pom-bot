@@ -171,7 +171,9 @@ good-names=i,
            exc,
            Run,
            _,
-           _log
+           _log,
+           setUp,
+           setUpClass
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no

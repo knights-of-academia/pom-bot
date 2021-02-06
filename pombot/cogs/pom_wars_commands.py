@@ -262,7 +262,7 @@ async def _is_action_successful(
         return base_chance * _delayed_exponential_drop(num_poms)
 
     if is_heavy_attack:
-        base_chance = _get_heavy_attack_base_chance(user.id)
+        base_chance = await _get_heavy_attack_base_chance(user.id)
         chance_func = lambda x: _get_heavy_attack_success_chance(x, base_chance)
     else:
         chance_func = _get_normal_attack_success_chance

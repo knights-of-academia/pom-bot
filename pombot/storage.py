@@ -130,15 +130,23 @@ class Storage:
     @classmethod
     async def create_tables_if_not_exists(cls):
         """Create predefined DB tables if they don't already exist."""
-        for table in cls.TABLES:
-            table_name, table_create_query = table.values()
-            _log.info('Creating "%s" table, if it does not exist', table_name)
+        # Tables are read first instead of purely relying on the "IF NOT
+        # EXISTS" SQL syntax to avoid an unnecessary warning from aiomysql.
+        async with _mysql_database_cursor() as cursor:
+            await cursor.execute("SHOW TABLES")
+            existing_tables = await cursor.fetchall()
 
-            # Tech debt: aiomysql will print a warning using the logging.info
-            # interface when a table already exists. Find a way to disable this
-            # warning as we already have an "IF NOT EXISTS" guard.
+        existing_table_names = set(row[0] for row in existing_tables)
+        required_table_names = set(table["name"] for table in cls.TABLES)
+        names_of_tables_to_create = required_table_names - existing_table_names
+
+        for table_to_create in names_of_tables_to_create:
+            _log.info('Creating table: %s', table_to_create)
+            create_query = next(table["create_query"] for table in cls.TABLES
+                                if table["name"] == table_to_create)
+
             async with _mysql_database_cursor() as cursor:
-                await cursor.execute(table_create_query)
+                await cursor.execute(create_query)
 
     @classmethod
     async def delete_all_rows_from_all_tables(cls):

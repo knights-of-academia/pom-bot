@@ -183,21 +183,19 @@ def _load_actions_directories(
     actions = []
     location = location / "~criticals" if is_critical else location
 
+    attack_kwargs = {"is_heavy": is_heavy, "is_critical": is_critical}
+
+    action_types = {
+        Attack: partial(Attack, **attack_kwargs),
+        Defend: Defend,
+        Bribe:  Bribe,
+    }
+
     for action_dir in location.iterdir():
         if action_dir.name.startswith("~"):
             continue
 
-        if type_ == Attack:
-            actions.append(Attack(action_dir, is_heavy, is_critical))
-        elif type_ == Defend:
-            actions.append(Defend(action_dir))
-        elif type_ == Bribe:
-            actions.append(Bribe(action_dir))
-        else:
-            raise ValueError('Unknown action.')
-
-        # Tech debt:
-        # see #56 / https://github.com/knights-of-academia/pom-bot/pull/56#discussion_r554639639
+        actions.append(action_types[type_](action_dir))
 
     return actions
 

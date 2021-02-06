@@ -67,11 +67,11 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
     if payload.emoji.name == Reactions.WAR_JOIN_REACTION:
         await _create_roles_on_guild(bot_roles, guild)
 
-        team = _get_guild_team_or_random(payload.guild_id)
+        team = await _get_guild_team_or_random(payload.guild_id)
         dm_description = "Enjoy the Pom War event! Good luck and have fun!"
 
         try:
-            Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team.value)
+            await Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team.value)
         except pombot.errors.UserAlreadyExistsError as exc:
             dm_description = "You're already on a team! :open_mouth:"
             user_roles = [r.name for r in payload.member.roles]
@@ -90,7 +90,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
 
                 if team != exc.team:
                     dm_description = "It looks like your team has been swapped!"
-                    Storage.update_user_team(payload.user_id, team.value)
+                    await Storage.update_user_team(payload.user_id, team.value)
 
         try:
             await send_embed_message(
@@ -113,7 +113,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
         await State.scoreboard.update()
 
     if payload.emoji.name in TIMEZONES:
-        user = Storage.get_user_by_id(payload.user_id)
+        user = await Storage.get_user_by_id(payload.user_id)
         if not user:
             await send_embed_message(
                 None,
@@ -123,12 +123,12 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
             )
             return
 
-        Storage.set_user_timezone(
+        await Storage.set_user_timezone(
                 payload.user_id,
                 timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))
             )
 
-def _get_guild_team_or_random(guild_id: int) -> Team:
+async def _get_guild_team_or_random(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the
     team that currently needs more players.
 
@@ -142,7 +142,8 @@ def _get_guild_team_or_random(guild_id: int) -> Team:
     elif guild_id in Pomwars.VIKING_ONLY_GUILDS:
         assigned_team = Team.VIKINGS
     else:
-        num_knights, num_vikings = Team.KNIGHTS.population, Team.VIKINGS.population
+        num_knights = await Team.KNIGHTS.population
+        num_vikings = await Team.VIKINGS.population
 
         if num_knights > num_vikings:
             assigned_team = Team.VIKINGS

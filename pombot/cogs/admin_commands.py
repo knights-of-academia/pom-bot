@@ -61,10 +61,10 @@ class AdminCommands(commands.Cog):
                 await ctx.author.send(_usage(header=exc))
                 return
 
-            poms = Storage.get_poms(date_range=date_range)
+            poms = await Storage.get_poms(date_range=date_range)
             msg = f"Total amount of poms in range {date_range}: {len(poms)}"
         else:
-            poms = Storage.get_poms()
+            poms = await Storage.get_poms()
             msg = f"Total amount of poms since ever: {len(poms)}"
 
         await ctx.send(msg)
@@ -130,15 +130,17 @@ class AdminCommands(commands.Cog):
             await ctx.author.send(_usage(header=exc))
             return
 
-        if overlapping := Storage.get_overlapping_events(date_range):
+        overlapping_events = await Storage.get_overlapping_events(date_range)
+
+        if overlapping_events:
             msg = "Found overlapping events: {}".format(", ".join(
-                event.event_name for event in overlapping))
+                event.event_name for event in overlapping_events))
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(msg))
             return
 
         try:
-            Storage.add_new_event(event_name, pom_goal, date_range)
+            await Storage.add_new_event(event_name, pom_goal, date_range)
         except pombot.errors.EventCreationError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(f"Failed to create event: {exc}"))
@@ -159,14 +161,13 @@ class AdminCommands(commands.Cog):
             """),
         )
 
-    @commands.command(name="remove_event", aliases=["delete_event"], hidden=True)
-    @commands.has_any_role("Guardian", "Helper")
-    async def do_remove_event(self, ctx: Context, *args):
-        """Allows guardians and helpers to start an event.
+    @commands.command(aliases=["delete_event"], hidden=True)
+    @commands.has_any_role("Guardian")
+    async def remove_event(self, ctx: Context, *args):
+        """Allows guardians to remove an existing event.
 
         This is an admin-only command.
         """
-
         if not args:
             cmd = ctx.prefix + ctx.invoked_with
 
@@ -180,7 +181,7 @@ class AdminCommands(commands.Cog):
             return
 
         name = " ".join(args).strip()
-        Storage.delete_event(name)
+        await Storage.delete_event(name)
         await ctx.message.add_reaction(Reactions.CHECKMARK)
 
     @commands.command(hidden=True)

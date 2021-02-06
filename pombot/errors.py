@@ -3,6 +3,9 @@
 
 class EventError(Exception):
     "Base exception for event errors."
+    def __init__(self, msg = None):
+        super().__init__(msg or self.__class__.__doc__)
+        self.msg = msg
 
 
 class EventCreationError(EventError):

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import textwrap
@@ -6,6 +7,7 @@ from typing import Any
 from discord.ext.commands import Bot, Cog, Context, errors
 
 from pombot.config import Config, Debug, Reactions, Secrets
+from pombot.state import State
 from pombot.storage import Storage
 
 _log = logging.getLogger(__name__)
@@ -37,8 +39,11 @@ class EventListeners(Cog):
         """Startup procedure after bot has logged into Discord."""
         _log.info("MYSQL_DATABASE: %s", Secrets.MYSQL_DATABASE)
 
+        State.event_loop = asyncio.get_event_loop()
+
         active_channels = ", ".join(f"#{channel}"
                                     for channel in Config.POM_CHANNEL_NAMES)
+
         _log.info("POM_CHANNEL_NAMES: %s", active_channels or "ALL CHANNELS")
 
         debug_options_enabled = ", ".join([k for k, v in vars(Debug).items() if v is True])
@@ -52,7 +57,7 @@ class EventListeners(Cog):
             for line in debug_enabled_message.split("\n"):
                 _log.info(line)
 
-        Storage.create_tables_if_not_exists()
+        await Storage.create_tables_if_not_exists()
 
         if Debug.DROP_TABLES_ON_RESTART:
             if not __debug__:
@@ -63,7 +68,7 @@ class EventListeners(Cog):
                 await self.bot.close()
                 raise RuntimeError(msg)
 
-            Storage.delete_all_rows_from_all_tables()
+            await Storage.delete_all_rows_from_all_tables()
 
         _log.info("READY ON DISCORD AS: %s", self.bot.user)
 

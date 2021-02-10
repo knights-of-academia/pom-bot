@@ -179,36 +179,25 @@ class UserCommands(commands.Cog):
         ))
 
     @commands.command()
-    async def undo(self, ctx: Context, *, count: str = None):
-        """Undo/remove your latest poms.
+    async def undo(self, ctx: Context):
+        """Undo/remove your latest poms."""
+        try:
+            last_pom, = await Storage.get_poms(user=ctx.author, limit=1)
+        except ValueError:
+            await ctx.send("You don't have any poms to undo!")
+            await ctx.message.add_reaction(Reactions.ROBOT)
+            return
 
-        Optionally specify a number to undo that many poms.
-        """
-        # Tech debt: There is a chance a user could:
-        # >>> !pom 5
-        # >>> !undo 6
-        # This will remove more than is probably intended. We should not accept
-        # a number in the !undo command and instead remove all of the most
-        # recent poms that have the same timestamp.
-        _count = 1
+        num_removed = await Storage.delete_poms(user=ctx.author,
+                                                time_set=last_pom.time_set)
 
-        if count:
-            first_word, *_ = count.split(" ", 1)
+        msg = "Removed {count} {description} pom{s}.".format(
+            count=num_removed,
+            description=last_pom.descript or "*undesignated*",
+            s="" if num_removed == 1 else "s"
+        )
 
-            try:
-                _count = int(first_word)
-            except ValueError:
-                await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send(f"Please specify a number of poms to undo.")
-                return
-
-            if not 0 < _count <= Config.POM_TRACK_LIMIT:
-                await ctx.message.add_reaction(Reactions.WARNING)
-                await ctx.send("You can only undo between 1 and "
-                               f"{Config.POM_TRACK_LIMIT} poms at once.")
-                return
-
-        await Storage.delete_most_recent_user_poms(ctx.author, _count)
+        await ctx.send(msg)
         await ctx.message.add_reaction(Reactions.UNDO)
 
     @commands.command()
@@ -227,7 +216,7 @@ class UserCommands(commands.Cog):
     @commands.command(hidden=True)
     async def reset(self, ctx: Context):
         """Permanently deletes all of your poms. This cannot be undone."""
-        await Storage.delete_all_user_poms(ctx.author)
+        await Storage.delete_poms(user=ctx.author)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
 
     @commands.command()

@@ -31,7 +31,7 @@ async def _mysql_database_connection():
     try:
         yield connection
     except aiomysql.Error:
-        connection.rollback()
+        await connection.rollback()
 
         # Handle error at callsite.
         raise
@@ -200,28 +200,29 @@ class Storage:
             await cursor.execute(query, (user.id, ))
 
     @staticmethod
-    async def delete_all_user_poms(user: DiscordUser):
-        """Remove all poms for user."""
-        query = f"""
-            DELETE FROM {Config.POMS_TABLE}
-            WHERE userID=%s;
+    async def delete_poms(*, user: DiscordUser, time_set: dt = None) -> int:
+        """Delete a user's poms matching the criteria.
+
+        NOTE: When only the user is specified, all of their poms will be
+        deleted!
+
+        @param user Only match poms for this user.
+        @param time_set Only match poms with this timestamp value.
+        @return Number of rows deleted.
         """
+        query = [f"DELETE FROM {Config.POMS_TABLE} WHERE userID=%s"]
+        args = [user.id]
+
+        if time_set:
+            query += ["WHERE time_set=%s"]
+            args += [time_set]
+
+        query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
         async with _mysql_database_cursor() as cursor:
-            await cursor.execute(query, (user.id, ))
+            num_rows_removed = await cursor.execute(query_str, args)
 
-    @staticmethod
-    async def delete_most_recent_user_poms(user: DiscordUser, count: int):
-        """Delete `count` most recent poms for `user`."""
-        query = f"""
-            DELETE FROM {Config.POMS_TABLE}
-            WHERE userID=%s
-            ORDER BY time_set DESC
-            LIMIT %s;
-        """
-
-        async with _mysql_database_cursor() as cursor:
-            await cursor.execute(query, (user.id, count))
+        return num_rows_removed
 
     @staticmethod
     async def get_ongoing_events() -> List[Event]:
@@ -243,23 +244,30 @@ class Storage:
     @staticmethod
     async def get_poms(*,
                  user: DiscordUser = None,
-                 date_range: DateRange = None) -> List[Pom]:
-        """Get a list of poms from storage matching certain criteria.
+                 date_range: DateRange = None,
+                 limit: int = None) -> List[Pom]:
+        """Get a list of poms from storage matching certain criteria. When
+        limit is set, then the order is assumed to be most recent first.
 
         @param user Only match poms for this user.
         @param date_range Only match poms within this date range.
+        @param limit Maximum length of the returned list.
         @return List of Pom objects.
         """
         query = [f"SELECT * FROM {Config.POMS_TABLE}"]
         args = []
 
         if user:
-            query += [f"WHERE userID=%s"]
+            query += ["WHERE userID=%s"]
             args += [user.id]
 
         if date_range:
-            query += ["WHERE time_set >= %s", "AND time_set <= %s"]
+            query += ["WHERE time_set >= %s AND time_set <= %s"]
             args += [date_range.start_date, date_range.end_date]
+
+        if limit:
+            query += ["ORDER BY time_set DESC LIMIT %s"]
+            args += [limit]
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 

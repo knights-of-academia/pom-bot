@@ -538,6 +538,10 @@ class PomWarsAdminCommands(commands.Cog):
         """Manually unload the pombot.cogs.pom_wars_commands."""
         await ctx.send("Unloading cog.")
         self.bot.unload_extension("pombot.cogs.pom_wars_commands")
+        # FIXME: this shouldn't be able to be loaded dynamically now that other
+        # servers are attached. Another server could create the role and load the
+        # cog themselves. We could restrict this to a specific guild/user, or we
+        # could just remove it from being configurable as a command.
 
 
 def setup(bot: Bot):

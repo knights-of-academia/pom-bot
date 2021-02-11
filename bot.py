@@ -31,6 +31,10 @@ def main():
         raise RuntimeError("Please update Python to at least {}".format(
             ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
 
+    # FIXME: this shouldn't be able to be loaded dynamically now that other
+    # servers are attached. Another server could create the role and load the
+    # cog themselves. We could restrict this to a specific guild/user, or we
+    # could just remove it from being configurable as a command.
     if Pomwars.LOAD_ON_STARTUP:
         Config.EXTENSIONS.append("pombot.cogs.pom_wars_commands")
 

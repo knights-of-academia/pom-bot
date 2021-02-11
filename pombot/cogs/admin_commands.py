@@ -8,7 +8,7 @@ from discord.ext.commands.bot import Bot
 import pombot.lib.errors
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
-from pombot.lib.pomwars import setup_pomwar_scoreboard
+from pombot.lib.scoreboard import setup_pomwar_scoreboard
 from pombot.lib.types import DateRange
 from pombot.state import State
 from pombot.storage import Storage

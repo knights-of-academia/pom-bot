@@ -19,7 +19,7 @@ import pombot.lib.errors
 from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
-from pombot.lib.pomwars import setup_pomwar_scoreboard
+from pombot.lib.scoreboard import setup_pomwar_scoreboard
 from pombot.lib.team import Team
 from pombot.lib.tiny_tools import daterange_from_timestamp
 from pombot.lib.types import DateRange, ActionType

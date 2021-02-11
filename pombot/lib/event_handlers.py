@@ -13,7 +13,7 @@ from pombot.state import State
 from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.team import Team
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 
 _log = logging.getLogger(__name__)
 

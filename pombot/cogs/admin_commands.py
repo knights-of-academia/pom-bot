@@ -11,7 +11,7 @@ from pombot.lib.messages import send_embed_message
 from pombot.lib.scoreboard import setup_pomwar_scoreboard
 from pombot.lib.types import DateRange
 from pombot.state import State
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 
 
 class AdminCommands(commands.Cog):

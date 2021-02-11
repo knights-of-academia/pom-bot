@@ -18,7 +18,7 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
         Debug.BENCHMARK_POMWAR_ATTACK = False
         return super().setUp()
 
-    @patch("pombot.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_actions")
     @patch("random.random")
     async def test_normal_attack_success_rate(
         self,
@@ -70,8 +70,8 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
                 self.assertEqual(expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
 
-    @patch("pombot.storage.Storage.get_actions")
-    @patch("pombot.storage.Storage.get_user_by_id")
+    @patch("pombot.lib.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_user_by_id")
     @patch("random.random")
     async def test_heavy_attack_success_rate(
         self,
@@ -139,7 +139,7 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
                     expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
 
-    @patch("pombot.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_actions")
     @patch("random.random")
     async def test_defend_success_rate(
         self,

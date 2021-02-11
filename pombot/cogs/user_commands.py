@@ -12,7 +12,7 @@ import pombot.lib.errors
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.state import State
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 from pombot.lib.types import DateRange, Pom
 
 

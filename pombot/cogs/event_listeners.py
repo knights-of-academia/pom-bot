@@ -8,7 +8,7 @@ from discord.ext.commands import Bot, Cog, Context, errors
 
 from pombot.config import Config, Debug, Reactions, Secrets
 from pombot.state import State
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 
 _log = logging.getLogger(__name__)
 

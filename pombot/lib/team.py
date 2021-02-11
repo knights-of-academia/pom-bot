@@ -1,6 +1,6 @@
 from enum import Enum
 from pombot.config import Pomwars, Config
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 from pombot.lib.types import ActionType
 
 

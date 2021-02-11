@@ -23,7 +23,7 @@ from pombot.lib.scoreboard import setup_pomwar_scoreboard
 from pombot.lib.team import Team
 from pombot.lib.tiny_tools import daterange_from_timestamp
 from pombot.lib.types import DateRange, ActionType
-from pombot.storage import Storage
+from pombot.lib.storage import Storage
 from pombot.state import State
 
 _log = logging.getLogger(__name__)

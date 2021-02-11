@@ -55,7 +55,7 @@ class Debug:
 
 class Pomwars:
     """Configuration for Pom Wars."""
-    LOAD_ON_STARTUP = str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
+    LOAD_POM_WARS = str2bool(os.getenv("LOAD_POM_WARS", "no"))
     KNIGHT_ROLE = os.getenv("KNIGHT_ROLE")
     VIKING_ROLE = os.getenv("VIKING_ROLE")
     BASE_DAMAGE_FOR_NORMAL_ATTACKS = positive_int(os.getenv("BASE_DAMAGE_FOR_NORMAL_ATTACKS"))

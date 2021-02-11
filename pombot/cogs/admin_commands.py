@@ -8,7 +8,6 @@ from discord.ext.commands.bot import Bot
 import pombot.lib.errors
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
-from pombot.lib.pom_wars.scoreboard import setup_pomwar_scoreboard
 from pombot.lib.types import DateRange
 from pombot.state import State
 from pombot.lib.storage import Storage
@@ -184,20 +183,6 @@ class AdminCommands(commands.Cog):
         name = " ".join(args).strip()
         await Storage.delete_event(name)
         await ctx.message.add_reaction(Reactions.CHECKMARK)
-
-    @commands.command(hidden=True)
-    @commands.has_any_role("Guardian")
-    async def load_pom_wars(self, ctx: Context):
-        """Manually load the pombot.cogs.pom_wars_commands."""
-        await ctx.send("Loading cog.")
-        self.bot.load_extension("pombot.cogs.pom_wars_commands")
-        # When the extension is loaded dynamically, the on_ready event is not
-        # triggered, so set up the Scoreboard explicitly.
-        await setup_pomwar_scoreboard(self.bot)
-        # FIXME: this shouldn't be able to be loaded dynamically now that other
-        # servers are attached. Another server could create the role and load the
-        # cog themselves. We could restrict this to a specific guild/user, or we
-        # could just remove it from being configurable as a command.
 
 
 def setup(bot: Bot):

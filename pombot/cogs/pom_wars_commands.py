@@ -15,12 +15,12 @@ from discord.ext.commands.bot import Bot
 from discord.user import User
 import discord.errors
 
-import pombot.lib.errors
+import pombot.lib.pom_wars.errors as war_crimes
 from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
-from pombot.lib.scoreboard import setup_pomwar_scoreboard
-from pombot.lib.team import Team
+from pombot.lib.pom_wars.scoreboard import setup_pomwar_scoreboard
+from pombot.lib.pom_wars.team import Team
 from pombot.lib.tiny_tools import daterange_from_timestamp
 from pombot.lib.types import DateRange, ActionType
 from pombot.lib.storage import Storage
@@ -36,7 +36,7 @@ def _get_user_team(user: User) -> str:
     ]
 
     if len(team_roles) != 1:
-        raise pombot.lib.errors.InvalidNumberOfRolesError()
+        raise war_crimes.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
 

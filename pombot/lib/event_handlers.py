@@ -8,11 +8,11 @@ from discord.ext.commands import Bot
 from discord.guild import Guild
 from discord.message import Message
 
-import pombot.lib.errors
+import pombot.lib.pom_wars.errors as war_crimes
 from pombot.state import State
 from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
-from pombot.lib.team import Team
+from pombot.lib.pom_wars.team import Team
 from pombot.lib.storage import Storage
 
 _log = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
 
         try:
             await Storage.add_user(payload.user_id, timezone(timedelta(hours=0)), team.value)
-        except pombot.lib.errors.UserAlreadyExistsError as exc:
+        except war_crimes.UserAlreadyExistsError as exc:
             dm_description = "You're already on a team! :open_mouth:"
             user_roles = [r.name for r in payload.member.roles]
             bot_roles_on_user = []

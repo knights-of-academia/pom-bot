@@ -8,7 +8,7 @@ from discord.ext.commands.bot import Bot
 from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.state import State
-from pombot.lib.team import Team
+from pombot.lib.pom_wars.team import Team
 
 _log = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from typing import List, Optional, Set
 import aiomysql
 from discord.user import User as DiscordUser
 
-import pombot.errors
+import pombot.lib.errors
 from pombot.config import Config, Secrets
 from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
 from pombot.lib.types import User as PombotUser
@@ -298,7 +298,7 @@ class Storage:
                 # Give a nicer error message than the mysql default. This has
                 # been tested to handle "event name too long" and "pom_goal"
                 # out of range.
-                raise pombot.errors.EventCreationError(exc.args[-1]) from exc
+                raise pombot.lib.errors.EventCreationError(exc.args[-1]) from exc
 
     @staticmethod
     async def get_all_events() -> List[Event]:
@@ -363,7 +363,7 @@ class Storage:
                 await cursor.execute(query, (user_id, zone_str, team))
             except aiomysql.IntegrityError as exc:
                 user = await cls.get_user_by_id(user_id)
-                raise pombot.errors.UserAlreadyExistsError(user.team) from exc
+                raise pombot.lib.errors.UserAlreadyExistsError(user.team) from exc
 
     @staticmethod
     async def set_user_timezone(user_id: str, zone: timezone):
@@ -404,7 +404,7 @@ class Storage:
             row = await cursor.fetchone()
 
         if not row:
-            raise pombot.errors.UserDoesNotExistError()
+            raise pombot.lib.errors.UserDoesNotExistError()
 
         return PombotUser(*row)
 

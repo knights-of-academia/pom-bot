@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-import pombot.errors
+import pombot.lib.errors
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.pomwars import setup_pomwar_scoreboard
@@ -142,7 +142,7 @@ class AdminCommands(commands.Cog):
 
         try:
             await Storage.add_new_event(event_name, pom_goal, date_range)
-        except pombot.errors.EventCreationError as exc:
+        except pombot.lib.errors.EventCreationError as exc:
             await ctx.message.add_reaction(Reactions.ROBOT)
             await ctx.author.send(_usage(f"Failed to create event: {exc}"))
             return

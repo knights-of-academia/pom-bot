@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ext.commands.bot import Bot
 
-import pombot.errors
+import pombot.lib.errors
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.state import State
@@ -93,7 +93,7 @@ class UserCommands(commands.Cog):
 
         if any(other_ongoing_events):
             msg = "Only one ongoing event supported."
-            raise pombot.errors.TooManyEventsError(msg)
+            raise pombot.lib.errors.TooManyEventsError(msg)
 
         current_poms_for_event = await Storage.get_poms(date_range=DateRange(
             ongoing_event.start_date, ongoing_event.end_date))

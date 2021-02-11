@@ -15,7 +15,7 @@ from discord.ext.commands.bot import Bot
 from discord.user import User
 import discord.errors
 
-import pombot.errors
+import pombot.lib.errors
 from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
@@ -36,7 +36,7 @@ def _get_user_team(user: User) -> str:
     ]
 
     if len(team_roles) != 1:
-        raise pombot.errors.InvalidNumberOfRolesError()
+        raise pombot.lib.errors.InvalidNumberOfRolesError()
 
     return Team(team_roles[0].name)
 

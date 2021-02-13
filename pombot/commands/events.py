@@ -8,9 +8,7 @@ from pombot.lib.messages import send_embed_message
 
 
 async def do_events(ctx: Context):
-    """Find any ongoing or upcoming events and send them to the user as an
-    embedded message.
-    """
+    """Show the current and upcoming events."""
     reported_events = []
 
     try:

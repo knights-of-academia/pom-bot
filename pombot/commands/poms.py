@@ -30,7 +30,10 @@ def _get_duration_message(user_poms: List[Pom]) -> str:
 
 
 async def do_poms(ctx: Context):
-    """Fetch poms for a user and send them a detailed DM."""
+    """See your poms.
+
+    See the details of your tracked poms and your current session.
+    """
     user_poms = await Storage.get_poms(user=ctx.author)
     title = f"Pom statistics for {ctx.author.display_name}"
 

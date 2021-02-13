@@ -8,10 +8,16 @@ from pombot.lib.types import DateRange
 from pombot.state import State
 
 
-async def do_pom(ctx: Context, description: str = None):
-    """Create a new pom or set of poms for a user based on the description
-    that the user provides.
+async def do_pom(ctx: Context, *description):
+    """Add a new pom.
+
+    If the first word in the description is a number (1-10), multiple poms
+    will be added with the given description.
+
+    Additionally, find out if there is an ongoing event, and, if so, mark the
+    event as completed if this is the final pom in the event.
     """
+    description = " ".join(description)
     count = 1
 
     if description:

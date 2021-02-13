@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, Mock, patch
 
 from pombot.config import Debug
-from pombot.cogs.pom_wars_commands import _is_action_successful
+from pombot.extensions.pom_wars_commands import _is_action_successful
 from pombot.lib.types import User as PombotUser
 
 # For vertical alignment.

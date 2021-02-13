@@ -32,7 +32,7 @@ def main():
             ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
 
     if Pomwars.LOAD_POM_WARS:
-        Config.EXTENSIONS.append("pombot.cogs.pom_wars_commands")
+        Config.EXTENSIONS.append("pombot.extensions.pom_wars_commands")
 
     for extension in Config.EXTENSIONS:
         _log.info("Loading extension: %s", extension)

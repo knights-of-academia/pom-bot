@@ -355,7 +355,7 @@ class PomWarsUserCommands(commands.Cog):
                 description=description,
                 icon_url=Pomwars.IconUrls.SWORD,
                 colour=Pomwars.ACTION_COLOUR,
-                private_message=True,
+                private_message=not Debug.POMS_COMMAND_IS_PUBLIC,
             )
             await ctx.message.add_reaction(Reactions.CHECKMARK)
         except discord.errors.Forbidden:

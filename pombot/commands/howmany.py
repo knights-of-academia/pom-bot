@@ -5,9 +5,7 @@ from pombot.lib.storage import Storage
 
 
 async def do_howmany(ctx: Context, description: str):
-    """Send the user a count of the number of their poms matching a
-    description.
-    """
+    """List your poms with a given description."""
     if description is None:
         await ctx.message.add_reaction(Reactions.WARNING)
         await ctx.send("You must specify a description to search for.")

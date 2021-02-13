@@ -1,3 +1,4 @@
+import unittest
 from unittest.async_case import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock
 
@@ -6,6 +7,7 @@ from pombot.config import Config
 from pombot.lib.storage import Storage
 
 
+@unittest.skip("Under construction")
 class TestUserCommands(IsolatedAsyncioTestCase):
     """Test the user commands cog."""
     def setUp(self) -> None:

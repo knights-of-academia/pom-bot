@@ -25,7 +25,6 @@ class Config:
 
     # Extensions
     EXTENSIONS = [
-        "pombot.extensions.event_listeners",
         "pombot.extensions.general",
         "pombot.extensions.admin_commands",
     ]

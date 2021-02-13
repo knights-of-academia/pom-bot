@@ -1,5 +1,5 @@
+import unittest
 from datetime import datetime, timedelta, timezone
-from unittest.async_case import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, Mock, patch
 
 from pombot.config import Debug
@@ -11,7 +11,7 @@ TRU = True
 FLS = False
 
 
-class TestActionSuccessRates(IsolatedAsyncioTestCase):
+class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
     """Generic tests for _is_attack_successful."""
     def setUp(self) -> None:
         """Set configuration objects for tests."""
@@ -191,3 +191,6 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
                 self.assertEqual(
                     expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
+
+if __name__ == "__main__":
+    unittest.main()

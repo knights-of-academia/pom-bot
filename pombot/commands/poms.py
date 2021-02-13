@@ -6,7 +6,7 @@ from typing import List
 
 from discord.ext.commands import Context
 
-from pombot.config import Reactions
+from pombot.config import Debug, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.storage import Storage
 from pombot.lib.types import Pom
@@ -53,7 +53,7 @@ async def do_poms(ctx: Context):
 
     await send_embed_message(
         ctx,
-        private_message=True,
+        private_message=not Debug.POMS_COMMAND_IS_PUBLIC,
         title=title,
         description=textwrap.dedent(f"""\
             **Pom statistics**

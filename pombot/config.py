@@ -51,6 +51,7 @@ class Debug:
     RESPOND_TO_DM = str2bool(os.getenv("RESPOND_TO_DM", "no"))
     DROP_TABLES_ON_RESTART = str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
     BENCHMARK_POMWAR_ATTACK = str2bool(os.getenv("BENCHMARK_POMWAR_ATTACK", "no"))
+    POMS_COMMAND_IS_PUBLIC = str2bool(os.getenv("POMS_COMMAND_IS_PUBLIC", "no"))
 
 
 class Pomwars:

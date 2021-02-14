@@ -26,7 +26,6 @@ class Config:
     # Extensions
     EXTENSIONS = [
         "pombot.extensions.general",
-        "pombot.extensions.admin_commands",
     ]
 
     # Logging
@@ -39,6 +38,7 @@ class Config:
     ACTIONS_TABLE = "actions"
 
     # Restrictions
+    ADMIN_ROLES = os.getenv("ADMIN_ROLES").split(",")
     POM_CHANNEL_NAMES = [
         channel.lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")

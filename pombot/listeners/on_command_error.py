@@ -45,7 +45,7 @@ async def handle_on_command_error(ctx: Context, error: Any):
             "This is not the command you're looking for. \\**waves hand\\**",
             "*noop*",
             "Command permenently moved to a different folder.",
-            "This ~~princess~~ command is in another castle.",
+            "This command is in another castle.",
             "Okay, let me get my tools.. brb",
             "(╯°□°）╯︵ ¡ƃuoɹʍ ʇuǝʍ ƃuıɥʇǝɯoS",
         ])

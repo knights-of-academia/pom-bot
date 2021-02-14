@@ -19,4 +19,4 @@ class UserAlreadyExistsError(PomWarsError):
 
 
 class UserDoesNotExistError(PomWarsError):
-    """Specified user dow not exist in database."""
+    """Specified user does not exist in database."""

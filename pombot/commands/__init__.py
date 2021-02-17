@@ -3,6 +3,7 @@ from pombot.commands.events import *
 from pombot.commands.howmany import *
 from pombot.commands.newleaf import *
 from pombot.commands.pom import *
+from pombot.commands.pom_wars import *
 from pombot.commands.poms import *
 from pombot.commands.remove_event import *
 from pombot.commands.reset import *

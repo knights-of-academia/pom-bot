@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, Mock, patch
 
 from pombot.config import Debug
-from pombot.extensions.pom_wars_commands import _is_action_successful
+from pombot.lib.pom_wars.action_chances import is_action_successful
 from pombot.lib.types import User as PombotUser
 
 # For vertical alignment.
@@ -64,7 +64,7 @@ class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(expected_outcome, actual_outcome,
@@ -132,7 +132,7 @@ class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(
@@ -185,7 +185,7 @@ class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(

@@ -11,16 +11,18 @@ from pombot.lib.storage import Storage
 _log = logging.getLogger(__name__)
 
 
-async def handle_on_ready(bot: Bot):
+# NOTE: When configured using the Bot.add_listener facility, both logging and
+# debugging fail to work entirely. Ensure there is a unit test.
+async def handle_on_ready(bot: Bot, log):
     """Startup procedure after bot has logged into Discord."""
-    _log.info("MYSQL_DATABASE: %s", Secrets.MYSQL_DATABASE)
+    log.info("MYSQL_DATABASE: %s", Secrets.MYSQL_DATABASE)
 
     State.event_loop = asyncio.get_event_loop()
 
     active_channels = ", ".join(f"#{channel}"
                                 for channel in Config.POM_CHANNEL_NAMES)
 
-    _log.info("POM_CHANNEL_NAMES: %s", active_channels or "ALL CHANNELS")
+    log.info("POM_CHANNEL_NAMES: %s", active_channels or "ALL CHANNELS")
 
     debug_options_enabled = ", ".join([k for k, v in vars(Debug).items() if v is True])
     if debug_options_enabled:
@@ -31,7 +33,7 @@ async def handle_on_ready(bot: Bot):
         """)
 
         for line in debug_enabled_message.split("\n"):
-            _log.info(line)
+            log.info(line)
 
     await Storage.create_tables_if_not_exists()
 
@@ -46,4 +48,4 @@ async def handle_on_ready(bot: Bot):
 
         await Storage.delete_all_rows_from_all_tables()
 
-    _log.info("READY ON DISCORD AS: %s", bot.user)
+    log.info("READY ON DISCORD AS: %s", bot.user)

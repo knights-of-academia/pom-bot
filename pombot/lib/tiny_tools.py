@@ -1,5 +1,10 @@
 from datetime import datetime
+from functools import partial
 from typing import Any
+
+import discord
+from discord.ext.commands import Context
+from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
 from pombot.lib.types import DateRange
 
@@ -28,3 +33,23 @@ def daterange_from_timestamp(timestamp: datetime):
     evening = get_timestamp_at_time("23:59:59")
 
     return DateRange(morning, evening)
+
+
+def has_any_role(ctx: Context, roles_needed=None) -> bool:
+    """A non-decorator reimplementation of discord.ext.commands.has_any_role,
+    but with dignity.
+    """
+    roles_needed = roles_needed or []
+
+    if not isinstance(ctx.channel, discord.abc.GuildChannel):
+        raise NoPrivateMessage()
+
+    get_user_roles = partial(discord.utils.get, ctx.author.roles)
+
+    if not any(get_user_roles(id=role_needed) is not None
+            if isinstance(role_needed, int)
+            else get_user_roles(name=role_needed) is not None
+                for role_needed in roles_needed):
+        raise MissingAnyRole(roles_needed)
+
+    return True

@@ -6,49 +6,18 @@ import discord.errors
 from discord import RawReactionActionEvent
 from discord.ext.commands import Bot
 from discord.guild import Guild
-from discord.message import Message
 
 import pombot.lib.pom_wars.errors as war_crimes
 from pombot.state import State
-from pombot.config import Config, Debug, Pomwars, Reactions, TIMEZONES
+from pombot.config import Pomwars, Reactions, TIMEZONES
 from pombot.lib.messages import send_embed_message
 from pombot.lib.pom_wars.team import Team
 from pombot.lib.storage import Storage
 
 _log = logging.getLogger(__name__)
 
-async def _create_roles_on_guild(roles: list, guild: Guild):
-    for role in roles:
-        if role in (r.name for r in guild.roles):
-            continue
 
-        await guild.create_role(name=role)
-
-
-async def on_message_handler(bot: Bot, message: Message):
-    """Handle an on_message event.
-
-    First, verify that the bot can respond in the given channel.
-
-    Then remove any spaces after the prefix. This would normally be achieved
-    by using a callable prefix, but the Discord.py API does not support the
-    use of spaces after symbols, only alphanumeric characters. This is a
-    workaround.
-    """
-    try:
-        if Config.POM_CHANNEL_NAMES:
-            if message.channel.name not in Config.POM_CHANNEL_NAMES:
-                return
-    except AttributeError:
-        if message.guild is None and not Debug.RESPOND_TO_DM:
-            return
-
-    if message.content.startswith(Config.PREFIX + " "):
-        message.content = "".join(message.content.split(" ", 1))
-
-    await bot.process_commands(message)
-
-async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent):
+async def on_raw_reaction_add(bot: Bot, payload: RawReactionActionEvent):
     """Handle reactions being added to messages, assign users to teams when
     they react."""
     guild = bot.get_guild(payload.guild_id)
@@ -124,9 +93,22 @@ async def on_raw_reaction_add_handler(bot: Bot, payload: RawReactionActionEvent)
             return
 
         await Storage.set_user_timezone(
-                payload.user_id,
-                timezone(timedelta(hours=TIMEZONES[payload.emoji.name]))
-            )
+            payload.user_id,
+            timezone(timedelta(hours=TIMEZONES[payload.emoji.name])))
+
+
+async def _create_roles_on_guild(roles: list, guild: Guild):
+    """Create a role on a the specified guild when a role with that name does
+    not already exist.
+
+    Discord.py will not raise when the role already exists on the guild, it
+    will instead create a new role with a new ID and an identical name. This
+    wrapper skips those roles who's names already exist.
+    """
+    for role in set(roles) - set(r.name for r in guild.roles):
+        _log.info('Creating "%s" role on guild "%s"', role, guild.name)
+        await guild.create_role(name=role)
+
 
 async def _get_guild_team_or_random(guild_id: int) -> Team:
     """Decide which team a user should be on, based on their guild and the

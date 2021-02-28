@@ -4,7 +4,6 @@ from functools import partial
 from discord.ext.commands import Bot, Command
 
 from pombot import commands
-from pombot import listeners
 from pombot.config import Config
 from pombot.lib.tiny_tools import has_any_role
 
@@ -12,7 +11,11 @@ _log = logging.getLogger(__name__)
 
 
 def setup(bot: Bot):
-    """Load general commands and listeners."""
+    """Load general commands.
+
+    Do not use this to add event handlers as basic and essential debugging
+    and logging will be broken. Instead, add them to bot.py::main().
+    """
     admin = {
         "checks": [partial(has_any_role, roles_needed=Config.ADMIN_ROLES)]
     }
@@ -31,15 +34,3 @@ def setup(bot: Bot):
         Command(commands.do_remove_event, name="remove_event", **admin),
     ]:
         bot.add_command(command)
-
-    on_ready_handler = partial(listeners.handle_on_ready, log=_log)
-
-    for listener in [
-        # FIXME: - logs and prints don't show up
-        #           - passing in a 2nd arg does not work as expected
-        #        - the debugger can't step through the on-ready handlers.
-        #           - who the fuck wrote this garbage?
-        (partial(on_ready_handler, bot), "on_ready"),
-        (listeners.handle_on_command_error,       "on_command_error"),
-    ]:
-        bot.add_listener(*listener)

@@ -9,7 +9,7 @@ from pombot.lib.pom_wars.scoreboard import Scoreboard
 _log = logging.getLogger(__name__)
 
 
-async def _setup_pomwar_scoreboard(bot: Bot):
+async def on_ready(bot: Bot):
     """Find and remember the static scoreboard for all connected guilds."""
     channels = []
 
@@ -28,8 +28,3 @@ async def _setup_pomwar_scoreboard(bot: Bot):
     for channel in restricted_channels:
         _log.error("Join channel '%s' on '%s' is not messagable (Missing Access)",
             channel.name, channel.guild.name)
-
-
-async def handle_on_ready(bot: Bot):
-    """Handle Pom-war-specific setup procedures."""
-    await _setup_pomwar_scoreboard(bot)

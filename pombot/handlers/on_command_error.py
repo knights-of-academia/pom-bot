@@ -9,23 +9,7 @@ from pombot.config import Config, Reactions
 _log = logging.getLogger(__name__)
 
 
-async def _send_to_errors_channel(ctx: Context, message: str):
-    if not Config.ERRORS_CHANNEL_NAME:
-        _log.info("ERRORS_CHANNEL_NAME not configured")
-        return
-
-    if ctx.guild is None:
-        return
-
-    for channel in ctx.guild.channels:
-        if channel.name == Config.ERRORS_CHANNEL_NAME:
-            await channel.send("```\n" + message + "```")
-            break
-    else:
-        _log.info("ERRORS_CHANNEL_NAME not found on context guild")
-
-
-async def handle_on_command_error(ctx: Context, error: Any):
+async def on_command_error(ctx: Context, error: Any):
     """Alert users when using commands to which they have no permission.
     In unknown cases, log the error and mark it in discord.
     """
@@ -66,3 +50,19 @@ async def handle_on_command_error(ctx: Context, error: Any):
         await _send_to_errors_channel(ctx, error_message)
 
     await ctx.message.add_reaction(Reactions.ERROR)
+
+
+async def _send_to_errors_channel(ctx: Context, message: str):
+    if not Config.ERRORS_CHANNEL_NAME:
+        _log.info("ERRORS_CHANNEL_NAME not configured")
+        return
+
+    if ctx.guild is None:
+        return
+
+    for channel in ctx.guild.channels:
+        if channel.name == Config.ERRORS_CHANNEL_NAME:
+            await channel.send("```\n" + message + "```")
+            break
+    else:
+        _log.info("ERRORS_CHANNEL_NAME not found on context guild")

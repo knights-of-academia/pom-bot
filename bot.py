@@ -2,13 +2,32 @@ import logging
 import sys
 from functools import partial
 
-from discord.ext.commands import Bot
+from discord.message import Message
+from discord.ext.commands import Bot, Command
 
+from pombot import commands
 from pombot import handlers
 from pombot.config import Config, Pomwars, Secrets
 
 _log = logging.getLogger(__name__)
 bot = Bot(command_prefix=Config.PREFIX, case_insensitive=True)
+
+
+@bot.event
+async def on_message(message: Message):
+    """Global on_message handler.
+
+    This is a special event.
+
+    The handler for the "on_message" event must be a bot-decorated function
+    due to the special property that Discord.py applies wherein the default
+    handler for "on_message" is applied, even when `bot.add_listener` is
+    called before the default handler is created. This means that without
+    this special, bot-decorated handler, the default handler would still be
+    applied, causing the bot to bypass all the restrictions we lay out in
+    `handlers.on_message`.
+    """
+    await handlers.on_message(bot, message)
 
 
 def main():
@@ -24,7 +43,6 @@ def main():
     # the `setup` function of an extension, so load them here.
     for event, handler in [
         ("on_ready",         partial(handlers.on_ready,   bot)),
-        ("on_message",       partial(handlers.on_message, bot)),
         ("on_command_error", handlers.on_command_error),
     ]:
         bot.add_listener(handler, event)
@@ -37,6 +55,10 @@ def main():
             bot.add_listener(handler, event)
 
         Config.EXTENSIONS.append("pombot.extensions.pom_wars")
+
+    # Replace the default, uncategorized help command comamnd.
+    bot.remove_command("help")
+    bot.add_command(Command(commands.do_help, name="help"))
 
     for extension in Config.EXTENSIONS:
         _log.info("Loading extension: %s", extension)

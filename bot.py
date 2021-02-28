@@ -42,7 +42,7 @@ def main():
     # Discord.py breaks debuggers and logging when loading event handlers in
     # the `setup` function of an extension, so load them here.
     for event, handler in [
-        ("on_ready",         partial(handlers.on_ready,   bot)),
+        ("on_ready",         partial(handlers.on_ready, bot)),
         ("on_command_error", handlers.on_command_error),
     ]:
         bot.add_listener(handler, event)

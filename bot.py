@@ -56,13 +56,14 @@ def main():
 
         Config.EXTENSIONS.append("pombot.extensions.pom_wars")
 
-    # Replace the default, uncategorized help command comamnd.
-    bot.remove_command("help")
-    bot.add_command(Command(commands.do_help, name="help"))
-
     for extension in Config.EXTENSIONS:
         _log.info("Loading extension: %s", extension)
         bot.load_extension(extension)
+
+    # Replace the default help command which marks every command as
+    # "Uncategorized" and does no cog separation.
+    bot.remove_command("help")
+    bot.add_command(Command(commands.do_help, name="help"))
 
     bot.run(Secrets.TOKEN)
 

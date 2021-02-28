@@ -14,7 +14,7 @@ async def on_message(bot: Bot, message: Message):
     workaround.
     """
     try:
-        if Config.POM_CHANNEL_NAMES:
+        if any(Config.POM_CHANNEL_NAMES):
             if message.channel.name not in Config.POM_CHANNEL_NAMES:
                 return
     except AttributeError:

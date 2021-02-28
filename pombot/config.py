@@ -41,7 +41,7 @@ class Config:
     ADMIN_ROLES = os.getenv("ADMIN_ROLES").split(",")
     # Tech debt: Pom Wars channels should be configured elsewhere.
     POM_CHANNEL_NAMES = [
-        channel.lstrip("#")
+        channel.strip().lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
 

@@ -304,6 +304,7 @@ class Storage:
     @staticmethod
     async def get_all_events() -> List[Event]:
         """Return a list of all events."""
+        # Tech debt: merge this function into `get_events`.
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             ORDER BY start_date;
@@ -320,6 +321,7 @@ class Storage:
         """Return a list of events in the database which overlap with the
         dates specified.
         """
+        # Tech debt: merge this function into `get_events`.
         query = f"""
             SELECT * FROM {Config.EVENTS_TABLE}
             WHERE %s < end_date

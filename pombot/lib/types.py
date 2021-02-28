@@ -103,6 +103,7 @@ class Event:
 
 class ActionType(str, Enum):
     """Type of an action in the actions table of the database."""
+    # Tech debt: This should be moved to pombot.lib.pom_wars.types.
     NORMAL_ATTACK = 'normal_attack'
     HEAVY_ATTACK = 'heavy_attack'
     DEFEND = 'defend'
@@ -112,6 +113,7 @@ class ActionType(str, Enum):
 @dataclass(frozen=True)
 class User:
     """A user, as described, in order, from the database."""
+    # Tech debt: This should be moved to pombot.lib.pom_wars.types.
     user_id: int
     timezone: timezone
     team: str
@@ -125,6 +127,7 @@ class User:
 @dataclass
 class Action:
     """An action, as described, in order, from the database."""
+    # Tech debt: This should be moved to pombot.lib.pom_wars.types.
     action_id: int
     user_id: int
     team: str
@@ -161,6 +164,7 @@ class Action:
 
 class InstantItem(str, Enum):
     """Type of an instant-use item in the actions table of the database."""
+    # Tech debt: This should be moved to pombot.lib.pom_wars.types.
     TEAM_INVINCIBILITY = 'team_invincibility'
     TEAM_DAMAGE_BUFF = 'team_damage_buff'
     TEAM_SUCCESS_CHANCE_BUFF = 'team_success_chance_buff'

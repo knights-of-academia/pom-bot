@@ -14,7 +14,7 @@ def setup(bot: Bot):
     """Load general commands.
 
     Do not use this to add event handlers as basic and essential debugging
-    and logging will be broken. Instead, add them to bot.py::main().
+    and logging will be broken. Instead, add them in bot.main.
     """
     admin = {
         "checks": [partial(has_any_role, roles_needed=Config.ADMIN_ROLES)]

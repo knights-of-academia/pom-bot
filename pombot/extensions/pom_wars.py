@@ -5,7 +5,11 @@ import pombot.commands.pom_wars as commands
 
 
 def setup(bot: Bot):
-    """Load general commands."""
+    """Load Pom Wars commands.
+
+    Do not use this to add event handlers as basic and essential debugging
+    and logging will be broken. Instead, add them in bot.main.
+    """
     for command in [
         Command(commands.do_actions, name="actions"),
         Command(commands.do_attack,  name="attack"),

@@ -26,7 +26,7 @@ def setup(bot: Bot):
         Command(commands.do_newleaf,      name="newleaf"),
         Command(commands.do_pom,          name="pom"),
         Command(commands.do_poms,         name="poms"),
-        Command(commands.do_reset,        name="reset"),
+        Command(commands.do_reset,        name="reset", hidden=True),
         Command(commands.do_undo,         name="undo"),
 
         Command(commands.do_total,        name="total",        **admin),

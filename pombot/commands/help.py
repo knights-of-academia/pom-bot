@@ -41,7 +41,7 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
             "Get a command's usage by specifying it!")
 
 
-def _get_help_for_command(ctx: Context, command: str) -> Tuple[Optional[str],
+def _get_help_for_command(_ctx: Context, command: str) -> Tuple[Optional[str],
                                                                Optional[str]]:
     return (f"Looking up {command}, hang on...", None)
 

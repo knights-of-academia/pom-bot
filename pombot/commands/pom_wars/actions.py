@@ -10,7 +10,7 @@ from pombot.lib.types import DateRange
 
 
 async def do_actions(ctx: Context, *args):
-    """Get your current, previous, or specific day's actions."""
+    """See your actions."""
     date_range = None
     today = datetime.today().strftime("%B %d").split()
     yesterday = (datetime.today() -

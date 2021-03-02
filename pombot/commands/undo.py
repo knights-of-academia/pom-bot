@@ -5,7 +5,7 @@ from pombot.config import Reactions
 
 
 async def do_undo(ctx: Context):
-    """Undo/remove your latest poms."""
+    """Undo/remove your latest pom(s)."""
     try:
         last_pom, = await Storage.get_poms(user=ctx.author, limit=1)
     except ValueError:

@@ -1,11 +1,11 @@
 import logging
 from functools import partial
 
-from discord.ext.commands import Bot, Command
+from discord.ext.commands import Bot
 
 from pombot import commands
 from pombot.config import Config
-from pombot.lib.tiny_tools import has_any_role
+from pombot.lib.tiny_tools import BotCommand, has_any_role
 
 _log = logging.getLogger(__name__)
 
@@ -21,16 +21,16 @@ def setup(bot: Bot):
     }
 
     for command in [
-        Command(commands.do_events,       name="events"),
-        Command(commands.do_howmany,      name="howmany"),
-        Command(commands.do_newleaf,      name="newleaf"),
-        Command(commands.do_pom,          name="pom"),
-        Command(commands.do_poms,         name="poms"),
-        Command(commands.do_reset,        name="reset", hidden=True),
-        Command(commands.do_undo,         name="undo"),
+        BotCommand(commands.do_events,       name="events"),
+        BotCommand(commands.do_howmany,      name="howmany"),
+        BotCommand(commands.do_newleaf,      name="newleaf"),
+        BotCommand(commands.do_pom,          name="pom"),
+        BotCommand(commands.do_poms,         name="poms"),
+        BotCommand(commands.do_reset,        name="reset", hidden=True),
+        BotCommand(commands.do_undo,         name="undo"),
 
-        Command(commands.do_total,        name="total",        **admin),
-        Command(commands.do_create_event, name="create_event", **admin),
-        Command(commands.do_remove_event, name="remove_event", **admin),
+        BotCommand(commands.do_total,        name="total",        **admin),
+        BotCommand(commands.do_create_event, name="create_event", **admin),
+        BotCommand(commands.do_remove_event, name="remove_event", **admin),
     ]:
         bot.add_command(command)

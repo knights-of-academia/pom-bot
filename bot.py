@@ -3,11 +3,12 @@ import sys
 from functools import partial
 
 from discord.message import Message
-from discord.ext.commands import Bot, Command
+from discord.ext.commands import Bot
 
 from pombot import commands
 from pombot import handlers
 from pombot.config import Config, Pomwars, Secrets
+from pombot.lib.tiny_tools import BotCommand
 
 _log = logging.getLogger(__name__)
 bot = Bot(command_prefix=Config.PREFIX, case_insensitive=True)
@@ -61,9 +62,9 @@ def main():
         bot.load_extension(extension)
 
     # Replace the default help command which marks every command as
-    # "Uncategorized" and does no cog separation.
+    # "Uncategorized" and does no extension separation.
     bot.remove_command("help")
-    bot.add_command(Command(commands.do_help, name="help"))
+    bot.add_command(BotCommand(commands.do_help, name="help"))
 
     bot.run(Secrets.TOKEN)
 

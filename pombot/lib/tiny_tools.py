@@ -1,9 +1,11 @@
+import inspect
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import discord
-from discord.ext.commands import Context
+from discord.ext.commands import Command, Context
 from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
 from pombot.lib.types import DateRange
@@ -53,3 +55,12 @@ def has_any_role(ctx: Context, roles_needed=None) -> bool:
         raise MissingAnyRole(roles_needed)
 
     return True
+
+
+class BotCommand(Command):
+    """Wrapper around discord.ext.commands.Command which maps the calling
+    module's __name__ to the custom attribute `extension`.
+    """
+    def __init__(self, func, **kwargs):
+        super().__init__(func, **kwargs)
+        self.extension = Path(inspect.stack()[1].filename).stem

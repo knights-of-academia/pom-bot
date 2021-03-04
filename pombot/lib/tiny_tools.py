@@ -62,5 +62,10 @@ class BotCommand(Command):
     module's __name__ to the custom attribute `extension`.
     """
     def __init__(self, func, **kwargs):
+        # The exception that's raised by `discord` is not helpful in finding
+        # the actual problem, so append the real issue to the traceback.
+        assert inspect.iscoroutinefunction(func), \
+            f"Function {func.__name__} is not a coroutine"
+
         super().__init__(func, **kwargs)
         self.extension = Path(inspect.stack()[1].filename).stem

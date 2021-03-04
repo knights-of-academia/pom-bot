@@ -17,8 +17,10 @@ class Config:
     MULTILINE_DESCRIPTION_DISABLED = True
 
     # Embeds
+    # pylint: disable=line-too-long
     EMBED_COLOUR = 0xff6347
-    EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
+    EMBED_IMAGE_URL = "https://media.discordapp.net/attachments/800742030782758982/816775519517409350/IMG_6344.PNG"
+    # pylint: enable=line-too-long
 
     # Errors
     ERRORS_CHANNEL_NAME = os.getenv("ERRORS_CHANNEL_NAME")

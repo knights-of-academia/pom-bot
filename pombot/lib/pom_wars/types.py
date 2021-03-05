@@ -1,5 +1,4 @@
 import json
-import re
 from pathlib import Path
 from string import Template
 
@@ -10,10 +9,7 @@ from pombot.config import Pomwars
 from pombot.data import Locations
 from pombot.lib.pom_wars.team import get_user_team
 from pombot.lib.storage import Storage
-
-
-def _normalize_newlines(text: str):
-    return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+from pombot.lib.tiny_tools import normalize_newlines
 
 
 class Attack:
@@ -57,7 +53,7 @@ class Attack:
             message_lines += [f"{Pomwars.Emotes.CRITICAL} `Critical attack!`"]
 
         action_result = "\n".join(message_lines)
-        formatted_story = "*" + _normalize_newlines(self._message) + "*"
+        formatted_story = "*" + normalize_newlines(self._message) + "*"
 
         return "\n\n".join([action_result, formatted_story])
 
@@ -104,7 +100,7 @@ class Defend:
         action's directory, and its result, as a string.
         """
         botuser = await Storage.get_user_by_id(user.id)
-        formatted_story = "*" + _normalize_newlines(self._message) + "*"
+        formatted_story = "*" + normalize_newlines(self._message) + "*"
         action_result = "** **\n{emt} `{dfn:.0f}% team damage reduction!`".format(
             emt=Pomwars.Emotes.DEFEND,
             dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[botuser.defend_level],
@@ -134,7 +130,7 @@ class Bribe:
         action's directory, and its result, as a string.
         """
 
-        story = Template(_normalize_newlines(self._message))
+        story = Template(normalize_newlines(self._message))
 
         return story.safe_substitute(
             DISPLAY_NAME=user.display_name,

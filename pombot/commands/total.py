@@ -8,9 +8,10 @@ from pombot.lib.types import DateRange
 
 
 async def do_total(ctx: Context, *args):
-    """Display the total poms for all users for a range of dates.
+    """Count the total poms for all users.
 
-    If no range of dates is given, all poms are tallied.
+    Optionally accepts a range of dates. If no range of dates is given, all
+    poms are tallied.
 
     This is an admin-only command.
     """

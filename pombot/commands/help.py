@@ -6,6 +6,7 @@ from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
+from pombot.lib.tiny_tools import normalize_newlines
 
 
 def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
@@ -74,9 +75,7 @@ def _get_help_for_command(
             except MissingAnyRole:
                 continue
 
-            # FIXME the helps wrap super weird.. do the thing from the
-            # message.txt to line them up better.
-            names_and_helps += [(cmd.name, cmd.help)
+            names_and_helps += [(cmd.name, normalize_newlines(cmd.help))
                                 for cmd in ctx.bot.commands
                                 if cmd.name == command_name_found]
 
@@ -112,10 +111,8 @@ async def do_help(ctx: Context, *args):
     Show a specific command by specifying it, for exmaple:
     !help pom
     """
-    try:
-        response, footer = _get_help_for_command(ctx, *args)
-    except IndexError:
-        response, footer = _get_help_for_all_commands(ctx)
+    response, footer = (_get_help_for_command(ctx, *args)
+                        if args else _get_help_for_all_commands(ctx))
 
     if response is None:
         return

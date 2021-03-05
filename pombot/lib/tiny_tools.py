@@ -1,4 +1,5 @@
 import inspect
+import re
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -58,14 +59,35 @@ def has_any_role(ctx: Context, roles_needed=None) -> bool:
 
 
 class BotCommand(Command):
-    """Wrapper around discord.ext.commands.Command which maps the calling
-    module's __name__ to the custom attribute `extension`.
+    """Wrapper around discord.ext.commands.Command which ensures that the
+    passed function is a coroutine and maps the caller's module __name__ to
+    the `extension` attribute.
     """
     def __init__(self, func, **kwargs):
-        # The exception that's raised by `discord` is not helpful in finding
-        # the actual problem, so append the real issue to the traceback.
+        # The exception raised by `discord` is not helpful in finding the
+        # actual problem, so append the real issue to the traceback.
         assert inspect.iscoroutinefunction(func), \
             f"Function {func.__name__} is not a coroutine"
 
         super().__init__(func, **kwargs)
         self.extension = Path(inspect.stack()[1].filename).stem
+
+
+def normalize_newlines(text: str) -> str:
+    r"""Replace newlines with spaces, unless the newline is followed by
+    another newline.
+
+    This allows us to write text in a nice format in editors (help text,
+    action stories, etc.) but still display them correctly in messages. For
+    example:
+
+    >>> import textwrap
+    >>> text_in_file = textwrap.dedent("\
+    ...     This is an example.
+    ...     This line and the last line will be joined by a space.
+    ...
+    ...     This line will be another paragraph in the message.
+    ... ")
+    >>> message_to_send = normalize_newlines(text_in_file)
+    """
+    return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()

@@ -12,7 +12,7 @@ from pombot.state import State
 
 
 async def do_create_event(ctx: Context, *args):
-    """Allows guardians and helpers to start an event.
+    """Create a new event.
 
     This is an admin-only command.
     """

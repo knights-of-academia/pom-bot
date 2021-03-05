@@ -7,7 +7,7 @@ from pombot.lib.storage import Storage
 
 
 async def do_remove_event(ctx: Context, *args):
-    """Allows guardians to remove an existing event.
+    """Remove an existing event.
 
     This is an admin-only command.
     """

@@ -45,7 +45,7 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
                               for cmd in sorted(groups[group]))
 
     return ("```{}```".format("\n".join(response_lines)),
-            "Get a command's usage by specifying it!")
+            "Type a command to get more information! (e.g. !help pom)")
 
 
 def _get_help_for_command(

@@ -74,7 +74,7 @@ class TestPomCommand(IsolatedAsyncioTestCase):
         expected_number_of_poms,
         user_provided_description,
     ):
-        """Test the user typing `!pom <number_of_poms>`."""
+        """Test the user typing `!pom <number_of_poms> <description>`."""
         ctx = mock_discord.MockContext()
         ctx.message = mock_discord.MockMessage()
 

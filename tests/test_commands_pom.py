@@ -84,7 +84,7 @@ class TestPomCommand(IsolatedAsyncioTestCase):
         poms = await Storage.get_poms()
         self.assertEqual(expected_number_of_poms, len(poms))
 
-        if number_of_poms < Config.POM_TRACK_LIMIT:
+        if number_of_poms <= Config.POM_TRACK_LIMIT:
             self.assertTrue(
                 all(pom.descript == user_provided_description for pom in poms))
 

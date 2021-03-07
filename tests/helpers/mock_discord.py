@@ -11,8 +11,9 @@ Modifications to the original work:
     - Discord license agreement added to beginning of discord code.
     - Some functionality disabled.
     - Some MagicMocks converted to AsyncMockMixins.
-    - "pending" attribute removed from CustomMockMixin
-    - AsyncMock `send` attribute added to MockContext
+    - "pending" attribute removed from CustomMockMixin.
+    - Default `message` attribute added to MockContext.
+    - AsyncMock `send` attribute added to MockContext.
     - Various Pylint warnings ignored.
 """
 # pylint: disable=access-member-before-definition
@@ -452,6 +453,7 @@ class MockContext(CustomMockMixin, unittest.mock.AsyncMockMixin):
         self.guild = kwargs.get('guild', MockGuild())
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+        self.message = kwargs.get('message', MockMessage())
         self.send = unittest.mock.AsyncMock()
 
 

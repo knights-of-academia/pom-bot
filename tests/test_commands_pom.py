@@ -11,8 +11,11 @@ from tests.helpers import mock_discord
 
 class TestPomCommand(IsolatedAsyncioTestCase):
     """Test the !pom command."""
+    ctx = None
+
     async def asyncSetUp(self) -> None:
         """Ensure database tables exist and create contexts for the tests."""
+        self.ctx = mock_discord.MockContext()
         await Storage.create_tables_if_not_exists()
         await Storage.delete_all_rows_from_all_tables()
 
@@ -22,22 +25,17 @@ class TestPomCommand(IsolatedAsyncioTestCase):
 
     async def test_pom_command_with_no_args(self):
         """Test the user typing `!pom`."""
-        ctx = mock_discord.MockContext()
-        ctx.message = mock_discord.MockMessage()
-
-        await pombot.commands.do_pom(ctx)
+        await pombot.commands.do_pom(self.ctx)
 
         pom, = await Storage.get_poms()
         self.assertIsNone(pom.descript)
 
     async def test_pom_command_with_description(self):
         """Test the user typing `!pom hello world`."""
-        ctx = mock_discord.MockContext()
-        ctx.message = mock_discord.MockMessage()
         user_provided_description = "hello world"
 
         args = tuple(user_provided_description.split())
-        await pombot.commands.do_pom(ctx, *args)
+        await pombot.commands.do_pom(self.ctx, *args)
 
         pom, = await Storage.get_poms()
         self.assertEqual(user_provided_description, pom.descript)
@@ -54,10 +52,7 @@ class TestPomCommand(IsolatedAsyncioTestCase):
         expected_number_of_poms,
     ):
         """Test the user typing `!pom <number_of_poms>`."""
-        ctx = mock_discord.MockContext()
-        ctx.message = mock_discord.MockMessage()
-
-        await pombot.commands.do_pom(ctx, str(number_of_poms))
+        await pombot.commands.do_pom(self.ctx, str(number_of_poms))
 
         poms = await Storage.get_poms()
         self.assertEqual(expected_number_of_poms, len(poms))
@@ -75,11 +70,8 @@ class TestPomCommand(IsolatedAsyncioTestCase):
         user_provided_description,
     ):
         """Test the user typing `!pom <number_of_poms> <description>`."""
-        ctx = mock_discord.MockContext()
-        ctx.message = mock_discord.MockMessage()
-
         args = tuple((str(number_of_poms), *user_provided_description.split()))
-        await pombot.commands.do_pom(ctx, *args)
+        await pombot.commands.do_pom(self.ctx, *args)
 
         poms = await Storage.get_poms()
         self.assertEqual(expected_number_of_poms, len(poms))

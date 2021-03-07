@@ -192,5 +192,6 @@ class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
                     expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -91,3 +91,15 @@ def normalize_newlines(text: str) -> str:
     >>> message_to_send = normalize_newlines(text_in_file)
     """
     return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+
+
+class classproperty(property):  # pylint: disable=invalid-name
+    """Decorator to use classmethods as properties."""
+    def __get__(self, obj, objtype=None):
+        return super().__get__(objtype)
+
+    def __set__(self, obj, value):
+        raise RuntimeError("Cannot set classproperty")
+
+    def __delete__(self, obj):
+        raise RuntimeError("Cannot delete classproperty")

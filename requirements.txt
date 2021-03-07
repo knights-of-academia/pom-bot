@@ -1,5 +1,6 @@
-aiomysql==0.0.21
+aiomysql>=0.0.21
 discord.py>=1.4.1
-pylint==2.6.0
-pytest==6.1.2
+parameterized>=0.8.1
+pylint>=2.6.0
+pytest>=6.1.2
 python-dotenv>=0.10.5

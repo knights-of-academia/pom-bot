@@ -1,8 +1,9 @@
 import os
+import sys
 
 import dotenv
 
-from pombot.lib.tiny_tools import positive_int, str2bool
+from pombot.lib.tiny_tools import classproperty, positive_int, str2bool
 
 dotenv.load_dotenv(override=True)
 
@@ -34,6 +35,7 @@ class Config:
     LOGFILE = "./errors.txt"
 
     # MySQL
+    LIVE_DATABASE = os.getenv("MYSQL_DATABASE")
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
     USERS_TABLE = "users"
@@ -46,6 +48,9 @@ class Config:
         channel.strip().lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
+
+    # Testing
+    TEST_DATABASE = os.getenv("TEST_DATABASE")
 
 
 class Debug:
@@ -151,8 +156,20 @@ class Secrets:
     TOKEN = os.getenv("DISCORD_TOKEN")
     MYSQL_HOST = os.getenv("MYSQL_HOST")
     MYSQL_USER = os.getenv("MYSQL_USER")
-    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+
+    @classproperty
+    def MYSQL_DATABASE(self) -> str:  # pylint: disable=invalid-name
+        """Return the database needed based on whether we're running in a
+        unit test.
+
+        This will determine if we're running inside of a unit test by looking
+        for the name "unittest" in the loaded modules, which should only be
+        true during unit testing. Introspection is not used because the
+        indices we would need to retrieve in the call stack are likely to
+        change between Python releases and runtimes.
+        """
+        return Config.TEST_DATABASE if "unittest" in sys.modules else Config.LIVE_DATABASE
 
 
 TIMEZONES = {

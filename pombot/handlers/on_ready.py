@@ -17,13 +17,11 @@ async def on_ready(bot: Bot):
 
     State.event_loop = asyncio.get_event_loop()
 
-    active_channels = ", ".join(f"#{channel}"
-                                for channel in Config.POM_CHANNEL_NAMES)
+    active_channels = ", ".join(f"#{channel}" for channel in Config.POM_CHANNEL_NAMES)
 
     _log.info("POM_CHANNEL_NAMES: %s", active_channels or "ALL CHANNELS")
 
-    debug_options_enabled = ", ".join([k for k, v in vars(Debug).items() if v is True])
-    if debug_options_enabled:
+    if debug_options_enabled := ", ".join([k for k, v in vars(Debug).items() if v is True]):
         debug_enabled_message = textwrap.dedent(f"""\
             ************************************************************
             DEBUG OPTIONS ENABLED: {debug_options_enabled}

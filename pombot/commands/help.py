@@ -14,7 +14,6 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
     """Get help information for all commands, grouped by extension.
 
     @param ctx Message context.
-    @param command The command to lookup.
     @return Tuple of (Response string, Intended footer).
     """
     groups = {}

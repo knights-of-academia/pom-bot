@@ -1,9 +1,9 @@
+import unittest
 from datetime import datetime, timedelta, timezone
-from unittest.async_case import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, Mock, patch
 
 from pombot.config import Debug
-from pombot.cogs.pom_wars_commands import _is_action_successful
+from pombot.lib.pom_wars.action_chances import is_action_successful
 from pombot.lib.types import User as PombotUser
 
 # For vertical alignment.
@@ -11,14 +11,14 @@ TRU = True
 FLS = False
 
 
-class TestActionSuccessRates(IsolatedAsyncioTestCase):
+class TestActionSuccessRates(unittest.IsolatedAsyncioTestCase):
     """Generic tests for _is_attack_successful."""
     def setUp(self) -> None:
         """Set configuration objects for tests."""
         Debug.BENCHMARK_POMWAR_ATTACK = False
         return super().setUp()
 
-    @patch("pombot.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_actions")
     @patch("random.random")
     async def test_normal_attack_success_rate(
         self,
@@ -64,14 +64,14 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
 
-    @patch("pombot.storage.Storage.get_actions")
-    @patch("pombot.storage.Storage.get_user_by_id")
+    @patch("pombot.lib.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_user_by_id")
     @patch("random.random")
     async def test_heavy_attack_success_rate(
         self,
@@ -132,14 +132,14 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(
                     expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
 
-    @patch("pombot.storage.Storage.get_actions")
+    @patch("pombot.lib.storage.Storage.get_actions")
     @patch("random.random")
     async def test_defend_success_rate(
         self,
@@ -185,9 +185,13 @@ class TestActionSuccessRates(IsolatedAsyncioTestCase):
 
             for dice_roll, expected_outcome in zip(*settings):
                 random_mock.return_value = dice_roll
-                actual_outcome = await _is_action_successful(
+                actual_outcome = await is_action_successful(
                     user, timestamp, is_heavy_attack)
 
                 self.assertEqual(
                     expected_outcome, actual_outcome,
                     f"pom_number: {pom_number}, dice_roll: {dice_roll}")
+
+
+if __name__ == "__main__":
+    unittest.main()

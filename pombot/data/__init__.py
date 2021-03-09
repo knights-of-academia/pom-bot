@@ -1,5 +1,5 @@
-from pathlib import Path
 import logging
+from pathlib import Path
 
 THIS_DIR = Path(__file__).parent
 POM_WARS_DATA_DIR = THIS_DIR / "pom_wars"

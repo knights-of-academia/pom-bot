@@ -2,15 +2,16 @@ from typing import List
 
 import discord.errors
 from discord.channel import ChannelType
+from discord.ext.commands.bot import Bot
 
 from pombot.config import Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
-from pombot.lib.team import Team
+from pombot.lib.pom_wars.team import Team
 
 
 class Scoreboard:
     """A representation of the scoreboard in join channels."""
-    def __init__(self, bot, scoreboard_channels) -> None:
+    def __init__(self, bot: Bot, scoreboard_channels: List) -> None:
         self.bot = bot
         self.scoreboard_channels = scoreboard_channels
 

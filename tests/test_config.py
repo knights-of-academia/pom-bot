@@ -1,3 +1,5 @@
+import unittest
+
 from pombot.config import Config, Secrets
 
 
@@ -23,3 +25,6 @@ def test_all_secrets_exist_in_env():
 # because the __debug__ symbol will change with optimization levels. The test
 # will always pass and some options might still be set (eg. clearing all MySQL
 # tables).
+
+if __name__ == "__main__":
+    unittest.main()

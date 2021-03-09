@@ -1,7 +1,23 @@
 from enum import Enum
+
+from discord.user import User
+
 from pombot.config import Pomwars, Config
-from pombot.storage import Storage
+from pombot.lib.pom_wars import errors as war_crimes
+from pombot.lib.storage import Storage
 from pombot.lib.types import ActionType
+
+
+def get_user_team(user: User) -> str:
+    team_roles = [
+        role for role in user.roles
+        if role.name in [Pomwars.KNIGHT_ROLE, Pomwars.VIKING_ROLE]
+    ]
+
+    if len(team_roles) != 1:
+        raise war_crimes.InvalidNumberOfRolesError()
+
+    return Team(team_roles[0].name)
 
 
 class Team(str, Enum):

@@ -1,15 +1,15 @@
 import logging
 
-from discord.ext.commands.bot import Bot
+from discord.ext.commands import Bot
 
 from pombot.config import Pomwars
-from pombot.scoreboard import Scoreboard
 from pombot.state import State
+from pombot.lib.pom_wars.scoreboard import Scoreboard
 
 _log = logging.getLogger(__name__)
 
 
-async def setup_pomwar_scoreboard(bot: Bot):
+async def on_ready(bot: Bot):
     """Find and remember the static scoreboard for all connected guilds."""
     channels = []
 

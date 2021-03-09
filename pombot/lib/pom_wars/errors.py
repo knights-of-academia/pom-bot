@@ -1,19 +1,4 @@
-"""Collection of Pombot's errors."""
-
-
-class EventError(Exception):
-    "Base exception for event errors."
-    def __init__(self, msg = None):
-        super().__init__(msg or self.__class__.__doc__)
-        self.msg = msg
-
-
-class EventCreationError(EventError):
-    "Failed to create event."
-
-
-class TooManyEventsError(EventError):
-    "Too many ongoing events."
+"""Collection of Pombot's Pom Wars errors."""
 
 
 class PomWarsError(Exception):
@@ -34,4 +19,4 @@ class UserAlreadyExistsError(PomWarsError):
 
 
 class UserDoesNotExistError(PomWarsError):
-    """Specified user dow not exist in database."""
+    """Specified user does not exist in database."""

@@ -1,8 +1,9 @@
 import os
+import sys
 
 import dotenv
 
-from pombot.lib.tiny_tools import positive_int, str2bool
+from pombot.lib.tiny_tools import classproperty, positive_int, str2bool
 
 dotenv.load_dotenv(override=True)
 
@@ -17,33 +18,39 @@ class Config:
     MULTILINE_DESCRIPTION_DISABLED = True
 
     # Embeds
+    # pylint: disable=line-too-long
     EMBED_COLOUR = 0xff6347
-    EMBED_IMAGE_URL = "https://i.imgur.com/qRoH5B5.png"
+    EMBED_IMAGE_URL = "https://media.discordapp.net/attachments/800742030782758982/816775519517409350/IMG_6344.PNG"
+    # pylint: enable=line-too-long
 
     # Errors
     ERRORS_CHANNEL_NAME = os.getenv("ERRORS_CHANNEL_NAME")
 
     # Extensions
     EXTENSIONS = [
-        "pombot.cogs.event_listeners",
-        "pombot.cogs.user_commands",
-        "pombot.cogs.admin_commands",
+        "pombot.extensions.general",
     ]
 
     # Logging
     LOGFILE = "./errors.txt"
 
     # MySQL
+    LIVE_DATABASE = os.getenv("MYSQL_DATABASE")
     POMS_TABLE = "poms"
     EVENTS_TABLE = "events"
     USERS_TABLE = "users"
     ACTIONS_TABLE = "actions"
 
     # Restrictions
+    ADMIN_ROLES = os.getenv("ADMIN_ROLES").split(",")
+    # Tech debt: Pom Wars channels should be configured elsewhere.
     POM_CHANNEL_NAMES = [
-        channel.lstrip("#")
+        channel.strip().lstrip("#")
         for channel in os.getenv("POM_CHANNEL_NAMES").split(",")
     ]
+
+    # Testing
+    TEST_DATABASE = os.getenv("TEST_DATABASE")
 
 
 class Debug:
@@ -51,11 +58,12 @@ class Debug:
     RESPOND_TO_DM = str2bool(os.getenv("RESPOND_TO_DM", "no"))
     DROP_TABLES_ON_RESTART = str2bool(os.getenv("DROP_TABLES_ON_RESTART", "no"))
     BENCHMARK_POMWAR_ATTACK = str2bool(os.getenv("BENCHMARK_POMWAR_ATTACK", "no"))
+    POMS_COMMAND_IS_PUBLIC = str2bool(os.getenv("POMS_COMMAND_IS_PUBLIC", "no"))
 
 
 class Pomwars:
     """Configuration for Pom Wars."""
-    LOAD_ON_STARTUP = str2bool(os.getenv("LOAD_ON_STARTUP", "no"))
+    LOAD_POM_WARS = str2bool(os.getenv("LOAD_POM_WARS", "no"))
     KNIGHT_ROLE = os.getenv("KNIGHT_ROLE")
     VIKING_ROLE = os.getenv("VIKING_ROLE")
     BASE_DAMAGE_FOR_NORMAL_ATTACKS = positive_int(os.getenv("BASE_DAMAGE_FOR_NORMAL_ATTACKS"))
@@ -148,8 +156,20 @@ class Secrets:
     TOKEN = os.getenv("DISCORD_TOKEN")
     MYSQL_HOST = os.getenv("MYSQL_HOST")
     MYSQL_USER = os.getenv("MYSQL_USER")
-    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
+
+    @classproperty
+    def MYSQL_DATABASE(self) -> str:  # pylint: disable=invalid-name
+        """Return the database needed based on whether we're running in a
+        unit test.
+
+        This will determine if we're running inside of a unit test by looking
+        for the name "unittest" in the loaded modules, which should only be
+        true during unit testing. Introspection is not used because the
+        indices we would need to retrieve in the call stack are likely to
+        change between Python releases and runtimes.
+        """
+        return Config.TEST_DATABASE if "unittest" in sys.modules else Config.LIVE_DATABASE
 
 
 TIMEZONES = {

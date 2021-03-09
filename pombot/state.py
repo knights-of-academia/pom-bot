@@ -7,8 +7,8 @@ class State:
     # can hook into the existing event loop to call our storage later.
     event_loop: ProactorEventLoop = None
 
-    # pombot.scoreboard.Scoreboard object to preserve and dynamically update
-    # scoreboard channels in Pomwar events.
+    # Scoreboard object to preserve and dynamically update scoreboard channels
+    # during Pomwar events.
     # NOTE: The type is not imported to avoid a circular import.
     scoreboard = None
 

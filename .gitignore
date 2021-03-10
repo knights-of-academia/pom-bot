@@ -10,7 +10,6 @@
 **/.venv
 
 # Other
-**/*.xml
 **/errors.*
 !**/errors.py
 

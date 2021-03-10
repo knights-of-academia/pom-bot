@@ -1,5 +1,6 @@
 from pombot.commands.create_event import *
 from pombot.commands.events import *
+from pombot.commands.fortune import *
 from pombot.commands.help import *
 from pombot.commands.howmany import *
 from pombot.commands.newleaf import *

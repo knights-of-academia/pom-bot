@@ -22,6 +22,7 @@ def setup(bot: Bot):
 
     for command in [
         BotCommand(commands.do_events,       name="events"),
+        BotCommand(commands.do_fortune,      name="fortune"),
         BotCommand(commands.do_howmany,      name="howmany"),
         BotCommand(commands.do_newleaf,      name="newleaf"),
         BotCommand(commands.do_pom,          name="pom"),

@@ -11,7 +11,8 @@ Modifications to the original work:
     - Discord license agreement added to beginning of discord code.
     - Some functionality disabled.
     - Some MagicMocks converted to AsyncMockMixins.
-    - "pending" attribute removed from CustomMockMixin.
+    - `pending` attribute removed from CustomMockMixin.
+    - Default `discriminator` attribute added to MockMember
     - Default `message` attribute added to MockContext.
     - AsyncMock `send` attribute added to MockContext.
     - Various Pylint warnings ignored.
@@ -280,7 +281,7 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
             'name': 'member',
             'id': next(self.discord_id),
             'bot': False,
-            # 'pending': False,
+            'discriminator': '1234',
         }
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 

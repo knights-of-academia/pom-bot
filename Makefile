@@ -13,7 +13,7 @@ lint:
 
 test:
 	@echo "Testing..."
-	@${PYTHON} -m pytest -x --ff --disable-pytest-warnings tests
+	@${PYTHON} -m pytest --disable-pytest-warnings tests
 
 build: test lint
 

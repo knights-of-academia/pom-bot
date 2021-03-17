@@ -1,9 +1,10 @@
 import inspect
 import re
+import textwrap
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 import discord
 from discord.ext.commands import Command, Context
@@ -103,3 +104,39 @@ class classproperty(property):  # pylint: disable=invalid-name
 
     def __delete__(self, obj):
         raise RuntimeError("Cannot delete classproperty")
+
+
+def explode_after_char(word: str, char: str) -> List[str]:
+    """Explode the string after the first occurence of a "." character.
+
+    This will take a string like "hello.world" and return a list of strings
+    in this pattern:
+    ['hello.w',
+     'hello.wo',
+     'hello.wor',
+     'hello.worl',
+     'hello.world']
+
+    Raises:
+        ValueError when the specified `char` is not found in `word` before
+        the last character (ie. when `word` ends with a `char`).
+    """
+    pos = word[:-1].index(char)
+    return [word[0:pos+2+i] for i in range(len(word) - (pos+1))]
+
+def get_default_usage_header(cmd: str, *args: tuple) -> str:
+    """Get a default header for use with the various nested _usage()
+    functions.
+
+    This function is entirely tech debt and should be removed once all
+    _usage() methods are deleted or moved.
+
+    @param cmd The prefix + invoked_with command.
+    @param args The args passed to the original function.
+    @return User-facing string indicating the command was invoked
+            incorrectly.
+    """
+    return normalize_newlines(textwrap.dedent(f"""\
+        Your command `{cmd + ' ' + ' '.join(args)}` does not meet the usage
+        requirements.
+    """))

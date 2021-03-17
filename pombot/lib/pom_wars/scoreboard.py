@@ -5,7 +5,7 @@ from discord.channel import ChannelType
 from discord.ext.commands.bot import Bot
 
 from pombot.config import Pomwars, Reactions
-from pombot.lib.messages import send_embed_message
+from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.pom_wars.team import Team
 
 
@@ -81,24 +81,21 @@ class Scoreboard:
                 "participants": stats[vikings]["population"],
             }
 
-            team_fields_inline = True
-            msg_fields = [
-                [
-                    "{emt} Knights{win}".format(
+            fields = [
+                EmbedField(
+                    name="{emt} Knights {win}".format(
                         emt=Pomwars.Emotes.KNIGHT,
-                        win=f" {Pomwars.Emotes.WINNER}" if winner==knights else "",
+                        win=f"{Pomwars.Emotes.WINNER}" if winner==knights else "",
                     ),
-                    "\n".join(lines).format(**knight_values),
-                    team_fields_inline
-                ],
-                [
-                    "{emt} Vikings{win}".format(
+                    value="\n".join(lines).format(**knight_values),
+                ),
+                EmbedField(
+                    name="{emt} Vikings {win}".format(
                         emt=Pomwars.Emotes.VIKING,
-                        win=f" {Pomwars.Emotes.WINNER}" if winner==vikings else "",
+                        win=f"{Pomwars.Emotes.WINNER}" if winner==vikings else "",
                     ),
-                    "\n".join(lines).format(**viking_values),
-                    team_fields_inline
-                ]
+                    value="\n".join(lines).format(**viking_values),
+                ),
             ]
 
             msg_title = "Pom War Season 3 Warboard"
@@ -118,7 +115,7 @@ class Scoreboard:
                     None,
                     title=msg_title,
                     description=None,
-                    fields=msg_fields,
+                    fields=fields,
                     footer=msg_footer,
                     colour=Pomwars.ACTION_COLOUR,
                     _func=scoreboard_msg.edit if scoreboard_msg else channel.send

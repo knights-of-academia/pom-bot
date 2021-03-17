@@ -64,7 +64,8 @@ def main():
     # Replace the default help command which marks every command as
     # "Uncategorized" and does no extension separation.
     bot.remove_command("help")
-    bot.add_command(BotCommand(commands.do_help, name="help"))
+    bot.add_command(
+        BotCommand(commands.do_help, name="help", aliases=Config.PUBLIC_HELP_ALIASES))
 
     bot.run(Secrets.TOKEN)
 

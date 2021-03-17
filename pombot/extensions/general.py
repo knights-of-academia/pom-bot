@@ -23,12 +23,14 @@ def setup(bot: Bot):
     for command in [
         BotCommand(commands.do_events,       name="events"),
         BotCommand(commands.do_fortune,      name="fortune"),
-        BotCommand(commands.do_howmany,      name="howmany"),
         BotCommand(commands.do_newleaf,      name="newleaf"),
         BotCommand(commands.do_pom,          name="pom"),
-        BotCommand(commands.do_poms,         name="poms"),
+        BotCommand(commands.do_poms,         name="poms", aliases=Config.PUBLIC_POMS_ALIASES),
         BotCommand(commands.do_reset,        name="reset", hidden=True),
         BotCommand(commands.do_undo,         name="undo"),
+
+        # Tech debt: This command is slated for removal.
+        BotCommand(commands.do_howmany,      name="howmany"),
 
         BotCommand(commands.do_total,        name="total",        **admin),
         BotCommand(commands.do_create_event, name="create_event", **admin),

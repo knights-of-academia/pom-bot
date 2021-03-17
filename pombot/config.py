@@ -3,13 +3,18 @@ import sys
 
 import dotenv
 
-from pombot.lib.tiny_tools import classproperty, positive_int, str2bool
+from pombot.lib.tiny_tools import (classproperty, explode_after_char,
+                                   positive_int, str2bool)
 
 dotenv.load_dotenv(override=True)
 
 
 class Config:
     """Bot instance configuration."""
+    # Aliases
+    PUBLIC_POMS_ALIASES = explode_after_char("poms.show", ".")
+    PUBLIC_HELP_ALIASES = explode_after_char("help.show", ".")
+
     # Bot
     MINIMUM_PYTHON_VERSION = (3, 9, 0)
     PREFIX = "!"

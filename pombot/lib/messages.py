@@ -1,9 +1,16 @@
-from typing import Callable, Optional
+from typing import Callable, NamedTuple, Optional
 
 from discord.embeds import Embed
 from discord.ext.commands import Context
 
 from pombot.config import Config
+
+
+class EmbedField(NamedTuple):
+    """A field represented as a tuple."""
+    name: str
+    value: str
+    inline: bool = True
 
 
 async def send_embed_message(

@@ -1,10 +1,9 @@
-import random
 from typing import Optional, Tuple
 
 from discord.ext.commands import Context
 from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
-from pombot.config import Reactions
+from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.tiny_tools import normalize_newlines
 
@@ -43,8 +42,10 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
         response_lines.extend(f"{offset}{cmd}: {groups[group][cmd]}"
                               for cmd in sorted(groups[group]))
 
-    return ("```{}```".format("\n".join(response_lines)),
-            "Type a command to get more information! (e.g. !help pom)")
+    response = "```{}```".format("\n".join(response_lines))
+    footer = "Type a command to get more information! (e.g. !help pom)"
+
+    return response, footer
 
 
 def _get_help_for_command(
@@ -84,7 +85,7 @@ def _get_help_for_command(
             s="" if len(requested_commands) == 1 else "s",
         ), None
 
-    response = "\n".join("```\n{}: {}```".format(k, v) for k, v in names_and_helps)
+    response = "".join("```\n{}: {}```".format(k, v) for k, v in names_and_helps)
 
     if unknowns := requested_commands - existing_commands:
         footer = "I can't help you with {} though.".format(", ".join(sorted(unknowns)))
@@ -93,13 +94,9 @@ def _get_help_for_command(
             footer = " ".join((footer[:last_comma_index], "or",
                                footer[last_comma_index + 2:]))
     else:
-        footer = random.choice([
-            "Hope this helps.",
-            "Look after yourself.",
-            "Take it easy.",
-            "That's all I know.",
-            "The more you know, the more you grow.",
-        ])
+        footer = "To see this info in the channel, type: {}".format(
+            " ".join((f"{ctx.bot.command_prefix}{ctx.invoked_with}.show", *requested_commands))
+        )
 
     return response, footer
 
@@ -116,10 +113,19 @@ async def do_help(ctx: Context, *args):
     if response is None:
         return
 
+    is_public_command = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
+
+    if is_public_command:
+        if args:
+            # Footer would look a little awkward here, so just remove it.
+            footer = None
+    else:
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
+
     await send_embed_message(
-        ctx,
+        None,
         title=f"{ctx.bot.user.display_name}'s Help Info",
         description=response,
         footer=footer,
+        _func=ctx.reply if is_public_command else ctx.author.send,
     )
-    await ctx.message.add_reaction(Reactions.CHECKMARK)

@@ -4,6 +4,7 @@ from discord.ext.commands import Context
 
 from pombot.config import Reactions
 from pombot.lib.storage import Storage
+from pombot.lib.tiny_tools import get_default_usage_header
 from pombot.lib.types import DateRange
 
 
@@ -17,10 +18,7 @@ async def do_total(ctx: Context, *args):
     """
     def _usage(header: str = None):
         cmd = ctx.prefix + ctx.invoked_with
-
-        header = (header
-                  or f"Your command `{cmd + ' ' + ' '.join(args)}` does "
-                  "not meet the usage requirements.")
+        header = header or get_default_usage_header(cmd, args)
 
         return textwrap.dedent(f"""\
             {header}

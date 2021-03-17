@@ -1,3 +1,4 @@
+import textwrap
 from collections import Counter
 from datetime import datetime, timedelta
 from enum import Enum
@@ -8,6 +9,7 @@ from discord.ext.commands import Context
 from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.storage import Storage
+from pombot.lib.tiny_tools import normalize_newlines
 from pombot.lib.types import Pom
 
 ZERO_WIDTH_SPACE = "\u200b"
@@ -100,7 +102,15 @@ class _Session:
             designated_lines = ["*No designated poms!*", ""]
 
         if not designated_poms and num_undesignated_poms == 0:
-            detail_lines = ["AIN'T NO POMS"]  # FIXME
+            if self.type == _SessionType.BANKED:
+                detail_lines = [normalize_newlines(textwrap.dedent("""\
+                    After you bank poms in your current session, they will be
+                    added here.
+                """))]
+            else:
+                detail_lines = [normalize_newlines(textwrap.dedent("""\
+                    Start your session by doing your first !pom
+                """))]
         else:
             detail_lines = [
                 *designated_lines,

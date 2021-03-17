@@ -66,7 +66,7 @@ async def do_poms(ctx: Context):
                 current_session.get_message_field(),
             ],
             description=ZERO_WIDTH_SPACE,
-            footer=current_session.get_duration_message(),
+            footer=current_session.get_duration_message(),  # <=============== Here
             _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
         )
         await ctx.message.add_reaction(Reactions.CHECKMARK)
@@ -104,8 +104,8 @@ class _Session:
         if not designated_poms and num_undesignated_poms == 0:
             if self.type == _SessionType.BANKED:
                 detail_lines = [normalize_newlines(textwrap.dedent("""\
-                    After you bank poms in your current session, they will be
-                    added here.
+                    Banking your poms in your current session will add them
+                    here.
                 """))]
             else:
                 detail_lines = [normalize_newlines(textwrap.dedent("""\

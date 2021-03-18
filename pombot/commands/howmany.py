@@ -1,3 +1,4 @@
+# Tech debt: Deprecated March, 2021
 from discord.ext.commands import Context
 
 from pombot.config import Reactions

@@ -66,7 +66,7 @@ async def do_poms(ctx: Context):
                 current_session.get_message_field(),
             ],
             description=ZERO_WIDTH_SPACE,
-            footer=current_session.get_duration_message(),  # <=============== Here
+            footer=current_session.get_duration_message(),
             _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
         )
         await ctx.message.add_reaction(Reactions.CHECKMARK)

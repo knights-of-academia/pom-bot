@@ -103,14 +103,16 @@ class _Session:
 
         if not designated_poms and num_undesignated_poms == 0:
             if self.type == _SessionType.BANKED:
-                detail_lines = [normalize_newlines(textwrap.dedent("""\
-                    Banking your poms in your current session will add them
-                    here.
-                """))]
+                detail_lines = [textwrap.dedent("""\
+                    Banking your poms in
+                    your current session
+                    will add them here!
+                """)]
             else:
-                detail_lines = [normalize_newlines(textwrap.dedent("""\
-                    Start your session by doing your first !pom
-                """))]
+                detail_lines = [textwrap.dedent("""\
+                    Start your session by
+                    doing your first !pom
+                """)]
         else:
             detail_lines = [
                 *designated_lines,

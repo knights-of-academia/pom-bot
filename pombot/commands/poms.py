@@ -2,7 +2,7 @@ import textwrap
 from collections import Counter
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 from discord.ext.commands import Context
 
@@ -30,16 +30,20 @@ async def do_poms(ctx: Context):
     """
     # FIXME remember to add session goal info to current seesion message
 
+    response_is_public = ctx.invoked_with in Config.PUBLIC_POMS_ALIASES
+
     # FIXME for !howmany-style args, this doesn't need to return all poms.
     # FIXME for public command, this could retun only current session poms.
     poms = await Storage.get_poms(user=ctx.author)
 
     banked_session, current_session = (
-        _Session(_SessionType.BANKED, [p for p in poms if not p.is_current_session()]),
-        _Session(_SessionType.CURRENT, [p for p in poms if p.is_current_session()]),
+        _Session(_SessionType.BANKED, [p for p in poms if not p.is_current_session()], response_is_public),
+        _Session(_SessionType.CURRENT, [p for p in poms if p.is_current_session()], response_is_public),
     )
 
-    response_is_public = ctx.invoked_with in Config.PUBLIC_POMS_ALIASES
+    total_poms = len(banked_session) + len(current_session)
+    total_time_spent_pomming = total_poms * timedelta(minutes=25)
+
 
     if response_is_public:
         await send_embed_message(
@@ -47,7 +51,7 @@ async def do_poms(ctx: Context):
             title=f"Pom statistics for {ctx.author.display_name}",
             icon_url=ctx.author.avatar_url,
             fields=[current_session.get_message_field()],
-            description=ZERO_WIDTH_SPACE,
+            description=current_session.get_session_started_message(),
             footer=current_session.get_duration_message(),
             _func=ctx.message.reply,
         )
@@ -65,9 +69,14 @@ async def do_poms(ctx: Context):
                 spacer,
                 current_session.get_message_field(),
             ],
-            description=ZERO_WIDTH_SPACE,
-            footer=current_session.get_duration_message(),
-            _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
+            description=current_session.get_session_started_message(),
+            footer="\n".join([
+                # FIXME make this nice and dynamic as well.
+                f"Total time spent pomming: {total_time_spent_pomming.seconds // 60} minutes",
+                current_session.get_duration_message(),
+            ]),
+            _func=(ctx.send
+                   if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
         )
         await ctx.message.add_reaction(Reactions.CHECKMARK)
 
@@ -85,12 +94,17 @@ class _Session:
     are not. This class builds and returns messages for either given a type
     and an iterator.
     """
-    def __init__(self, session_type: _SessionType, poms: List[Pom]):
+    def __init__(self, session_type: _SessionType, poms: List[Pom], response_is_public: bool):
         self.type = session_type
-        self.poms = poms
+        self.poms = sorted(poms)
+        self._public = response_is_public
+
+    def __len__(self):
+        assert isinstance(self.poms, list)
+        return len(self.poms)
 
     def get_message_field(self) -> EmbedField:
-        """Get the stats of this session as an EmbedField tuple."""
+        """Get the stats of this session as an EmbedField."""
         pom_counts = Counter(pom.descript for pom in self.poms)
 
         designated_poms = [f"{k}: *{v}*" for k, v in pom_counts.most_common() if k is not None]
@@ -131,7 +145,6 @@ class _Session:
         if not self.poms:
             return "Start your session with !pom"
 
-        # NOTE: This assumes self.poms is sorted by either ID or timestamp.
         delta = datetime.now() - self.poms[0].time_set
 
         days       = delta.days
@@ -149,3 +162,13 @@ class _Session:
             parts = [f"{days} day{s}", *parts]
 
         return "Time this session: {}".format(", ".join(parts))
+
+    def get_session_started_message(self) -> Optional[str]:
+        if self._public:
+            return None
+
+        if not self.poms:
+            return "*Session not yet started.*"
+
+        return "Current session started {}".format(
+            self.poms[0].time_set.strftime("%B %d, %Y (%H:%M UTC)"))

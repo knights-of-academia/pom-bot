@@ -90,6 +90,17 @@ class Pom:
         """Return whether this pom is in the user's current session."""
         return bool(self.session)
 
+    def __lt__(self, other):
+        """Return whether th Pom in `other` came before this one.
+
+        This is needed for sorting lists of Poms with `sorted`. `pom_id` is
+        used for the comparison because multiple poms can have exactly the
+        same time_set and would return false when niether true for false make
+        sense.
+        """
+
+        return self.pom_id < other.pom_id
+
 
 @dataclass
 class Event:

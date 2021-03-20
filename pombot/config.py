@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import timedelta
 
 import dotenv
 
@@ -21,6 +22,7 @@ class Config:
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
     MULTILINE_DESCRIPTION_DISABLED = True
+    POM_LENGTH = timedelta(minutes=25)
 
     # Embeds
     # pylint: disable=line-too-long

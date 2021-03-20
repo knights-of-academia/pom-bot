@@ -9,7 +9,6 @@ from discord.ext.commands import Context
 from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.storage import Storage
-from pombot.lib.tiny_tools import normalize_newlines
 from pombot.lib.types import Pom
 
 ZERO_WIDTH_SPACE = "\u200b"
@@ -36,14 +35,17 @@ async def do_poms(ctx: Context):
     # FIXME for public command, this could retun only current session poms.
     poms = await Storage.get_poms(user=ctx.author)
 
-    banked_session, current_session = (
-        _Session(_SessionType.BANKED, [p for p in poms if not p.is_current_session()], response_is_public),
-        _Session(_SessionType.CURRENT, [p for p in poms if p.is_current_session()], response_is_public),
+    banked_session = _Session(
+        session_type=_SessionType.BANKED,
+        poms=[p for p in poms if not p.is_current_session()],
+        public_response=response_is_public,
     )
 
-    total_poms = len(banked_session) + len(current_session)
-    total_time_spent_pomming = total_poms * timedelta(minutes=25)
-
+    current_session = _Session(
+        session_type=_SessionType.CURRENT,
+        poms=[p for p in poms if p.is_current_session()],
+        public_response=response_is_public,
+    )
 
     if response_is_public:
         await send_embed_message(
@@ -71,8 +73,9 @@ async def do_poms(ctx: Context):
             ],
             description=current_session.get_session_started_message(),
             footer="\n".join([
-                # FIXME make this nice and dynamic as well.
-                f"Total time spent pomming: {total_time_spent_pomming.seconds // 60} minutes",
+                "Total time spent pomming: {}".format(
+                    _dynamic_duration(
+                        len(banked_session + current_session) * Config.POM_LENGTH)),
                 current_session.get_duration_message(),
             ]),
             _func=(ctx.send
@@ -84,6 +87,7 @@ async def do_poms(ctx: Context):
 class _SessionType(str, Enum):
     BANKED = "Banked Poms"
     CURRENT = "Current Session"
+    COMBINED = "Combined"
 
 
 class _Session:
@@ -94,14 +98,29 @@ class _Session:
     are not. This class builds and returns messages for either given a type
     and an iterator.
     """
-    def __init__(self, session_type: _SessionType, poms: List[Pom], response_is_public: bool):
+    def __init__(
+        self,
+        *,
+        session_type: _SessionType,
+        poms: List[Pom],
+        public_response: bool,
+    ):
         self.type = session_type
         self.poms = sorted(poms)
-        self._public = response_is_public
+        self._public = public_response
 
     def __len__(self):
-        assert isinstance(self.poms, list)
         return len(self.poms)
+
+    def __add__(self, other):
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError(f"Cannot add {type(other)}")
+
+        return self.__class__(
+            session_type=_SessionType.COMBINED,
+            poms=self.poms + other.poms,
+            public_response=self._public,
+        )
 
     def get_message_field(self) -> EmbedField:
         """Get the stats of this session as an EmbedField."""
@@ -141,29 +160,14 @@ class _Session:
         )
 
     def get_duration_message(self) -> str:
-        """Return the length of this session as a string."""
-        if not self.poms:
-            return "Start your session with !pom"
-
-        delta = datetime.now() - self.poms[0].time_set
-
-        days       = delta.days
-        hours, _   = divmod(delta.seconds, 60 * 60)
-        minutes, _ = divmod(_, 60)
-
-        parts = [f"{minutes} minutes"]
-
-        if delta >= timedelta(minutes=60):
-            s = "s" if hours != 1 else ""
-            parts = [f"{hours} hour{s}", *parts]
-
-        if delta >= timedelta(hours=24):
-            s = "s" if days != 1 else ""
-            parts = [f"{days} day{s}", *parts]
-
-        return "Time this session: {}".format(", ".join(parts))
+        """Return the time spent pomming this session as a dynamic string."""
+        return "Time this session: {}".format(
+            _dynamic_duration(len(self.poms) * Config.POM_LENGTH))
 
     def get_session_started_message(self) -> Optional[str]:
+        """Return a user-facing timestamp of when this session started, or
+        None if the message will eventually be publicly-visible.
+        """
         if self._public:
             return None
 
@@ -172,3 +176,21 @@ class _Session:
 
         return "Current session started {}".format(
             self.poms[0].time_set.strftime("%B %d, %Y (%H:%M UTC)"))
+
+
+def _dynamic_duration(delta: timedelta) -> str:
+    days       = delta.days
+    hours, _   = divmod(delta.seconds, 60 * 60)
+    minutes, _ = divmod(_, 60)
+
+    parts = [f"{minutes} minutes"]
+
+    if delta >= timedelta(minutes=60):
+        s = "s" if hours != 1 else ""
+        parts = [f"{hours} hour{s}", *parts]
+
+    if delta >= timedelta(hours=24):
+        s = "s" if days != 1 else ""
+        parts = [f"{days:,} day{s}", *parts]
+
+    return ", ".join(parts)

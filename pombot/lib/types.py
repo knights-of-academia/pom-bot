@@ -86,10 +86,6 @@ class Pom:
     time_set: datetime
     session: int
 
-    def is_current_session(self) -> bool:
-        """Return whether this pom is in the user's current session."""
-        return bool(self.session)
-
     def __lt__(self, other):
         """Return whether th Pom in `other` came before this one.
 
@@ -98,8 +94,14 @@ class Pom:
         same time_set and would return false when niether true for false make
         sense.
         """
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError(f"Cannot compare with {type(other)}")
 
         return self.pom_id < other.pom_id
+
+    def is_current_session(self) -> bool:
+        """Return whether this pom is in the user's current session."""
+        return bool(self.session)
 
 
 @dataclass

@@ -131,7 +131,6 @@ class Pomwars:
 
 class Reactions:
     """Static reaction emojis."""
-    ABACUS = "🧮"
     BOOM = "💥"
     CHECKMARK = "✅"
     CROSSED_SWORDS= "⚔"

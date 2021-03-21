@@ -87,11 +87,11 @@ class Pom:
     session: int
 
     def __lt__(self, other):
-        """Return whether th Pom in `other` came before this one.
+        """Return whether the Pom in `other` came before this one.
 
         This is needed for sorting lists of Poms with `sorted`. `pom_id` is
         used for the comparison because multiple poms can have exactly the
-        same time_set and would return false when niether true for false make
+        same time_set and would return false when niether true nor false make
         sense.
         """
         if not isinstance(other, self.__class__):

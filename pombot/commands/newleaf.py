@@ -6,7 +6,7 @@ from pombot.config import Reactions
 
 
 async def do_newleaf(ctx: Context):
-    """Deprecated command.
+    """Deprecated command; see !bank.
 
     This command is disabled and will be removed soon. See `!help bank`
     instead.

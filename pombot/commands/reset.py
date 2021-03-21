@@ -6,7 +6,7 @@ from pombot.config import Reactions
 
 
 async def do_reset(ctx: Context):
-    """Deprecated command.
+    """Deprecated command; see !poms and !bank.
 
     This command is disabled and will be removed soon. See `!help poms` and
     `!help bank` instead.

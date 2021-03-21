@@ -7,7 +7,7 @@ from pombot.config import Reactions
 
 
 async def do_howmany(ctx: Context):
-    """Deprecated command.
+    """Deprecated command; see !poms.
 
     This command is disabled and will be removed soon. See `!help poms`
     instead.

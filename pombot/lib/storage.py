@@ -245,6 +245,7 @@ class Storage:
     @staticmethod
     async def get_poms(*,
                  user: DiscordUser = None,
+                 descript = None,
                  date_range: DateRange = None,
                  limit: int = None) -> List[Pom]:
         """Get a list of poms from storage matching certain criteria. When
@@ -261,6 +262,10 @@ class Storage:
         if user:
             query += ["WHERE userID=%s"]
             args += [user.id]
+
+        if descript:
+            query += ["WHERE descript=%s"]
+            args += [descript]
 
         if date_range:
             query += ["WHERE time_set >= %s AND time_set <= %s"]

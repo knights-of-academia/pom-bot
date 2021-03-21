@@ -1,6 +1,6 @@
 import textwrap
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 from functools import partial
 from typing import List, Optional

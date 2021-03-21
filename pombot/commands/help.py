@@ -50,6 +50,7 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
 
 def _get_help_for_command(
     ctx: Context,
+    is_public: bool,
     *requested_commands: Tuple[str],
 ) -> Tuple[Optional[str], Optional[str]]:
     """Get a specific command(s) help information.
@@ -94,9 +95,12 @@ def _get_help_for_command(
             footer = " ".join((footer[:last_comma_index], "or",
                                footer[last_comma_index + 2:]))
     else:
-        footer = "To see this info in the channel, type: {}".format(
-            " ".join((f"{ctx.bot.command_prefix}{ctx.invoked_with}.show", *requested_commands))
-        )
+        if is_public:
+            footer = None
+        else:
+            footer = "To see this info in the channel, type: {}".format(
+                " ".join((f"{ctx.bot.command_prefix}{ctx.invoked_with}.show",
+                          *requested_commands)))
 
     return response, footer
 
@@ -107,19 +111,14 @@ async def do_help(ctx: Context, *args):
     Show a specific command by specifying it, for exmaple:
     !help pom
     """
-    response, footer = (_get_help_for_command(ctx, *args)
+    public_response = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
+    response, footer = (_get_help_for_command(ctx, public_response, *args)
                         if args else _get_help_for_all_commands(ctx))
 
     if response is None:
         return
 
-    is_public_command = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
-
-    if is_public_command:
-        if args:
-            # Footer would look a little awkward here, so just remove it.
-            footer = None
-    else:
+    if not public_response:
         await ctx.message.add_reaction(Reactions.CHECKMARK)
 
     await send_embed_message(
@@ -127,5 +126,5 @@ async def do_help(ctx: Context, *args):
         title=f"{ctx.bot.user.display_name}'s Help Info",
         description=response,
         footer=footer,
-        _func=ctx.reply if is_public_command else ctx.author.send,
+        _func=ctx.reply if public_response else ctx.author.send,
     )

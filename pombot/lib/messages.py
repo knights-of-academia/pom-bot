@@ -22,6 +22,8 @@ async def send_embed_message(
         icon_url=Config.EMBED_IMAGE_URL,
         fields: list = None,
         footer: str = None,
+        image: str = None,
+        thumbnail: str = None,
         private_message: bool = False,
         _func: Callable = None,
 ):
@@ -30,6 +32,7 @@ async def send_embed_message(
         description=description,
         colour=colour,
     )
+
     if icon_url:
         message.set_author(
             name=title,
@@ -45,8 +48,13 @@ async def send_embed_message(
             name, value, inline = field
             message.add_field(name=name, value=value, inline=inline)
 
-    if footer:
-        message.set_footer(text=footer)
+    for content, setter, kwarg in (
+        (image,     message.set_image,     "url"),
+        (footer,    message.set_footer,    "text"),
+        (thumbnail, message.set_thumbnail, "url"),
+    ):
+        if content:
+            setter(**{kwarg: content})
 
     if ctx is None:
         coro = _func

@@ -2,6 +2,7 @@ from typing import Callable, NamedTuple, Optional
 
 from discord.embeds import Embed
 from discord.ext.commands import Context
+from discord.message import Message
 
 from pombot.config import Config
 
@@ -26,8 +27,52 @@ async def send_embed_message(
         thumbnail: str = None,
         private_message: bool = False,
         _func: Callable = None,
-):
-    """Send an embedded message using the context."""
+) -> Message:
+    """Send an embedded message using the context.
+
+    @param ctx Ethier the context with which to send the response, or None
+        when a coroutine is specified via _func.
+    @param colour Colour to line the left side of the embed.
+    @param private_messaage Whether or not to send this emabed as a DM to the
+        user; does not apply when ctx is None.
+    @param _func Coroutine describing how to send the embed.
+
+    All other parameters:
+
+    ┌───────────────────────────────────────┐
+    │┌─────┐                                │
+    ││icon │ Title                 ┌──────┐ │
+    │└─────┘                       │thumb-│ │
+    ├─────────────────────────     │nail  │ │
+    │                              │      │ │
+    │ Description                  └──────┘ │
+    │                                       │
+    │                                       │
+    ├┬──────────────┬┬──────────────┐       │
+    ││              ││              │       │
+    ││ Field        ││ Field        │       │
+    ││ (inline)     ││ (inline)     │       │
+    ││              ││              │       │
+    ││              ││              │       │
+    ├┴──────────────┴┴──────────────┘       │
+    │                                       │
+    │ ┌──────────────────────────────────┐  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │             Image                │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ │                                  │  │
+    │ └──────────────────────────────────┘  │
+    │Footer                                 │
+    └───────────────────────────────────────┘
+
+    @return The message object that was sent.
+    """
     message = Embed(
         description=description,
         colour=colour,

@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from discord.ext.commands import Context
 
-from pombot.config import Config, Debug, Pomwars, Reactions
+from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.storage import Storage
 from pombot.lib.types import Pom

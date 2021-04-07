@@ -4,7 +4,7 @@ from discord.embeds import Embed
 from discord.ext.commands import Context
 from discord.message import Message
 
-from pombot.config import Config
+from pombot.config import Config, IconUrls
 
 
 class EmbedField(NamedTuple):
@@ -20,7 +20,7 @@ async def send_embed_message(
         title: str,
         description: str,
         colour=Config.EMBED_COLOUR,
-        icon_url=Config.EMBED_IMAGE_URL,
+        icon_url=IconUrls.POMBOMB,
         fields: list = None,
         footer: str = None,
         image: str = None,

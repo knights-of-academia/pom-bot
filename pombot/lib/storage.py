@@ -188,8 +188,10 @@ class Storage:
             await cursor.executemany(query, poms)
 
     @staticmethod
-    async def clear_user_session_poms(user: DiscordUser):
-        """Set all active session poms to be non-active."""
+    async def clear_user_session_poms(user: DiscordUser) -> int:
+        """Set all active session poms to be non-active and return number of
+        rows affected.
+        """
         query = f"""
             UPDATE  {Config.POMS_TABLE}
             SET current_session = 0
@@ -198,7 +200,9 @@ class Storage:
         """
 
         async with _mysql_database_cursor() as cursor:
-            await cursor.execute(query, (user.id, ))
+            rows_affected = await cursor.execute(query, (user.id, ))
+
+        return rows_affected
 
     @staticmethod
     async def delete_poms(*, user: DiscordUser, time_set: dt = None) -> int:
@@ -243,11 +247,13 @@ class Storage:
         return [Event(*row) for row in rows]
 
     @staticmethod
-    async def get_poms(*,
-                 user: DiscordUser = None,
-                 descript = None,
-                 date_range: DateRange = None,
-                 limit: int = None) -> List[Pom]:
+    async def get_poms(
+        *,
+        user: DiscordUser = None,
+        descript = None,
+        date_range: DateRange = None,
+        limit: int = None
+    ) -> List[Pom]:
         """Get a list of poms from storage matching certain criteria. When
         limit is set, then the order is assumed to be most recent first.
 
@@ -398,6 +404,25 @@ class Storage:
 
         async with _mysql_database_cursor() as cursor:
             await cursor.execute(query, (team, user_id))
+
+    @staticmethod
+    async def update_user_poms_descriptions(
+        user: DiscordUser,
+        old_description: str,
+        new_description: str,
+    ):
+        """Update user poms matching a description to a new description."""
+        query = f"""
+            UPDATE {Config.POMS_TABLE}
+            SET descript=%s
+            WHERE userID=%s
+            AND descript=%s
+        """
+
+        async with _mysql_database_cursor() as cursor:
+            rows_affected = await cursor.execute(query, (new_description, user.id, old_description))
+
+        return rows_affected
 
     @staticmethod
     async def get_user_by_id(user_id: int) -> Optional[PombotUser]:

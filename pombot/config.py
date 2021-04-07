@@ -15,6 +15,7 @@ class Config:
     # Aliases
     PUBLIC_POMS_ALIASES = explode_after_char("poms.show", ".")
     PUBLIC_HELP_ALIASES = explode_after_char("help.show", ".")
+    RENAME_POMS_IN_BANK = explode_after_char("bank.rename", ".")
 
     # Bot
     MINIMUM_PYTHON_VERSION = (3, 9, 0)
@@ -27,7 +28,7 @@ class Config:
     # Embeds
     # pylint: disable=line-too-long
     EMBED_COLOUR = 0xff6347
-    EMBED_IMAGE_URL = "https://media.discordapp.net/attachments/800742030782758982/816775519517409350/IMG_6344.PNG"
+    EMBED_IMAGE_URL = "https://cdn.discordapp.com/attachments/780898356184219678/829104391113801731/IMG_6344.PNG"
     WIZARD_ICON_URL = "https://cdn.discordapp.com/emojis/818734106337738772.png"
     # pylint: enable=line-too-long
 
@@ -131,12 +132,11 @@ class Pomwars:
 
 class Reactions:
     """Static reaction emojis."""
+    BANK = "🏦"
     BOOM = "💥"
     CHECKMARK = "✅"
     CROSSED_SWORDS= "⚔"
     ERROR = "🐛"
-    FALLEN_LEAF = "🍂"
-    LEAVES = "🍃"
     ROBOT = "🤖"
     SHIELD = "🛡"
     TOMATO = "🍅"

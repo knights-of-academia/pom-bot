@@ -165,7 +165,7 @@ class _Session:
                 else:
                     detail_lines = [textwrap.dedent("""\
                         Start your session by doing
-                        your first !pom
+                        your first !pom.
                     """)]
         else:
             if self.desc:

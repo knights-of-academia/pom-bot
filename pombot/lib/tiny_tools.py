@@ -94,6 +94,11 @@ def normalize_newlines(text: str) -> str:
     return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
 
 
+def normalize_and_dedent(text: str) -> str:
+    """Same as normalize_newlines, but un-indent the text first."""
+    return normalize_newlines(textwrap.dedent(text))
+
+
 class classproperty(property):  # pylint: disable=invalid-name
     """Decorator to use classmethods as properties."""
     def __get__(self, obj, objtype=None):
@@ -136,7 +141,7 @@ def get_default_usage_header(cmd: str, *args: tuple) -> str:
     @return User-facing string indicating the command was invoked
             incorrectly.
     """
-    return normalize_newlines(textwrap.dedent(f"""\
+    return normalize_and_dedent(f"""\
         Your command `{cmd + ' ' + ' '.join(args)}` does not meet the usage
         requirements.
-    """))
+    """)

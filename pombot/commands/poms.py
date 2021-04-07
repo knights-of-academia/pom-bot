@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from discord.ext.commands import Context
 
-from pombot.config import Config, Debug, Reactions
+from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.storage import Storage
 from pombot.lib.types import Pom
@@ -59,9 +59,9 @@ async def do_poms(ctx: Context, *args):
         await send_embed_message(
             None,
             title=f"Pom statistics for {ctx.author.display_name}",
-            icon_url=ctx.author.avatar_url,
-            fields=[current_session.get_message_field()],
             description=current_session.get_session_started_message(),
+            thumbnail=ctx.author.avatar_url,
+            fields=[current_session.get_message_field()],
             footer=current_session.get_duration_message(),
             _func=ctx.message.reply)
 
@@ -83,13 +83,13 @@ async def do_poms(ctx: Context, *args):
     await send_embed_message(
         None,
         title=f"Your pom statistics",
-        icon_url=Config.EMBED_IMAGE_URL,
+        description=current_session.get_session_started_message(),
+        thumbnail=ctx.author.avatar_url,
         fields=[
             banked_session.get_message_field(),
             SPACER,
             current_session.get_message_field(),
         ],
-        description=current_session.get_session_started_message(),
         footer=footer,
         _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
     )

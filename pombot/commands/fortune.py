@@ -6,7 +6,7 @@ from xml.etree import ElementTree
 
 from discord.ext.commands import Context
 
-from pombot.config import Config, IconUrls
+from pombot.config import IconUrls
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 

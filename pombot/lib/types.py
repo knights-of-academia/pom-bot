@@ -48,7 +48,7 @@ class DateRange:
             - The time of the end day is assumed to be 1 second before
               midnight of the following day.
         """
-        if len(args) == 2 and all(isinstance(_, datetime) for _ in args):
+        if len(args) == 2 and all(isinstance(arg, datetime) for arg in args):
             self.start_date, self.end_date = args
             return
 

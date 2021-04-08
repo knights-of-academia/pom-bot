@@ -38,7 +38,7 @@ def main():
 
     if sys.version_info < Config.MINIMUM_PYTHON_VERSION:
         raise RuntimeError("Please update Python to at least {}".format(
-            ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
+            ".".join(str(i) for i in Config.MINIMUM_PYTHON_VERSION)))
 
     # Discord.py breaks debuggers and logging when loading event handlers in
     # the `setup` function of an extension, so load them here.

@@ -112,7 +112,7 @@ class classproperty(property):  # pylint: disable=invalid-name
 
 
 def explode_after_char(word: str, char: str) -> List[str]:
-    """Explode the string after the first occurence of a "." character.
+    """Explode the string after the first occurence of a `char`.
 
     This will take a string like "hello.world" and return a list of strings
     in this pattern:

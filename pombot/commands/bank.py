@@ -63,11 +63,12 @@ async def do_bank(ctx: Context, *args):
 
 async def _rename_poms(ctx: Context, old: str, new: str):
     try:
-        changed = await Storage.update_user_poms_descriptions(ctx.author, old, new)
+        changed = await Storage.update_user_poms_descriptions(
+            ctx.author, old, new, banked_poms_only=True)
 
         if not changed:
             await ctx.author.send(normalize_and_dedent(f"""
-                No poms found matching "{old}".
+                No poms found matching "{old}" in your bank.
             """))
             await ctx.message.add_reaction(Reactions.ROBOT)
             return

@@ -410,6 +410,7 @@ class Storage:
         user: DiscordUser,
         old_description: str,
         new_description: str,
+        banked_poms_only: bool,
     ):
         """Update user poms matching a description to a new description."""
         query = f"""
@@ -418,6 +419,9 @@ class Storage:
             WHERE userID=%s
             AND descript=%s
         """
+
+        if banked_poms_only:
+            query += "AND current_session=0"
 
         async with _mysql_database_cursor() as cursor:
             rows_affected = await cursor.execute(query, (new_description, user.id, old_description))

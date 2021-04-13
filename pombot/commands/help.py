@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple
 
 from discord.ext.commands import Context
 from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
@@ -6,6 +6,19 @@ from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.tiny_tools import normalize_newlines
+
+
+def _uniq(iterator: Iterator) -> Any:
+    already_yielded = set()
+
+    for item in iterator:
+        if item in already_yielded:
+            continue
+
+        try:
+            yield item
+        finally:
+            already_yielded.add(item)
 
 
 def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
@@ -51,7 +64,7 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
 def _get_help_for_command(
     ctx: Context,
     is_public: bool,
-    *requested_commands: Tuple[str],
+    *commands: Tuple[str],
 ) -> Tuple[Optional[str], Optional[str]]:
     """Get a specific command(s) help information.
 
@@ -59,14 +72,20 @@ def _get_help_for_command(
     @param command The command to lookup.
     @return Tuple of (Response string, Intended footer).
     """
-    requested_commands = set(c.casefold() for c in requested_commands)
-    existing_commands = set(c.name.casefold() for c in ctx.bot.commands)
+    requested_commands = {c.casefold() for c in commands}
+    existing_commands = {c.name.casefold() for c in ctx.bot.commands}
     names_and_helps = []
 
     if command_names_found := requested_commands & existing_commands:
-        for command_name_found in command_names_found:
+        for command in _uniq(commands):
+
+            # If we simply iterate over command_names_found, then they won't
+            # appear in the order requested by the user.
+            if command not in command_names_found:
+                continue
+
             checks = next(c.checks for c in ctx.bot.commands
-                          if c.name == command_name_found)
+                          if c.name == command)
 
             try:
                 for func in checks:
@@ -78,7 +97,7 @@ def _get_help_for_command(
 
             names_and_helps += [(cmd.name, normalize_newlines(cmd.help))
                                 for cmd in ctx.bot.commands
-                                if cmd.name == command_name_found]
+                                if cmd.name == command]
 
     if not names_and_helps:
         return "I don't know {that} command{s}, sorry.".format(

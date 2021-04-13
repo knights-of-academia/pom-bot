@@ -1,10 +1,10 @@
-from typing import Any, Iterator, Optional, Tuple
+from typing import Any, Iterator, List, Optional, Tuple
 
 from discord.ext.commands import Context
 from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
 from pombot.config import Config, Reactions
-from pombot.lib.messages import send_embed_message
+from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.tiny_tools import normalize_newlines
 
 
@@ -15,10 +15,8 @@ def _uniq(iterator: Iterator) -> Any:
         if item in already_yielded:
             continue
 
-        try:
-            yield item
-        finally:
-            already_yielded.add(item)
+        yield item
+        already_yielded.add(item)
 
 
 def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
@@ -61,20 +59,20 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
     return response, footer
 
 
-def _get_help_for_command(
+def _get_help_for_commands(
     ctx: Context,
     is_public: bool,
     *commands: Tuple[str],
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Tuple[Optional[List[EmbedField]], Optional[str]]:
     """Get a specific command(s) help information.
 
     @param ctx Message context.
-    @param command The command to lookup.
-    @return Tuple of (Response string, Intended footer).
+    @param commands The commands to lookup.
+    @return Tuple of (Response field list, Intended footer).
     """
     requested_commands = {c.casefold() for c in commands}
     existing_commands = {c.name.casefold() for c in ctx.bot.commands}
-    names_and_helps = []
+    fields = []
 
     if command_names_found := requested_commands & existing_commands:
         for command in _uniq(commands):
@@ -95,17 +93,12 @@ def _get_help_for_command(
             except MissingAnyRole:
                 continue
 
-            names_and_helps += [(cmd.name, normalize_newlines(cmd.help))
-                                for cmd in ctx.bot.commands
-                                if cmd.name == command]
-
-    if not names_and_helps:
-        return "I don't know {that} command{s}, sorry.".format(
-            that="that" if len(requested_commands) == 1 else "those",
-            s="" if len(requested_commands) == 1 else "s",
-        ), None
-
-    response = "".join("```\n{}: {}```".format(k, v) for k, v in names_and_helps)
+            fields += [
+                EmbedField(Config.PREFIX + cmd.name,
+                           "```" + normalize_newlines(cmd.help) + "```",
+                           inline=False) for cmd in ctx.bot.commands
+                if cmd.name == command
+            ]
 
     if unknowns := requested_commands - existing_commands:
         footer = "I can't help you with {} though.".format(", ".join(sorted(unknowns)))
@@ -121,7 +114,7 @@ def _get_help_for_command(
                 " ".join((f"{ctx.bot.command_prefix}{ctx.invoked_with}.show",
                           *requested_commands)))
 
-    return response, footer
+    return fields, footer
 
 
 async def do_help(ctx: Context, *args):
@@ -131,10 +124,21 @@ async def do_help(ctx: Context, *args):
     !help pom
     """
     public_response = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
-    response, footer = (_get_help_for_command(ctx, public_response, *args)
-                        if args else _get_help_for_all_commands(ctx))
+    response, fields = None, None
 
-    if response is None:
+    if args:
+        fields, footer = _get_help_for_commands(ctx, public_response, *args)
+
+        if not fields:
+            response = "I don't know {that} command{s}, sorry.".format(
+                that="that" if len(args) == 1 else "those",
+                s="" if len(args) == 1 else "s",
+            )
+            footer = None
+    else:
+        response, footer = _get_help_for_all_commands(ctx)
+
+    if not any((response, fields)):
         return
 
     if not public_response:
@@ -144,6 +148,7 @@ async def do_help(ctx: Context, *args):
         None,
         title=f"{ctx.bot.user.display_name}'s Help Info",
         description=response,
+        fields=fields,
         footer=footer,
         _func=ctx.reply if public_response else ctx.author.send,
     )

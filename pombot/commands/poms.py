@@ -27,15 +27,17 @@ async def do_poms(ctx: Context, *args):
 
     Receive a DM of your banked poms and the poms in your current session in
     separate lists, organized by the number of poms of any particular
-    description.
+    description. You can also share the details of your current session by
+    typing: "!poms.show" (without quotes).
 
-    You can also share the details of your current session by typing:
-    "!poms.show" (without quotes).
+    To see only poms of a certain description, specify the description:
+
+    !poms reading
+
+    Or show them publicly:
+
+    !poms.show reading
     """
-    # FIXME session goals?
-    # FIXME `!poms <description>`?
-    # FIXME `!poms.reset`
-
     description = " ".join(args)
     poms = await Storage.get_poms(user=ctx.author, descript=description)
 

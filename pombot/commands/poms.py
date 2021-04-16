@@ -1,18 +1,17 @@
 import textwrap
 from collections import Counter
 from datetime import timedelta
-from enum import Enum
 from functools import partial
 from typing import List, Optional
 
-from aiomysql import DataError
 from discord.ext.commands import Context
 
 from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
+from pombot.lib.rename_poms import rename_poms
 from pombot.lib.storage import Storage
 from pombot.lib.tiny_tools import normalize_and_dedent
-from pombot.lib.types import Pom
+from pombot.lib.types import Pom, SessionType
 
 ZERO_WIDTH_SPACE = "\u200b"
 LIGHT_HORIZONTAL = "\u2500"
@@ -64,7 +63,7 @@ async def do_poms(ctx: Context, *args):
             """))
             await ctx.message.add_reaction(Reactions.ROBOT)
 
-        await _rename_poms_in_current_session(ctx, old, new)
+        await rename_poms(ctx, old, new, SessionType.CURRENT)
         return
 
     description = " ".join(args)
@@ -77,12 +76,12 @@ async def do_poms(ctx: Context, *args):
                       public_response=response_is_public)
 
     banked_session = session(
-        session_type=_SessionType.BANKED,
+        session_type=SessionType.BANKED,
         poms=[p for p in poms if not p.is_current_session()],
     )
 
     current_session = session(
-        session_type=_SessionType.CURRENT,
+        session_type=SessionType.CURRENT,
         poms=[p for p in poms if p.is_current_session()],
     )
 
@@ -127,12 +126,6 @@ async def do_poms(ctx: Context, *args):
     await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
-class _SessionType(str, Enum):
-    BANKED = "Banked Poms"
-    CURRENT = "Current Session"
-    COMBINED = "Combined"
-
-
 class _Session:
     """Represent the entire "session" of a series of poms by type.
 
@@ -144,7 +137,7 @@ class _Session:
     def __init__(
         self,
         *,
-        session_type: _SessionType,
+        session_type: SessionType,
         poms: List[Pom],
         description: str,
         public_response: bool,
@@ -162,7 +155,7 @@ class _Session:
             raise NotImplementedError(f"Cannot add {type(other)}")
 
         return self.__class__(
-            session_type=_SessionType.COMBINED,
+            session_type=SessionType.COMBINED,
             poms=self.poms + other.poms,
             description=self.desc,
             public_response=self.is_public,
@@ -182,7 +175,7 @@ class _Session:
             designated_lines = ["*No designated poms!*", ""]
 
         if not designated_poms and num_undesignated_poms == 0:
-            if self.type == _SessionType.BANKED:
+            if self.type == SessionType.BANKED:
                 if self.desc:
                     detail_lines = [f"No *{self.desc}* poms!"]
                 else:
@@ -249,27 +242,3 @@ def _dynamic_duration(delta: timedelta) -> str:
         parts = [f"{days:,} day{s}", *parts]
 
     return ", ".join(parts)
-
-async def _rename_poms_in_current_session(ctx: Context, old: str, new: str) -> None:
-    try:
-        changed = await Storage.update_user_poms_descriptions(
-            ctx.author, old, new, session_poms_only=True)
-
-        if not changed:
-            await ctx.author.send(normalize_and_dedent(f"""
-                No poms found matching "{old}" in your bank.
-            """))
-            await ctx.message.add_reaction(Reactions.ROBOT)
-            return
-    except DataError as exc:
-        if "Data too long" not in exc.args[1]:
-            raise
-
-        await ctx.author.send(normalize_and_dedent(f"""
-            New description is too long: "{new}" ({len(new)} of
-            {Config.DESCRIPTION_LIMIT} character maximum).
-        """))
-        await ctx.message.add_reaction(Reactions.ROBOT)
-        return
-
-    await ctx.message.add_reaction(Reactions.CHECKMARK)

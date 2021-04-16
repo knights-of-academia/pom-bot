@@ -1,12 +1,13 @@
 from functools import partial
 
-from aiomysql import DataError
 from discord.ext.commands import Context
 
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
+from pombot.lib.rename_poms import rename_poms
 from pombot.lib.storage import Storage
 from pombot.lib.tiny_tools import normalize_and_dedent
+from pombot.lib.types import SessionType
 
 
 async def do_bank(ctx: Context, *args):
@@ -42,7 +43,7 @@ async def do_bank(ctx: Context, *args):
             await ctx.message.add_reaction(Reactions.ROBOT)
             return
 
-        await _rename_poms_in_bank(ctx, old, new)
+        await rename_poms(ctx, old, new, SessionType.BANKED)
         return
 
     reply_with_embed = partial(send_embed_message, ctx=None, _func=ctx.reply)
@@ -59,28 +60,3 @@ async def do_bank(ctx: Context, *args):
         await reply_with_embed(
             title="Oops!",
             description="No poms to bank! Start your session by doing your first !pom.")
-
-
-async def _rename_poms_in_bank(ctx: Context, old: str, new: str):
-    try:
-        changed = await Storage.update_user_poms_descriptions(
-            ctx.author, old, new, banked_poms_only=True)
-
-        if not changed:
-            await ctx.author.send(normalize_and_dedent(f"""
-                No poms found matching "{old}" in your bank.
-            """))
-            await ctx.message.add_reaction(Reactions.ROBOT)
-            return
-    except DataError as exc:
-        if "Data too long" not in exc.args[1]:
-            raise
-
-        await ctx.author.send(normalize_and_dedent(f"""
-            New description is too long: "{new}" ({len(new)} of
-            {Config.DESCRIPTION_LIMIT} character maximum).
-        """))
-        await ctx.message.add_reaction(Reactions.ROBOT)
-        return
-
-    await ctx.message.add_reaction(Reactions.CHECKMARK)

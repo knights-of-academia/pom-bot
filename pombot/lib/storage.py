@@ -412,8 +412,11 @@ class Storage:
         new_description: str,
         banked_poms_only: bool = False,
         session_poms_only: bool = False,
-    ):
+    ) -> int:
         """Update user poms matching a description to a new description."""
+        if banked_poms_only and session_poms_only:
+            raise RuntimeError("Only one of banked_poms_only or session_poms_only allowed.")
+
         query = f"""
             UPDATE {Config.POMS_TABLE}
             SET descript=%s

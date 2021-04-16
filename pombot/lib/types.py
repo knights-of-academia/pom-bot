@@ -181,3 +181,10 @@ class InstantItem(str, Enum):
     TEAM_INVINCIBILITY = 'team_invincibility'
     TEAM_DAMAGE_BUFF = 'team_damage_buff'
     TEAM_SUCCESS_CHANCE_BUFF = 'team_success_chance_buff'
+
+
+class SessionType(str, Enum):
+    """Type of sessions the user can be in."""
+    BANKED = "Banked Poms"
+    CURRENT = "Current Session"
+    COMBINED = "Combined"

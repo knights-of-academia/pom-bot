@@ -14,7 +14,10 @@ class Config:
     """Bot instance configuration."""
     # Aliases
     PUBLIC_POMS_ALIASES = explode_after_char("poms.show", ".")
+    RENAME_POMS_IN_SESSION = explode_after_char("poms.rename", ".")
+
     PUBLIC_HELP_ALIASES = explode_after_char("help.show", ".")
+
     RENAME_POMS_IN_BANK = explode_after_char("bank.rename", ".")
 
     # Bot

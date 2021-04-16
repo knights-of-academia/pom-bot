@@ -1,7 +1,7 @@
 from functools import partial
 
-from discord.ext.commands import Context
 from aiomysql import DataError
+from discord.ext.commands import Context
 
 from pombot.config import Config, Reactions
 from pombot.lib.messages import send_embed_message
@@ -42,7 +42,7 @@ async def do_bank(ctx: Context, *args):
             await ctx.message.add_reaction(Reactions.ROBOT)
             return
 
-        await _rename_poms(ctx, old, new)
+        await _rename_poms_in_bank(ctx, old, new)
         return
 
     reply_with_embed = partial(send_embed_message, ctx=None, _func=ctx.reply)
@@ -61,7 +61,7 @@ async def do_bank(ctx: Context, *args):
             description="No poms to bank! Start your session by doing your first !pom.")
 
 
-async def _rename_poms(ctx: Context, old: str, new: str):
+async def _rename_poms_in_bank(ctx: Context, old: str, new: str):
     try:
         changed = await Storage.update_user_poms_descriptions(
             ctx.author, old, new, banked_poms_only=True)

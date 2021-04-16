@@ -5,11 +5,13 @@ from enum import Enum
 from functools import partial
 from typing import List, Optional
 
+from aiomysql import DataError
 from discord.ext.commands import Context
 
 from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.storage import Storage
+from pombot.lib.tiny_tools import normalize_and_dedent
 from pombot.lib.types import Pom
 
 ZERO_WIDTH_SPACE = "\u200b"
@@ -37,7 +39,34 @@ async def do_poms(ctx: Context, *args):
     Or show them publicly:
 
     !poms.show reading
+
+    Renaming poms:
+
+    Use !poms.rename to redesignate all poms from one description to another.
+
+    !poms.rename readign reading
+
+    This command takes exactly two arguments; if descriptions have spaces,
+    then you'll need to enclose them in double quotes, e.g.:
+
+    !poms.rename "sturdy 4 teh fennel" "study for the final"
+
+    CAUTION: This cannot be undone. If you rename some poms to an existing
+    name, then they will be considered the same and cannot be re-split later.
     """
+    if ctx.invoked_with in Config.RENAME_POMS_IN_SESSION:
+        try:
+            old, new = args
+        except ValueError:
+            await ctx.author.send(normalize_and_dedent("""\
+                Please specify exactly two descriptions (the old one followed
+                by the new one) inside of double quotes. See `!help poms`.
+            """))
+            await ctx.message.add_reaction(Reactions.ROBOT)
+
+        await _rename_poms_in_current_session(ctx, old, new)
+        return
+
     description = " ".join(args)
     poms = await Storage.get_poms(user=ctx.author, descript=description)
 
@@ -220,3 +249,27 @@ def _dynamic_duration(delta: timedelta) -> str:
         parts = [f"{days:,} day{s}", *parts]
 
     return ", ".join(parts)
+
+async def _rename_poms_in_current_session(ctx: Context, old: str, new: str) -> None:
+    try:
+        changed = await Storage.update_user_poms_descriptions(
+            ctx.author, old, new, session_poms_only=True)
+
+        if not changed:
+            await ctx.author.send(normalize_and_dedent(f"""
+                No poms found matching "{old}" in your bank.
+            """))
+            await ctx.message.add_reaction(Reactions.ROBOT)
+            return
+    except DataError as exc:
+        if "Data too long" not in exc.args[1]:
+            raise
+
+        await ctx.author.send(normalize_and_dedent(f"""
+            New description is too long: "{new}" ({len(new)} of
+            {Config.DESCRIPTION_LIMIT} character maximum).
+        """))
+        await ctx.message.add_reaction(Reactions.ROBOT)
+        return
+
+    await ctx.message.add_reaction(Reactions.CHECKMARK)

@@ -21,12 +21,17 @@ def setup(bot: Bot):
     }
 
     for command in [
-        BotCommand(commands.do_bank,         name="bank", aliases=Config.RENAME_POMS_IN_BANK),
         BotCommand(commands.do_events,       name="events"),
         BotCommand(commands.do_fortune,      name="fortune"),
         BotCommand(commands.do_pom,          name="pom"),
-        BotCommand(commands.do_poms,         name="poms", aliases=Config.PUBLIC_POMS_ALIASES),
         BotCommand(commands.do_undo,         name="undo"),
+        BotCommand(commands.do_bank,         name="bank", aliases=[
+            *Config.RENAME_POMS_IN_BANK
+        ]),
+        BotCommand(commands.do_poms,         name="poms", aliases=[
+            *Config.PUBLIC_POMS_ALIASES,
+            *Config.RENAME_POMS_IN_SESSION,
+        ]),
 
         BotCommand(commands.do_total,        name="total",        **admin),
         BotCommand(commands.do_create_event, name="create_event", **admin),

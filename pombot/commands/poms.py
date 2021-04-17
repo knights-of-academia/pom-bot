@@ -24,7 +24,7 @@ SPACER = EmbedField(name=ZERO_WIDTH_SPACE, value=ZERO_WIDTH_SPACE)
 
 
 async def do_poms(ctx: Context, *args):
-    """See your banked poms and your current session.
+    """See the poms in your bank and current session.
 
     Receive a DM of your banked poms and the poms in your current session in
     separate lists, organized by the number of poms of any particular

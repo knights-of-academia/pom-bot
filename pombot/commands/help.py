@@ -70,8 +70,10 @@ def _get_help_for_commands(
     @param commands The commands to lookup.
     @return Tuple of (Response field list, Intended footer).
     """
-    # FIXME getting help for aliases should work (maybe)
-    requested_commands = {c.casefold() for c in commands}
+    # Remove "dot-alias", but preserve order of user-supplied values.
+    commands = tuple(cmd.rsplit(".", 1)[0].casefold() for cmd in commands)
+
+    requested_commands = {n.rsplit(".", 1)[0] for n in commands}
     existing_commands = {c.name.casefold() for c in ctx.bot.commands}
     fields = []
 

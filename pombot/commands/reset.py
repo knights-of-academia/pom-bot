@@ -18,6 +18,7 @@ async def do_reset(ctx: Context):
 
 
 # FIXME should exist in poms.reset and bank.reset
+# FIXME remember to update docstrings.
 # async def do_reset(ctx: Context):
 #     """Permanently deletes all of your poms. This cannot be undone."""
 #     await Storage.delete_poms(user=ctx.author)

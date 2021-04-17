@@ -5,7 +5,7 @@ from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
 from pombot.config import Config, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
-from pombot.lib.tiny_tools import normalize_newlines
+from pombot.lib.tiny_tools import PolyStr, normalize_newlines
 
 
 def _uniq(iterator: Iterator) -> Any:
@@ -70,6 +70,7 @@ def _get_help_for_commands(
     @param commands The commands to lookup.
     @return Tuple of (Response field list, Intended footer).
     """
+    # FIXME getting help for aliases should work (maybe)
     requested_commands = {c.casefold() for c in commands}
     existing_commands = {c.name.casefold() for c in ctx.bot.commands}
     fields = []
@@ -101,11 +102,9 @@ def _get_help_for_commands(
             ]
 
     if unknowns := requested_commands - existing_commands:
-        footer = "I can't help you with {} though.".format(", ".join(sorted(unknowns)))
-
-        if (last_comma_index := footer.rfind(",")) > 0:
-            footer = " ".join((footer[:last_comma_index], "or",
-                               footer[last_comma_index + 2:]))
+        footer = PolyStr("I can't help you with {} though.") \
+                    .format(", ".join(sorted(unknowns))) \
+                    .replace_final_occurence(", ", "or")
     else:
         if is_public:
             footer = None

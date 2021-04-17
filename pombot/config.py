@@ -15,10 +15,12 @@ class Config:
     # Aliases
     PUBLIC_POMS_ALIASES = explode_after_char("poms.show", ".")
     RENAME_POMS_IN_SESSION = explode_after_char("poms.rename", ".")
+    RESET_POMS_IN_SESSION = explode_after_char("poms.reset", ".")
 
     PUBLIC_HELP_ALIASES = explode_after_char("help.show", ".")
 
     RENAME_POMS_IN_BANK = explode_after_char("bank.rename", ".")
+    RESET_POMS_IN_BANK = explode_after_char("bank.reset", ".")
 
     # Bot
     MINIMUM_PYTHON_VERSION = (3, 9, 0)

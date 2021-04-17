@@ -17,7 +17,7 @@ async def do_reset(ctx: Context):
     await ctx.message.add_reaction(Reactions.ROBOT)
 
 
-# FIXME
+# FIXME should exist in poms.reset and bank.reset
 # async def do_reset(ctx: Context):
 #     """Permanently deletes all of your poms. This cannot be undone."""
 #     await Storage.delete_poms(user=ctx.author)

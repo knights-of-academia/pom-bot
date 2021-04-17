@@ -1,6 +1,7 @@
 import inspect
 import re
 import textwrap
+from collections import Counter
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -69,6 +70,14 @@ class BotCommand(Command):
         # actual problem, so append the real issue to the traceback.
         assert inspect.iscoroutinefunction(func), \
             f"Function {func.__name__} is not a coroutine"
+
+        self.duplicate_aliases = []
+        if aliases := kwargs.get("aliases"):
+            unique_commands = set(aliases)
+            repeated_commands = set(Counter(aliases) - Counter(unique_commands))
+
+            kwargs["aliases"] = sorted(unique_commands - repeated_commands)
+            self.duplicate_aliases = sorted(repeated_commands)
 
         super().__init__(func, **kwargs)
         self.extension = Path(inspect.stack()[1].filename).stem
@@ -145,3 +154,17 @@ def get_default_usage_header(cmd: str, *args: tuple) -> str:
         Your command `{cmd + ' ' + ' '.join(args)}` does not meet the usage
         requirements.
     """)
+
+
+class PolyStr(str):
+    """Subclass of str which adds custom methods."""
+    def format(self, *args, **kwargs):
+        return self.__class__(super().format(*args, **kwargs))
+
+    def replace_final_occurence(self, old:str, new: str):
+        """Like `replace`, but only replace the last occurence of char."""
+        if (last_comma_index := self.rfind(old)) > 0:
+            return self.__class__(" ".join((self[:last_comma_index], new,
+                                 self[last_comma_index + len(old):])))
+
+        return self

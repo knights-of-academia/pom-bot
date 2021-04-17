@@ -26,11 +26,13 @@ def setup(bot: Bot):
         BotCommand(commands.do_pom,          name="pom"),
         BotCommand(commands.do_undo,         name="undo"),
         BotCommand(commands.do_bank,         name="bank", aliases=[
-            *Config.RENAME_POMS_IN_BANK
+            *Config.RENAME_POMS_IN_BANK,
+            *Config.RESET_POMS_IN_BANK,
         ]),
         BotCommand(commands.do_poms,         name="poms", aliases=[
             *Config.PUBLIC_POMS_ALIASES,
             *Config.RENAME_POMS_IN_SESSION,
+            *Config.RESET_POMS_IN_SESSION,
         ]),
 
         BotCommand(commands.do_total,        name="total",        **admin),
@@ -42,4 +44,8 @@ def setup(bot: Bot):
         BotCommand(commands.do_newleaf,      name="newleaf"),
         BotCommand(commands.do_reset,        name="reset", hidden=True),
     ]:
+        for alias in command.duplicate_aliases:
+            bot.add_command(
+                BotCommand(commands.do_ambiguous_command, name=alias, hidden=True))
+
         bot.add_command(command)

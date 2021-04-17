@@ -61,7 +61,7 @@ async def do_bank(ctx: Context, *args):
 
     reply_with_embed = partial(send_embed_message, ctx=None, _func=ctx.reply)
 
-    if num_poms_banked := await Storage.clear_user_session_poms(ctx.author):
+    if num_poms_banked := await Storage.bank_user_session_poms(ctx.author):
         await reply_with_embed(
             title="Poms Banked",
             description="You have successfully banked {n} pom{s}!".format(

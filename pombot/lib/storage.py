@@ -188,7 +188,7 @@ class Storage:
             await cursor.executemany(query, poms)
 
     @staticmethod
-    async def clear_user_session_poms(user: DiscordUser) -> int:
+    async def bank_user_session_poms(user: DiscordUser) -> int:
         """Set all active session poms to be non-active and return number of
         rows affected.
         """

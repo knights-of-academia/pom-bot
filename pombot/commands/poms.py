@@ -52,6 +52,13 @@ async def do_poms(ctx: Context, *args):
 
     CAUTION: This cannot be undone. If you rename some poms to an existing
     name, then they will be considered the same and cannot be re-split later.
+
+    Resetting poms:
+
+    Use !poms.reset to reset your current session by deleting all your poms.
+
+    CAUTION: This cannot be undone. !undo cannot undo this. The poms will be
+    lost forever.
     """
     if ctx.invoked_with in Config.RENAME_POMS_IN_SESSION:
         try:
@@ -65,7 +72,8 @@ async def do_poms(ctx: Context, *args):
 
         await rename_poms(ctx, old, new, SessionType.CURRENT)
         return
-    elif ctx.invoked_with in Config.RESET_POMS_IN_SESSION:
+
+    if ctx.invoked_with in Config.RESET_POMS_IN_SESSION:
         # FIXME show poms first (somehow)
         await Storage.delete_poms(user=ctx.author, session=SessionType.CURRENT)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)

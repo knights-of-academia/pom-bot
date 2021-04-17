@@ -39,10 +39,12 @@ async def rename_poms(ctx: Context, old: str, new: str, session_type: SessionTyp
         return 0
 
     if not changed:
+        session_name = "current session" if session_poms_only else "bank"
         await ctx.author.send(normalize_and_dedent(f"""
-            No poms found matching "{old}" in your bank.
+            No poms found matching "{old}" in your {session_name}.
         """))
         await ctx.message.add_reaction(Reactions.ROBOT)
+        return 0
 
     await ctx.message.add_reaction(Reactions.CHECKMARK)
     return changed

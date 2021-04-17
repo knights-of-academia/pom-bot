@@ -45,6 +45,11 @@ async def do_bank(ctx: Context, *args):
 
         await rename_poms(ctx, old, new, SessionType.BANKED)
         return
+    elif ctx.invoked_with in Config.RESET_POMS_IN_BANK:
+        # FIXME show poms first (somehow)
+        await Storage.delete_poms(user=ctx.author, session=SessionType.BANKED)
+        await ctx.message.add_reaction(Reactions.WASTEBASKET)
+        return
 
     reply_with_embed = partial(send_embed_message, ctx=None, _func=ctx.reply)
 

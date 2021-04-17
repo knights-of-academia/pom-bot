@@ -10,7 +10,7 @@ from discord.user import User as DiscordUser
 import pombot.lib.errors as errors
 import pombot.lib.pom_wars.errors as war_crimes
 from pombot.config import Config, Secrets
-from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
+from pombot.lib.types import Action, ActionType, DateRange, Event, Pom, SessionType
 from pombot.lib.types import User as PombotUser
 from pombot.state import State
 
@@ -205,7 +205,12 @@ class Storage:
         return rows_affected
 
     @staticmethod
-    async def delete_poms(*, user: DiscordUser, time_set: dt = None) -> int:
+    async def delete_poms(
+        *,
+        user: DiscordUser,
+        time_set: dt = None,
+        session: SessionType = None,
+     ) -> int:
         """Delete a user's poms matching the criteria.
 
         NOTE: When only the user is specified, all of their poms will be
@@ -213,6 +218,7 @@ class Storage:
 
         @param user Only match poms for this user.
         @param time_set Only match poms with this timestamp value.
+        @param session Only remove poms from this session.
         @return Number of rows deleted.
         """
         query = [f"DELETE FROM {Config.POMS_TABLE} WHERE userID=%s"]
@@ -221,6 +227,14 @@ class Storage:
         if time_set:
             query += ["WHERE time_set=%s"]
             args += [time_set]
+
+        if session:
+            if (not isinstance(session, SessionType) or
+                    session not in [SessionType.CURRENT, SessionType.BANKED]):
+                raise RuntimeError("Invalid session type for removal.")
+
+            query += ["WHERE current_session=%s"]
+            args += [int(session == SessionType.CURRENT)]
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 

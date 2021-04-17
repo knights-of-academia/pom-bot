@@ -74,7 +74,6 @@ async def do_poms(ctx: Context, *args):
         return
 
     if ctx.invoked_with in Config.RESET_POMS_IN_SESSION:
-        # FIXME show poms first (somehow)
         await Storage.delete_poms(user=ctx.author, session=SessionType.CURRENT)
         await ctx.message.add_reaction(Reactions.WASTEBASKET)
         return

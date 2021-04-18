@@ -3,12 +3,12 @@ from pathlib import Path
 from string import Template
 
 from discord.ext.commands import Bot
-from discord.user import User
+from discord.user import User as DiscordUser
 
 from pombot.config import Pomwars
 from pombot.data import Locations
+from pombot.lib.types import User as BotUser
 from pombot.lib.pom_wars.team import get_user_team
-from pombot.lib.storage import Storage
 from pombot.lib.tiny_tools import normalize_newlines
 
 
@@ -57,7 +57,7 @@ class Attack:
 
         return "\n\n".join([action_result, formatted_story])
 
-    def get_title(self, user: User) -> str:
+    def get_title(self, user: DiscordUser) -> str:
         """Title that includes the name of the team user attacked."""
 
         title = "You have used{indicator}Attack against {team}!".format(
@@ -95,15 +95,14 @@ class Defend:
         """The configured base weighted-chance for this action."""
         return self.chance_for_this_action
 
-    async def get_message(self, user: User) -> str:
+    def get_message(self, user: BotUser) -> str:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """
-        botuser = await Storage.get_user_by_id(user.id)
         formatted_story = "*" + normalize_newlines(self._message) + "*"
         action_result = "** **\n{emt} `{dfn:.0f}% team damage reduction!`".format(
             emt=Pomwars.Emotes.DEFEND,
-            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[botuser.defend_level],
+            dfn=100 * Pomwars.DEFEND_LEVEL_MULTIPLIERS[user.defend_level],
         )
 
         return "\n\n".join([action_result, formatted_story])
@@ -125,7 +124,7 @@ class Bribe:
         """The configured base weighted-chance for this action."""
         return self.chance_for_this_action
 
-    def get_message(self, user: User, bot: Bot) -> str:
+    def get_message(self, user: DiscordUser, bot: Bot) -> str:
         """The markdown-formatted version of the message.txt from the
         action's directory, and its result, as a string.
         """

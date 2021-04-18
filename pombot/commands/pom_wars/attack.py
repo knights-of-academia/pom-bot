@@ -1,9 +1,9 @@
 import random
 from datetime import datetime, timedelta
-from functools import partial
 
 from discord.ext.commands import Context
 
+import pombot.lib.pom_wars.errors as war_crimes
 from pombot.config import Config, Debug, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.data.pom_wars import load_actions_directories
@@ -38,6 +38,13 @@ async def do_attack(ctx: Context, *args):
     timestamp = datetime.now()
     heavy_attack = bool(args) and args[0].casefold() in Pomwars.HEAVY_QUALIFIERS
     description = " ".join(args[1:] if heavy_attack else args)
+
+    try:
+        _ = await Storage.get_user_by_id(ctx.author.id)
+    except war_crimes.UserDoesNotExistError:
+        await ctx.reply("How did you get in here? You haven't joined the war!")
+        await ctx.message.add_reaction(Reactions.ROBOT)
+        return
 
     if len(description) > Config.DESCRIPTION_LIMIT:
         await ctx.message.add_reaction(Reactions.WARNING)
@@ -97,7 +104,7 @@ async def do_attack(ctx: Context, *args):
         description=attack.get_message(action["damage"]),
         icon_url=None,
         colour=attack.get_colour(),
-        _func=partial(ctx.channel.send, content=ctx.author.mention),
+        _func=ctx.reply,
     )
 
     await State.scoreboard.update()

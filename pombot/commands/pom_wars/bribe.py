@@ -11,7 +11,7 @@ from pombot.lib.storage import Storage
 from pombot.lib.types import ActionType
 
 
-async def do_bribe(self, ctx: Context):
+async def do_bribe(ctx: Context):
     """What? I don't take bribes..."""
     bribes = load_actions_directories(Locations.BRIBES_DIR, type_=Bribe)
     weights = [bribe.weight for bribe in bribes]
@@ -31,4 +31,4 @@ async def do_bribe(self, ctx: Context):
     }
 
     await Storage.add_pom_war_action(**action)
-    await ctx.send(bribe.get_message(ctx.author, self.bot))
+    await ctx.reply(bribe.get_message(ctx.author, ctx.bot))

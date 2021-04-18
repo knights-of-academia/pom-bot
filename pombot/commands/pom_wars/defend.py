@@ -1,9 +1,9 @@
 import random
 from datetime import datetime
-from functools import partial
 
 from discord.ext.commands import Context
 
+import pombot.lib.pom_wars.errors as war_crimes
 from pombot.config import Config, Pomwars, Reactions
 from pombot.data import Locations
 from pombot.data.pom_wars import load_actions_directories
@@ -19,6 +19,13 @@ async def do_defend(ctx: Context, *args):
     """Defend your team."""
     description = " ".join(args)
     timestamp = datetime.now()
+
+    try:
+        defender = await Storage.get_user_by_id(ctx.author.id)
+    except war_crimes.UserDoesNotExistError:
+        await ctx.reply("How did you get in here? You haven't joined the war!")
+        await ctx.message.add_reaction(Reactions.ROBOT)
+        return
 
     if len(description) > Config.DESCRIPTION_LIMIT:
         await ctx.message.add_reaction(Reactions.WARNING)
@@ -65,8 +72,8 @@ async def do_defend(ctx: Context, *args):
         title="You have used Defend against {team}s!".format(
             team=(~get_user_team(ctx.author)).value,
         ),
-        description=await defend.get_message(ctx.author),
+        description=defend.get_message(defender),
         colour=Pomwars.DEFEND_COLOUR,
         icon_url=None,
-        _func=partial(ctx.channel.send, content=ctx.author.mention),
+        _func=ctx.reply,
     )

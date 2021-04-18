@@ -30,7 +30,7 @@ async def send_embed_message(
 ) -> Message:
     """Send an embedded message using the context.
 
-    @param ctx Ethier the context with which to send the response, or None
+    @param ctx Either the context with which to send the response, or None
         when a coroutine is specified via _func.
     @param colour Colour to line the left side of the embed.
     @param private_messaage Whether or not to send this emabed as a DM to the

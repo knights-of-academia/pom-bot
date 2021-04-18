@@ -161,7 +161,7 @@ class PolyStr(str):
     def format(self, *args, **kwargs):
         return self.__class__(super().format(*args, **kwargs))
 
-    def replace_final_occurence(self, old:str, new: str):
+    def replace_final_occurence(self, old: str, new: str):
         """Like `replace`, but only replace the last occurence of char."""
         if (last_comma_index := self.rfind(old)) > 0:
             return self.__class__(" ".join((self[:last_comma_index], new,

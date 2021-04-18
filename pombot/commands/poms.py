@@ -50,15 +50,11 @@ async def do_poms(ctx: Context, *args):
 
     !poms.rename "sturdy 4 teh fennel" "study for the final"
 
-    CAUTION: This cannot be undone. If you rename some poms to an existing
-    name, then they will be considered the same and cannot be re-split later.
-
     Resetting poms:
 
     Use !poms.reset to reset your current session by deleting all your poms.
 
-    CAUTION: This cannot be undone. !undo cannot undo this. The poms will be
-    lost forever.
+    CAUTION: Neither renaming nor resetting can be undone!
     """
     if ctx.invoked_with in Config.RENAME_POMS_IN_SESSION:
         try:

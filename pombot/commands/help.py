@@ -71,14 +71,12 @@ def _get_help_for_commands(
     @return Tuple of (Response field list, Intended footer).
     """
     # Remove "dot-alias", but preserve order of user-supplied values.
-    commands = tuple(cmd.rsplit(".", 1)[0].casefold() for cmd in commands)
-
-    requested_commands = {n.rsplit(".", 1)[0] for n in commands}
+    requested_commands = tuple(cmd.rsplit(".", 1)[0].casefold() for cmd in commands)
     existing_commands = {c.name.casefold() for c in ctx.bot.commands}
-    fields = []
 
-    if command_names_found := requested_commands & existing_commands:
-        for command in _uniq(commands):
+    fields = []
+    if command_names_found := set(requested_commands) & existing_commands:
+        for command in _uniq(requested_commands):
 
             # If we simply iterate over command_names_found, then they won't
             # appear in the order requested by the user.
@@ -97,13 +95,13 @@ def _get_help_for_commands(
                 continue
 
             fields += [
-                EmbedField(Config.PREFIX + cmd.name,
-                           "```" + normalize_newlines(cmd.help) + "```",
-                           inline=False) for cmd in ctx.bot.commands
-                if cmd.name == command
+                EmbedField(name=Config.PREFIX + cmd.name,
+                           value="```" + normalize_newlines(cmd.help) + "```",
+                           inline=False)
+                    for cmd in ctx.bot.commands if cmd.name == command
             ]
 
-    if unknowns := requested_commands - existing_commands:
+    if unknowns := set(requested_commands) - existing_commands:
         footer = PolyStr("I can't help you with {} though.") \
                     .format(", ".join(sorted(unknowns))) \
                     .replace_final_occurence(", ", "or")
@@ -119,10 +117,18 @@ def _get_help_for_commands(
 
 
 async def do_help(ctx: Context, *args):
-    """Show this help message.
+    """See this help message.
 
     Show a specific command by specifying it, for exmaple:
     !help pom
+
+    You can also show help messages to your current channel by saying
+    "!help.show" (without quotes) and specify more than one command, e.g.:
+
+    !help.show pom poms bank
+
+    This will reply to you in the channel with the detailed help of all three
+    commands.
     """
     public_response = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
     response, fields = None, None

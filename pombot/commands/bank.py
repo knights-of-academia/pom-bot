@@ -15,8 +15,7 @@ async def do_bank(ctx: Context, *args):
 
     Your "Bank" is your archive of poms after you've ended a session. This
     command will move the poms in your current session to your bank; You can
-    see your bank with !poms. There are some variants to this command as
-    well:
+    see your bank with !poms.
 
     Renaming poms:
 
@@ -29,15 +28,11 @@ async def do_bank(ctx: Context, *args):
 
     !bank.rename "sturdy 4 teh fennel" "study for the final"
 
-    CAUTION: This cannot be undone. If you rename some poms to an existing
-    name, then they will be considered the same and cannot be re-split later.
-
     Resetting poms:
 
     Use !bank.reset to reset your bank by deleting all your poms.
 
-    CAUTION: This cannot be undone. !undo cannot undo this. The poms will be
-    lost forever.
+    CAUTION: Neither renaming nor resetting can be undone!
     """
     if ctx.invoked_with in Config.RENAME_POMS_IN_BANK:
         try:

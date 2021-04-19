@@ -1,6 +1,6 @@
 from typing import Callable, NamedTuple, Optional
 
-from discord.embeds import Embed
+from discord.embeds import Embed, EmptyEmbed
 from discord.ext.commands import Context
 from discord.message import Message
 
@@ -18,7 +18,7 @@ async def send_embed_message(
         ctx: Optional[Context],
         *,
         title: str,
-        description: str,
+        description: Optional[str],
         colour=Config.EMBED_COLOUR,
         icon_url=IconUrls.POMBOMB,
         fields: list = None,
@@ -73,6 +73,10 @@ async def send_embed_message(
 
     @return The message object that was sent.
     """
+    # In discord.py==1.7.x there is a defect which handles None as a string.
+    # This a workaround and can likely be removed later.
+    description = description or EmptyEmbed
+
     message = Embed(
         description=description,
         colour=colour,

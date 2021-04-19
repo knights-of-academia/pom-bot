@@ -1,6 +1,6 @@
 # Prod
 aiomysql>=0.0.21
-discord.py>=1.6.0
+discord.py>=1.7.1
 python-dotenv>=0.10.5
 
 # Dev

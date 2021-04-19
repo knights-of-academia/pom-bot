@@ -6,7 +6,7 @@ from xml.etree import ElementTree
 
 from discord.ext.commands import Context
 
-from pombot.config import Config
+from pombot.config import IconUrls
 from pombot.data import Locations
 from pombot.lib.messages import send_embed_message
 
@@ -18,11 +18,13 @@ async def do_fortune(ctx: Context) -> str:
     with _pause_rng("".join((date, ctx.author.discriminator))):
         lucky_numbers = [random.randint(0, 101) for _ in range(5)]
 
+    disclaimer = _Disclaimer()
+
     await send_embed_message(
         ctx,
         title="Fortune",
-        icon_url=Config.WIZARD_ICON_URL,
-        description=f"Full disclosure: {_Disclaimer()}",
+        thumbnail=IconUrls.WIZARD,
+        description=f"{disclaimer.type}: {disclaimer.content}",
         footer="Your lucky numbers for today are {}".format(", ".join(
             str(n) for n in lucky_numbers)),
     )
@@ -42,14 +44,25 @@ def _pause_rng(seed: object):
 
 class _Disclaimer:
     """Random disclaimer getter."""
+    POSSIBLE_TYPES = (
+        "Information",
+        "WARNING",
+        "Full Disclosure",
+        "Disclaimer",
+        "NOTICE",
+        "Terms and Conditions",
+        "ACHTUNG",
+        "AVISO",
+    )
+
     _disclaimers: List[Tuple[str, float]] = []
 
-    def __new__(cls) -> str:
+    def __init__(self) -> str:
         """Return a random disclaimer from the memoized list."""
-        if not cls._disclaimers:
+        if not self._disclaimers:
             root = ElementTree.parse(Locations.DISCLAIMERS).getroot()
-            cls._disclaimers = [(elem.text, float(elem.attrib["probability"]))
+            self._disclaimers = [(elem.text, float(elem.attrib["probability"]))
                                 for elem in root.findall(".//fortune")]
 
-        disclaimer, = random.choices(*zip(*cls._disclaimers))
-        return disclaimer
+        self.content, = random.choices(*zip(*self._disclaimers))
+        self.type = random.choice(self.POSSIBLE_TYPES)

@@ -1,28 +1,36 @@
 import os
 import sys
+from datetime import timedelta
 
 import dotenv
 
-from pombot.lib.tiny_tools import classproperty, positive_int, str2bool
+from pombot.lib.tiny_tools import (classproperty, explode_after_char,
+                                   positive_int, str2bool)
 
 dotenv.load_dotenv(override=True)
 
 
 class Config:
     """Bot instance configuration."""
+    # Aliases
+    PUBLIC_POMS_ALIASES = explode_after_char("poms.show", ".")
+    RENAME_POMS_IN_SESSION = explode_after_char("poms.rename", ".")
+    RESET_POMS_IN_SESSION = explode_after_char("poms.reset", ".")
+
+    PUBLIC_HELP_ALIASES = explode_after_char("help.show", ".")
+
+    RENAME_POMS_IN_BANK = explode_after_char("bank.rename", ".")
+    RESET_POMS_IN_BANK = explode_after_char("bank.reset", ".")
+
     # Bot
     MINIMUM_PYTHON_VERSION = (3, 9, 0)
     PREFIX = "!"
     POM_TRACK_LIMIT = 10
     DESCRIPTION_LIMIT = 30
-    MULTILINE_DESCRIPTION_DISABLED = True
+    POM_LENGTH = timedelta(minutes=25)
 
     # Embeds
-    # pylint: disable=line-too-long
     EMBED_COLOUR = 0xff6347
-    EMBED_IMAGE_URL = "https://media.discordapp.net/attachments/800742030782758982/816775519517409350/IMG_6344.PNG"
-    WIZARD_ICON_URL = "https://cdn.discordapp.com/emojis/818734106337738772.png"
-    # pylint: enable=line-too-long
 
     # Errors
     ERRORS_CHANNEL_NAME = os.getenv("ERRORS_CHANNEL_NAME")
@@ -61,6 +69,26 @@ class Debug:
     BENCHMARK_POMWAR_ATTACK = str2bool(os.getenv("BENCHMARK_POMWAR_ATTACK", "no"))
     POMS_COMMAND_IS_PUBLIC = str2bool(os.getenv("POMS_COMMAND_IS_PUBLIC", "no"))
 
+class IconUrls:
+    """Locations of Pombot's custom reactions and icons."""
+    # The Pomato
+    POMBOMB = "https://koa-assets.s3-us-west-2.amazonaws.com/pombomb.png"
+
+    # Actions
+    ATTACK = "https://koa-assets.s3-us-west-2.amazonaws.com/attack.png"
+    DEFEND = "https://koa-assets.s3-us-west-2.amazonaws.com/defend.png"
+    AND_MY_AXE = "https://koa-assets.s3-us-west-2.amazonaws.com/axe.png"
+
+    # Actors
+    KNIGHT = "https://koa-assets.s3-us-west-2.amazonaws.com/knight.png"
+    VIKING = "https://koa-assets.s3-us-west-2.amazonaws.com/viking.png"
+    WIZARD = "https://koa-assets.s3-us-west-2.amazonaws.com/wizard.png"
+
+    # Potions
+    MANA = "https://koa-assets.s3-us-west-2.amazonaws.com/mana.png"
+    HEALTH = "https://koa-assets.s3-us-west-2.amazonaws.com/health.png"
+    POISON = "https://koa-assets.s3-us-west-2.amazonaws.com/poison.png"
+
 
 class Pomwars:
     """Configuration for Pom Wars."""
@@ -86,16 +114,6 @@ class Pomwars:
         int(guild.strip()) if guild.strip() else 0
         for guild in os.getenv("VIKING_ONLY_GUILDS").split(",")
     ]
-
-    # pylint: disable=line-too-long
-    class IconUrls:
-        """Locations of embeddable emojis."""
-        KNIGHT = "https://cdn.discordapp.com/attachments/758012800789381331/794257081455869952/if_Knight_2913116_1.png"
-        VIKING = "https://cdn.discordapp.com/attachments/758012800789381331/794257094454149130/if_Viking_2913107_1.png"
-        AXE = "https://cdn.discordapp.com/attachments/784284292506189845/793860961860583485/david-axe.png"
-        SHIELD = "https://cdn.discordapp.com/attachments/791201687410835497/794634532145725440/image0.png"
-        SWORD = "https://cdn.discordapp.com/attachments/791201687410835497/794620213374877696/image0.png"
-    # pylint: enable=line-too-long
 
     HEAVY_ATTACK_LEVEL_VALIANT_ATTEMPT_CONDOLENCE_REWARDS = {
         # Level: (Min chance, Max chance)
@@ -124,13 +142,11 @@ class Pomwars:
 
 class Reactions:
     """Static reaction emojis."""
-    ABACUS = "🧮"
+    BANK = "🏦"
     BOOM = "💥"
     CHECKMARK = "✅"
     CROSSED_SWORDS= "⚔"
     ERROR = "🐛"
-    FALLEN_LEAF = "🍂"
-    LEAVES = "🍃"
     ROBOT = "🤖"
     SHIELD = "🛡"
     TOMATO = "🍅"

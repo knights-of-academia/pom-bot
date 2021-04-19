@@ -10,7 +10,7 @@ from discord.user import User as DiscordUser
 import pombot.lib.errors as errors
 import pombot.lib.pom_wars.errors as war_crimes
 from pombot.config import Config, Secrets
-from pombot.lib.types import Action, ActionType, DateRange, Event, Pom
+from pombot.lib.types import Action, ActionType, DateRange, Event, Pom, SessionType
 from pombot.lib.types import User as PombotUser
 from pombot.state import State
 
@@ -188,8 +188,10 @@ class Storage:
             await cursor.executemany(query, poms)
 
     @staticmethod
-    async def clear_user_session_poms(user: DiscordUser):
-        """Set all active session poms to be non-active."""
+    async def bank_user_session_poms(user: DiscordUser) -> int:
+        """Set all active session poms to be non-active and return number of
+        rows affected.
+        """
         query = f"""
             UPDATE  {Config.POMS_TABLE}
             SET current_session = 0
@@ -198,10 +200,17 @@ class Storage:
         """
 
         async with _mysql_database_cursor() as cursor:
-            await cursor.execute(query, (user.id, ))
+            rows_affected = await cursor.execute(query, (user.id, ))
+
+        return rows_affected
 
     @staticmethod
-    async def delete_poms(*, user: DiscordUser, time_set: dt = None) -> int:
+    async def delete_poms(
+        *,
+        user: DiscordUser,
+        time_set: dt = None,
+        session: SessionType = None,
+     ) -> int:
         """Delete a user's poms matching the criteria.
 
         NOTE: When only the user is specified, all of their poms will be
@@ -209,6 +218,7 @@ class Storage:
 
         @param user Only match poms for this user.
         @param time_set Only match poms with this timestamp value.
+        @param session Only remove poms from this session.
         @return Number of rows deleted.
         """
         query = [f"DELETE FROM {Config.POMS_TABLE} WHERE userID=%s"]
@@ -217,6 +227,14 @@ class Storage:
         if time_set:
             query += ["WHERE time_set=%s"]
             args += [time_set]
+
+        if session:
+            if (not isinstance(session, SessionType) or
+                    session not in [SessionType.CURRENT, SessionType.BANKED]):
+                raise RuntimeError("Invalid session type for removal.")
+
+            query += ["WHERE current_session=%s"]
+            args += [int(session == SessionType.CURRENT)]
 
         query_str = _replace_further_occurances(" ".join(query), "WHERE", "AND")
 
@@ -243,10 +261,13 @@ class Storage:
         return [Event(*row) for row in rows]
 
     @staticmethod
-    async def get_poms(*,
-                 user: DiscordUser = None,
-                 date_range: DateRange = None,
-                 limit: int = None) -> List[Pom]:
+    async def get_poms(
+        *,
+        user: DiscordUser = None,
+        descript = None,
+        date_range: DateRange = None,
+        limit: int = None
+    ) -> List[Pom]:
         """Get a list of poms from storage matching certain criteria. When
         limit is set, then the order is assumed to be most recent first.
 
@@ -261,6 +282,10 @@ class Storage:
         if user:
             query += ["WHERE userID=%s"]
             args += [user.id]
+
+        if descript:
+            query += ["WHERE descript=%s"]
+            args += [descript]
 
         if date_range:
             query += ["WHERE time_set >= %s AND time_set <= %s"]
@@ -393,6 +418,36 @@ class Storage:
 
         async with _mysql_database_cursor() as cursor:
             await cursor.execute(query, (team, user_id))
+
+    @staticmethod
+    async def update_user_poms_descriptions(
+        user: DiscordUser,
+        old_description: str,
+        new_description: str,
+        banked_poms_only: bool = False,
+        session_poms_only: bool = False,
+    ) -> int:
+        """Update user poms matching a description to a new description."""
+        if banked_poms_only and session_poms_only:
+            raise RuntimeError("Only one of banked_poms_only or session_poms_only allowed.")
+
+        query = f"""
+            UPDATE {Config.POMS_TABLE}
+            SET descript=%s
+            WHERE userID=%s
+            AND descript=%s
+        """
+
+        if banked_poms_only:
+            query += "AND current_session=0"
+
+        if session_poms_only:
+            query += "AND current_session=1"
+
+        async with _mysql_database_cursor() as cursor:
+            rows_affected = await cursor.execute(query, (new_description, user.id, old_description))
+
+        return rows_affected
 
     @staticmethod
     async def get_user_by_id(user_id: int) -> Optional[PombotUser]:

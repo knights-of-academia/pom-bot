@@ -1,9 +1,11 @@
 import inspect
 import re
+import textwrap
+from collections import Counter
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 import discord
 from discord.ext.commands import Command, Context
@@ -69,6 +71,14 @@ class BotCommand(Command):
         assert inspect.iscoroutinefunction(func), \
             f"Function {func.__name__} is not a coroutine"
 
+        self.duplicate_aliases = []
+        if aliases := kwargs.get("aliases"):
+            unique_commands = set(aliases)
+            repeated_commands = set(Counter(aliases) - Counter(unique_commands))
+
+            kwargs["aliases"] = sorted(unique_commands - repeated_commands)
+            self.duplicate_aliases = sorted(repeated_commands)
+
         super().__init__(func, **kwargs)
         self.extension = Path(inspect.stack()[1].filename).stem
 
@@ -93,6 +103,11 @@ def normalize_newlines(text: str) -> str:
     return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
 
 
+def normalize_and_dedent(text: str) -> str:
+    """Same as normalize_newlines, but un-indent the text first."""
+    return normalize_newlines(textwrap.dedent(text))
+
+
 class classproperty(property):  # pylint: disable=invalid-name
     """Decorator to use classmethods as properties."""
     def __get__(self, obj, objtype=None):
@@ -103,3 +118,53 @@ class classproperty(property):  # pylint: disable=invalid-name
 
     def __delete__(self, obj):
         raise RuntimeError("Cannot delete classproperty")
+
+
+def explode_after_char(word: str, char: str) -> List[str]:
+    """Explode the string after the first occurence of a `char`.
+
+    This will take a string like "hello.world" and return a list of strings
+    in this pattern:
+    ['hello.w',
+     'hello.wo',
+     'hello.wor',
+     'hello.worl',
+     'hello.world']
+
+    Raises:
+        ValueError when the specified `char` is not found in `word` before
+        the last character (ie. when `word` ends with a `char`).
+    """
+    pos = word[:-1].index(char)
+    return [word[0:pos+2+i] for i in range(len(word) - (pos+1))]
+
+def get_default_usage_header(cmd: str, *args: tuple) -> str:
+    """Get a default header for use with the various nested _usage()
+    functions.
+
+    This function is entirely tech debt and should be removed once all
+    _usage() methods are deleted or moved.
+
+    @param cmd The prefix + invoked_with command.
+    @param args The args passed to the original function.
+    @return User-facing string indicating the command was invoked
+            incorrectly.
+    """
+    return normalize_and_dedent(f"""\
+        Your command `{cmd + ' ' + ' '.join(args)}` does not meet the usage
+        requirements.
+    """)
+
+
+class PolyStr(str):
+    """Subclass of str which adds custom methods."""
+    def format(self, *args, **kwargs):
+        return self.__class__(super().format(*args, **kwargs))
+
+    def replace_final_occurence(self, old: str, new: str):
+        """Like `replace`, but only replace the last occurence of char."""
+        if (last_comma_index := self.rfind(old)) > 0:
+            return self.__class__(" ".join((self[:last_comma_index], new,
+                                 self[last_comma_index + len(old):])))
+
+        return self

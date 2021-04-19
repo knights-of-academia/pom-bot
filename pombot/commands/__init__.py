@@ -1,3 +1,5 @@
+from pombot.commands.ambiguous_command import *
+from pombot.commands.bank import *
 from pombot.commands.create_event import *
 from pombot.commands.events import *
 from pombot.commands.fortune import *

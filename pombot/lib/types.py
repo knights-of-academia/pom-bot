@@ -48,7 +48,7 @@ class DateRange:
             - The time of the end day is assumed to be 1 second before
               midnight of the following day.
         """
-        if len(args) == 2 and all(isinstance(_, datetime) for _ in args):
+        if len(args) == 2 and all(isinstance(arg, datetime) for arg in args):
             self.start_date, self.end_date = args
             return
 
@@ -85,6 +85,19 @@ class Pom:
     descript: str
     time_set: datetime
     session: int
+
+    def __lt__(self, other):
+        """Return whether the Pom in `other` came before this one.
+
+        This is needed for sorting lists of Poms with `sorted`. `pom_id` is
+        used for the comparison because multiple poms can have exactly the
+        same time_set and would return false when niether true nor false make
+        sense.
+        """
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError(f"Cannot compare with {type(other)}")
+
+        return self.pom_id < other.pom_id
 
     def is_current_session(self) -> bool:
         """Return whether this pom is in the user's current session."""
@@ -168,3 +181,10 @@ class InstantItem(str, Enum):
     TEAM_INVINCIBILITY = 'team_invincibility'
     TEAM_DAMAGE_BUFF = 'team_damage_buff'
     TEAM_SUCCESS_CHANCE_BUFF = 'team_success_chance_buff'
+
+
+class SessionType(str, Enum):
+    """Type of sessions the user can be in."""
+    BANKED = "Banked Poms"
+    CURRENT = "Current Session"
+    COMBINED = "Combined"

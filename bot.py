@@ -38,7 +38,7 @@ def main():
 
     if sys.version_info < Config.MINIMUM_PYTHON_VERSION:
         raise RuntimeError("Please update Python to at least {}".format(
-            ".".join(str(_) for _ in Config.MINIMUM_PYTHON_VERSION)))
+            ".".join(str(i) for i in Config.MINIMUM_PYTHON_VERSION)))
 
     # Discord.py breaks debuggers and logging when loading event handlers in
     # the `setup` function of an extension, so load them here.
@@ -64,7 +64,8 @@ def main():
     # Replace the default help command which marks every command as
     # "Uncategorized" and does no extension separation.
     bot.remove_command("help")
-    bot.add_command(BotCommand(commands.do_help, name="help"))
+    bot.add_command(
+        BotCommand(commands.do_help, name="help", aliases=Config.PUBLIC_HELP_ALIASES))
 
     bot.run(Secrets.TOKEN)
 

@@ -42,12 +42,8 @@ async def do_pom(ctx: Context, *description):
                             f"{Config.DESCRIPTION_LIMIT} characters.")
             return
 
-    has_multiline_description = description is not None and "\n" in description
-
-    if has_multiline_description and Config.MULTILINE_DESCRIPTION_DISABLED:
-        await ctx.message.add_reaction(Reactions.WARNING)
-        await ctx.send("Multi-line pom descriptions are disabled.")
-        return
+    if description is not None:
+        description = description.replace("\n", " ")
 
     await Storage.add_poms_to_user_session(ctx.author, description, count)
     await ctx.message.add_reaction(Reactions.TOMATO)

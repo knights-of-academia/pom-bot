@@ -1,12 +1,22 @@
-import random
-from typing import Optional, Tuple
+from typing import Any, Iterator, List, Optional, Tuple
 
 from discord.ext.commands import Context
 from discord.ext.commands.errors import MissingAnyRole, NoPrivateMessage
 
-from pombot.config import Reactions
-from pombot.lib.messages import send_embed_message
-from pombot.lib.tiny_tools import normalize_newlines
+from pombot.config import Config, Reactions
+from pombot.lib.messages import EmbedField, send_embed_message
+from pombot.lib.tiny_tools import PolyStr, normalize_newlines
+
+
+def _uniq(iterator: Iterator) -> Any:
+    already_yielded = set()
+
+    for item in iterator:
+        if item in already_yielded:
+            continue
+
+        yield item
+        already_yielded.add(item)
 
 
 def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
@@ -43,28 +53,38 @@ def _get_help_for_all_commands(ctx: Context) -> Tuple[Optional[str],
         response_lines.extend(f"{offset}{cmd}: {groups[group][cmd]}"
                               for cmd in sorted(groups[group]))
 
-    return ("```{}```".format("\n".join(response_lines)),
-            "Type a command to get more information! (e.g. !help pom)")
+    response = "```{}```".format("\n".join(response_lines))
+    footer = "Type a command to get more information! (e.g. !help pom)"
+
+    return response, footer
 
 
-def _get_help_for_command(
+def _get_help_for_commands(
     ctx: Context,
-    *requested_commands: Tuple[str],
-) -> Tuple[Optional[str], Optional[str]]:
+    is_public: bool,
+    *commands: Tuple[str],
+) -> Tuple[Optional[List[EmbedField]], Optional[str]]:
     """Get a specific command(s) help information.
 
     @param ctx Message context.
-    @param command The command to lookup.
-    @return Tuple of (Response string, Intended footer).
+    @param commands The commands to lookup.
+    @return Tuple of (Response field list, Intended footer).
     """
-    requested_commands = set(c.casefold() for c in requested_commands)
-    existing_commands = set(c.name.casefold() for c in ctx.bot.commands)
-    names_and_helps = []
+    # Remove "dot-alias", but preserve order of user-supplied values.
+    requested_commands = tuple(cmd.rsplit(".", 1)[0].casefold() for cmd in commands)
+    existing_commands = {c.name.casefold() for c in ctx.bot.commands}
 
-    if command_names_found := requested_commands & existing_commands:
-        for command_name_found in command_names_found:
+    fields = []
+    if command_names_found := set(requested_commands) & existing_commands:
+        for command in _uniq(requested_commands):
+
+            # If we simply iterate over command_names_found, then they won't
+            # appear in the order requested by the user.
+            if command not in command_names_found:
+                continue
+
             checks = next(c.checks for c in ctx.bot.commands
-                          if c.name == command_name_found)
+                          if c.name == command)
 
             try:
                 for func in checks:
@@ -74,52 +94,68 @@ def _get_help_for_command(
             except MissingAnyRole:
                 continue
 
-            names_and_helps += [(cmd.name, normalize_newlines(cmd.help))
-                                for cmd in ctx.bot.commands
-                                if cmd.name == command_name_found]
+            fields += [
+                EmbedField(name=Config.PREFIX + cmd.name,
+                           value="```" + normalize_newlines(cmd.help) + "```",
+                           inline=False)
+                    for cmd in ctx.bot.commands if cmd.name == command
+            ]
 
-    if not names_and_helps:
-        return "I don't know {that} command{s}, sorry.".format(
-            that="that" if len(requested_commands) == 1 else "those",
-            s="" if len(requested_commands) == 1 else "s",
-        ), None
-
-    response = "\n".join("```\n{}: {}```".format(k, v) for k, v in names_and_helps)
-
-    if unknowns := requested_commands - existing_commands:
-        footer = "I can't help you with {} though.".format(", ".join(sorted(unknowns)))
-
-        if (last_comma_index := footer.rfind(",")) > 0:
-            footer = " ".join((footer[:last_comma_index], "or",
-                               footer[last_comma_index + 2:]))
+    if unknowns := set(requested_commands) - existing_commands:
+        footer = PolyStr("I can't help you with {} though.") \
+                    .format(", ".join(sorted(unknowns))) \
+                    .replace_final_occurence(", ", "or")
     else:
-        footer = random.choice([
-            "Hope this helps.",
-            "Look after yourself.",
-            "Take it easy.",
-            "That's all I know.",
-            "The more you know, the more you grow.",
-        ])
+        if is_public:
+            footer = None
+        else:
+            footer = "To see this info in the channel, type: {}".format(
+                " ".join((f"{ctx.bot.command_prefix}{ctx.invoked_with}.show",
+                          *requested_commands)))
 
-    return response, footer
+    return fields, footer
 
 
 async def do_help(ctx: Context, *args):
-    """Show this help message.
+    """See this help message.
 
     Show a specific command by specifying it, for exmaple:
     !help pom
-    """
-    response, footer = (_get_help_for_command(ctx, *args)
-                        if args else _get_help_for_all_commands(ctx))
 
-    if response is None:
+    You can also show help messages to your current channel by saying
+    "!help.show" (without quotes) and specify more than one command, e.g.:
+
+    !help.show pom poms bank
+
+    This will reply to you in the channel with the detailed help of all three
+    commands.
+    """
+    public_response = ctx.invoked_with in Config.PUBLIC_HELP_ALIASES
+    response, fields = None, None
+
+    if args:
+        fields, footer = _get_help_for_commands(ctx, public_response, *args)
+
+        if not fields:
+            response = "I don't know {that} command{s}, sorry.".format(
+                that="that" if len(args) == 1 else "those",
+                s="" if len(args) == 1 else "s",
+            )
+            footer = None
+    else:
+        response, footer = _get_help_for_all_commands(ctx)
+
+    if not any((response, fields)):
         return
 
+    if not public_response:
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
+
     await send_embed_message(
-        ctx,
+        None,
         title=f"{ctx.bot.user.display_name}'s Help Info",
         description=response,
+        fields=fields,
         footer=footer,
+        _func=ctx.reply if public_response else ctx.author.send,
     )
-    await ctx.message.add_reaction(Reactions.CHECKMARK)

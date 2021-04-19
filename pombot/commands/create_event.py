@@ -7,6 +7,7 @@ import pombot
 from pombot.config import Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.storage import Storage
+from pombot.lib.tiny_tools import get_default_usage_header
 from pombot.lib.types import DateRange
 from pombot.state import State
 
@@ -18,10 +19,7 @@ async def do_create_event(ctx: Context, *args):
     """
     def _usage(header: str = None):
         cmd = ctx.prefix + ctx.invoked_with
-
-        header = (header
-                    or f"Your command `{cmd + ' ' + ' '.join(args)}` does "
-                    "not meet the usage requirements.")
+        header = header or get_default_usage_header(cmd, args)
 
         return textwrap.dedent(f"""\
             {header}

@@ -14,7 +14,7 @@ from pombot.state import State
 async def do_create_event(ctx: Context, *args):
     """Create a new event.
 
-    Usage: !create_event <name> <goal> <start_month> <start_day> <end_month <end_day>
+    Usage: !create_event <name> <goal> <start_month> <start_day> <end_month> <end_day>
 
     Where:\r
         <name>         Name for this event.\r

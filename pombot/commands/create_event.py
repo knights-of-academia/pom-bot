@@ -37,7 +37,10 @@ async def do_create_event(ctx: Context, *args):
         await ctx.message.add_reaction(Reactions.ROBOT)
         return
 
-    event_name = " ".join(name)
+    if not (event_name := " ".join(name)):  # pylint: disable=superfluous-parens
+        await ctx.reply("Please specify an event name.")
+        await ctx.message.add_reaction(Reactions.ROBOT)
+        return
 
     try:
         pom_goal = int(pom_goal)

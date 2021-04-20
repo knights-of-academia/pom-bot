@@ -2,7 +2,7 @@ from enum import Enum
 
 from discord.user import User
 
-from pombot.config import Pomwars, Config
+from pombot.config import Config, IconUrls, Pomwars
 from pombot.lib.pom_wars import errors as war_crimes
 from pombot.lib.storage import Storage
 from pombot.lib.types import ActionType
@@ -31,8 +31,8 @@ class Team(str, Enum):
     def get_icon(self):
         """Return the team's configured IconUrl."""
         icons = {
-            self.KNIGHTS: Pomwars.IconUrls.KNIGHT,
-            self.VIKINGS: Pomwars.IconUrls.VIKING,
+            self.KNIGHTS: IconUrls.VIKING,
+            self.VIKINGS: IconUrls.VIKING,
         }
 
         return icons[self]

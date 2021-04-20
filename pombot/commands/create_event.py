@@ -59,9 +59,7 @@ async def do_create_event(ctx: Context, *args):
         await ctx.message.add_reaction(Reactions.ROBOT)
         return
 
-    overlapping_events = await Storage.get_overlapping_events(date_range)
-
-    if overlapping_events:
+    if overlapping_events := await Storage.get_overlapping_events(date_range):
         await ctx.reply("Found overlapping events: {}".format(", ".join(
             event.event_name for event in overlapping_events)))
         await ctx.message.add_reaction(Reactions.ROBOT)

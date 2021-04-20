@@ -99,8 +99,13 @@ def normalize_newlines(text: str) -> str:
     ...     This line will be another paragraph in the message.
     ... ")
     >>> message_to_send = normalize_newlines(text_in_file)
+
+    As an attempt to give developers a means of forcing single-spaced lines,
+    any carriage return ("\r") will be replaced with newlines after the
+    initial normalization.
     """
-    return re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+    normalized = re.sub(r"(?<!\n)\n(?!\n)|\n{3,}", " ", text).strip()
+    return normalized.replace("\r", "\n")
 
 
 def normalize_and_dedent(text: str) -> str:
@@ -137,23 +142,6 @@ def explode_after_char(word: str, char: str) -> List[str]:
     """
     pos = word[:-1].index(char)
     return [word[0:pos+2+i] for i in range(len(word) - (pos+1))]
-
-def get_default_usage_header(cmd: str, *args: tuple) -> str:
-    """Get a default header for use with the various nested _usage()
-    functions.
-
-    This function is entirely tech debt and should be removed once all
-    _usage() methods are deleted or moved.
-
-    @param cmd The prefix + invoked_with command.
-    @param args The args passed to the original function.
-    @return User-facing string indicating the command was invoked
-            incorrectly.
-    """
-    return normalize_and_dedent(f"""\
-        Your command `{cmd + ' ' + ' '.join(args)}` does not meet the usage
-        requirements.
-    """)
 
 
 class PolyStr(str):

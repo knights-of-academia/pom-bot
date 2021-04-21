@@ -31,7 +31,7 @@ class Team(str, Enum):
     def get_icon(self):
         """Return the team's configured IconUrl."""
         icons = {
-            self.KNIGHTS: IconUrls.VIKING,
+            self.KNIGHTS: IconUrls.KNIGHT,
             self.VIKINGS: IconUrls.VIKING,
         }
 

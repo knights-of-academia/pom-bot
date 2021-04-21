@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import discord.errors
 from discord.ext.commands import Context
 
-from pombot.config import Debug, Pomwars, Reactions
+from pombot.config import Debug, IconUrls, Pomwars, Reactions
 from pombot.lib.messages import send_embed_message
 from pombot.lib.storage import Storage
 from pombot.lib.types import DateRange
@@ -70,7 +70,7 @@ async def do_actions(ctx: Context, *args):
             ctx,
             title=f"Actions for {date_range}",
             description=description,
-            icon_url=Pomwars.IconUrls.SWORD,
+            thumbnail=IconUrls.ATTACK,
             colour=Pomwars.ACTION_COLOUR,
             private_message=not Debug.POMS_COMMAND_IS_PUBLIC,
         )

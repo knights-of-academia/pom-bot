@@ -15,6 +15,7 @@ Modifications to the original work:
     - Default `discriminator` attribute added to MockMember
     - Default `message` attribute added to MockContext.
     - AsyncMock `send` attribute added to MockContext.
+    - AsyncMock `reply` attribute added to MockMessage.
     - Various Pylint warnings ignored.
 """
 # pylint: disable=access-member-before-definition
@@ -485,6 +486,7 @@ class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+        self.reply = unittest.mock.AsyncMock()
 
 
 emoji_data = {'require_colons': True, 'managed': True, 'id': 1, 'name': 'hyperlemon'}

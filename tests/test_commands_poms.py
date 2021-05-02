@@ -1,5 +1,6 @@
+import random
+import string
 import unittest
-from unittest.mock import patch
 from unittest.async_case import IsolatedAsyncioTestCase
 
 from discord.embeds import Embed
@@ -81,13 +82,21 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             self.assertEqual(expected["value"], actual.value)
             self.assertEqual(expected["inline"], actual.inline)
 
-    # @unittest.mock.patch
-    # async def test_embed_too_long_causes_normal_message(self):
-    #     """Test the user typing `!poms` when the response of the message
-    #     would be at least 1,024 characters.
-    #     """
-    #     self.ctx.invoked_with = "poms"
-    #     await pombot.commands.do_poms(self.ctx)
+    async def test_embed_too_long_causes_normal_message(self):
+        """Test the user typing `!poms` when the response of the message
+        would exceed Discord limits.
+        """
+        # Deterministically generate pom descriptions.
+        random.seed(42)
+
+        # Make our combined pom descriptions over 6,000 characters.
+        descriptions = ("".join(
+            random.choice(string.ascii_letters + string.digits)
+            for _ in range(30)) for _ in range(201))
+        await Storage.add_poms_to_user_session(self.ctx.author, descriptions, 1)
+
+        self.ctx.invoked_with = "poms"
+        await pombot.commands.do_poms(self.ctx)
 
 
 if __name__ == "__main__":

@@ -64,6 +64,7 @@ from discord.ext.commands import Bot, Context
 # from bot.async_stats import AsyncStatsClient
 # from bot.bot import Bot
 # from tests._autospec import autospec  # noqa: F401 other modules import it via this module
+from pombot.data import Limits
 from pombot.lib.tiny_tools import normalize_and_dedent
 
 
@@ -84,17 +85,6 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
     See:
     https://canary.discord.com/developers/docs/resources/channel#embed-limits
     """
-    MAX_CHARACTERS_PER_MESSAGE = 2000
-    MAX_CHARACTERS_PER_EMBED = 6000
-
-    MAX_EMBED_TITLE       = 256
-    MAX_EMBED_DESCRIPTION = 2048
-    MAX_NUM_EMBED_FIELDS  = 25
-    MAX_EMBED_FIELD_NAME  = 256
-    MAX_EMBED_FIELD_VALUE = 1024
-    MAX_EMBED_FOOTER_TEXT = 2048
-    MAX_EMBED_AUTHOR_NAME = 256
-
     async def __await__(self, *args, **kwargs):
         """Become awaitable."""
 
@@ -109,7 +99,7 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
         # still want to investigate that stuff even if we raise.
         super().__call__(*args, **kwargs)
 
-        if args and sum(len(a) for a in args) > self.MAX_CHARACTERS_PER_MESSAGE:
+        if args and sum(len(a) for a in args) > Limits.MAX_CHARACTERS_PER_MESSAGE:
             self.raise_bad_request("args")
 
         if not (embed := kwargs.get("embed")):
@@ -118,10 +108,10 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
         total_embed_length = 0
 
         for attr, max_attr_length in (
-            ("title",       self.MAX_EMBED_TITLE),
-            ("description", self.MAX_EMBED_DESCRIPTION),
-            ("fields",      self.MAX_NUM_EMBED_FIELDS),
-            ("footer",      self.MAX_EMBED_FOOTER_TEXT),
+            ("title",       Limits.MAX_EMBED_TITLE),
+            ("description", Limits.MAX_EMBED_DESCRIPTION),
+            ("fields",      Limits.MAX_NUM_EMBED_FIELDS),
+            ("footer",      Limits.MAX_EMBED_FOOTER_TEXT),
         ):
             try:
                 attr_length = len(getattr(embed, attr, None))
@@ -134,8 +124,8 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
         # When `fields` is not specified, it's an empty list.
         for index, field in enumerate(embed.fields):
             for attr, max_attr_length in (
-                ("name",  self.MAX_EMBED_FIELD_NAME),
-                ("value", self.MAX_EMBED_FIELD_VALUE),
+                ("name",  Limits.MAX_EMBED_FIELD_NAME),
+                ("value", Limits.MAX_EMBED_FIELD_VALUE),
             ):
                 try:
                     attr_length = len(getattr(field, attr, None))
@@ -149,11 +139,11 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
                 total_embed_length += attr_length
 
         if author_name := getattr(embed.author, "name", None):
-            if len(author_name) > self.MAX_EMBED_AUTHOR_NAME:
+            if len(author_name) > Limits.MAX_EMBED_AUTHOR_NAME:
                 self.raise_bad_request("embed author name")
             total_embed_length += len(author_name)
 
-        if total_embed_length > self.MAX_CHARACTERS_PER_EMBED:
+        if total_embed_length > Limits.MAX_CHARACTERS_PER_EMBED:
             self.raise_bad_request("total embed length is OVER 6,0000!")
 
     @staticmethod

@@ -2,12 +2,13 @@ import textwrap
 from collections import Counter
 from datetime import timedelta
 from functools import partial
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from discord.ext.commands import Context
 from discord.errors import HTTPException
 
 from pombot.config import Config, Debug, Reactions
+from pombot.data import Limits
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.rename_poms import rename_poms
 from pombot.lib.storage import Storage
@@ -126,25 +127,34 @@ async def do_poms(ctx: Context, *args):
             current_session.get_duration_message(),
         ])
 
-    # try:
-    await send_embed_message(
-        None,
-        title=f"Your pom statistics",
-        description=current_session.get_session_started_message(),
-        thumbnail=ctx.author.avatar_url,
-        fields=[
-            banked_session.get_message_field(),
-            SPACER,
-            current_session.get_message_field(),
-        ],
-        footer=footer,
-        _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
-    )
-    # except HTTPException:
-    #     await ctx.reply("this is a multi-message response etc etc")  # FIXME
-    #     await ctx.message.add_reaction(Reactions.ROBOT)
-    # else:
-    await ctx.message.add_reaction(Reactions.CHECKMARK)
+    try:
+        await send_embed_message(
+            None,
+            title=f"Your pom statistics",
+            description=current_session.get_session_started_message(),
+            thumbnail=ctx.author.avatar_url,
+            fields=[
+                banked_session.get_message_field(),
+                SPACER,
+                current_session.get_message_field(),
+            ],
+            footer=footer,
+            _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
+        )
+    except HTTPException:
+        for session in (current_session, banked_session):
+            field = session.get_message_field()
+            if len(field.value) <= Limits.MAX_EMBED_FIELD_VALUE:
+                print("this one is good")  # FIXME
+                continue
+
+            for message in session.iter_message_field(
+                    max_length=Limits.MAX_EMBED_FIELD_VALUE - 100):
+                print(message)
+
+        await ctx.message.add_reaction(Reactions.ROBOT)
+    else:
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
 class _Session:
@@ -245,6 +255,33 @@ class _Session:
 
         return "Current session started {}".format(
             self.poms[0].time_set.strftime("%B %d, %Y (%H:%M UTC)"))
+
+    def iter_message_field(self, max_length: int) -> Iterator[str]:
+        """Generate the list of poms in the field as a plain string of at most
+        `max_length` characters.
+        """
+        pom_counts = Counter(pom.descript for pom in self.poms)
+        sorted_descripts = sorted(pom_counts, key=str.casefold)
+
+        descripts_and_counts: List[str] = []
+        candidate: Optional[str] = None
+
+        for descript in sorted_descripts:
+            count = pom_counts[descript]
+            descripts_and_counts += [f"{descript} ({count})"]
+
+            candidate = ", ".join(descripts_and_counts)
+
+            # if len(candidate) < max_length:
+            #    sorted_descript.pop?
+
+            if len(candidate) > max_length:
+                last_item = descripts_and_counts.pop()
+
+                # ???
+
+
+            yield candidate # ??? FIXME
 
 
 def _dynamic_duration(delta: timedelta) -> str:

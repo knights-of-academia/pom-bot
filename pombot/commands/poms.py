@@ -5,6 +5,7 @@ from functools import partial
 from typing import List, Optional
 
 from discord.ext.commands import Context
+from discord.errors import HTTPException
 
 from pombot.config import Config, Debug, Reactions
 from pombot.lib.messages import EmbedField, send_embed_message
@@ -94,15 +95,22 @@ async def do_poms(ctx: Context, *args):
     )
 
     if response_is_public:
-        await send_embed_message(
-            None,
-            title=f"Pom statistics for {ctx.author.display_name}",
-            description=current_session.get_session_started_message(),
-            thumbnail=ctx.author.avatar_url,
-            fields=[current_session.get_message_field()],
-            footer=current_session.get_duration_message(),
-            _func=ctx.message.reply)
-
+        try:
+            await send_embed_message(
+                None,
+                title=f"Pom statistics for {ctx.author.display_name}",
+                description=current_session.get_session_started_message(),
+                thumbnail=ctx.author.avatar_url,
+                fields=[current_session.get_message_field()],
+                footer=current_session.get_duration_message(),
+                _func=ctx.message.reply)
+        except HTTPException:
+            await ctx.author.send(normalize_and_dedent("""\
+                The combined length of the pom descriptions in your current
+                session are over Discord's embed character limit. Use !poms
+                (without `.show`) to see them and rename a few.
+            """))
+            await ctx.message.add_reaction(Reactions.ROBOT)
         return
 
     if description:
@@ -118,20 +126,25 @@ async def do_poms(ctx: Context, *args):
             current_session.get_duration_message(),
         ])
 
-    await send_embed_message(
-        None,
-        title=f"Your pom statistics",
-        description=current_session.get_session_started_message(),
-        thumbnail=ctx.author.avatar_url,
-        fields=[
-            banked_session.get_message_field(),
-            SPACER,
-            current_session.get_message_field(),
-        ],
-        footer=footer,
-        _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
-    )
-    await ctx.message.add_reaction(Reactions.CHECKMARK)
+    try:
+        await send_embed_message(
+            None,
+            title=f"Your pom statistics",
+            description=current_session.get_session_started_message(),
+            thumbnail=ctx.author.avatar_url,
+            fields=[
+                banked_session.get_message_field(),
+                SPACER,
+                current_session.get_message_field(),
+            ],
+            footer=footer,
+            _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
+        )
+    except HTTPException:
+        await ctx.reply("this is a multi-message response etc etc")  # FIXME
+        await ctx.message.add_reaction(Reactions.ROBOT)
+    else:
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
 class _Session:

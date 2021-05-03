@@ -36,10 +36,10 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
         await pombot.commands.do_poms(self.ctx)
 
         if response_is_public := self.ctx.invoked_with in Config.PUBLIC_POMS_ALIASES:
-            self.assertEqual(1, self.ctx.message.reply.await_count)
+            self.assertEqual(1, self.ctx.message.reply.call_count)
             embed_sent_to_user = self.ctx.message.reply.call_args.kwargs["embed"]
         else:
-            self.assertEqual(1, self.ctx.author.send.await_count)
+            self.assertEqual(1, self.ctx.author.send.call_count)
             embed_sent_to_user = self.ctx.author.send.call_args.kwargs["embed"]
 
         if response_is_public:
@@ -95,8 +95,9 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             for _ in range(30)) for _ in range(201))
         await Storage.add_poms_to_user_session(self.ctx.author, descriptions, 1)
 
-        self.ctx.invoked_with = "poms"
-        await pombot.commands.do_poms(self.ctx)
+        with assert_not_raises():
+            self.ctx.invoked_with = "poms"
+            await pombot.commands.do_poms(self.ctx)
 
 
 if __name__ == "__main__":

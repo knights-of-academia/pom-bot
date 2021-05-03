@@ -126,25 +126,25 @@ async def do_poms(ctx: Context, *args):
             current_session.get_duration_message(),
         ])
 
-    try:
-        await send_embed_message(
-            None,
-            title=f"Your pom statistics",
-            description=current_session.get_session_started_message(),
-            thumbnail=ctx.author.avatar_url,
-            fields=[
-                banked_session.get_message_field(),
-                SPACER,
-                current_session.get_message_field(),
-            ],
-            footer=footer,
-            _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
-        )
-    except HTTPException:
-        await ctx.reply("this is a multi-message response etc etc")  # FIXME
-        await ctx.message.add_reaction(Reactions.ROBOT)
-    else:
-        await ctx.message.add_reaction(Reactions.CHECKMARK)
+    # try:
+    await send_embed_message(
+        None,
+        title=f"Your pom statistics",
+        description=current_session.get_session_started_message(),
+        thumbnail=ctx.author.avatar_url,
+        fields=[
+            banked_session.get_message_field(),
+            SPACER,
+            current_session.get_message_field(),
+        ],
+        footer=footer,
+        _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
+    )
+    # except HTTPException:
+    #     await ctx.reply("this is a multi-message response etc etc")  # FIXME
+    #     await ctx.message.add_reaction(Reactions.ROBOT)
+    # else:
+    await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
 class _Session:

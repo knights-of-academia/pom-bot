@@ -29,7 +29,7 @@ class TestFortuneCommand(IsolatedAsyncioTestCase):
         await pombot.commands.do_fortune(self.ctx)
         embeds_sent_to_user += [self.ctx.send.call_args.kwargs.get("embed")]
 
-        self.assertEqual(2, self.ctx.send.await_count)
+        self.assertEqual(2, self.ctx.send.call_count)
 
         # We expect the message descriptions to change between calls, but the
         # footer's "lucky numbers" should remain constant.

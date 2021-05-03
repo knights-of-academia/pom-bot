@@ -14,8 +14,9 @@ Modifications to the original work:
     - `pending` attribute removed from CustomMockMixin.
     - Default `discriminator` attribute added to MockMember
     - Default `message` attribute added to MockContext.
-    - AsyncMock `send` attribute added to MockContext.
-    - AsyncMock `reply` attribute added to MockMessage.
+    - Subclass AsyncMock to API exceptions (AsyncCheckRaiseResponse)
+    - AsyncCheckRaiseResponse `send` attribute added to MockContext.
+    - AsyncCheckRaiseResponse `reply` attribute added to MockMessage.
     - Various Pylint warnings ignored.
 """
 # pylint: disable=access-member-before-definition
@@ -63,6 +64,7 @@ from discord.ext.commands import Bot, Context
 # from bot.async_stats import AsyncStatsClient
 # from bot.bot import Bot
 # from tests._autospec import autospec  # noqa: F401 other modules import it via this module
+from pombot.lib.tiny_tools import normalize_and_dedent
 
 
 for logger in logging.Logger.manager.loggerDict.values():
@@ -79,12 +81,9 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
     """Mock what would be Discord API errors as Python exceptions in the same
     way that Disocrd.py will at runtime.
 
-    original work etc
-
     See:
     https://canary.discord.com/developers/docs/resources/channel#embed-limits
     """
-    # FIXME docstring
     MAX_CHARACTERS_PER_MESSAGE = 2000
     MAX_CHARACTERS_PER_EMBED = 6000
 
@@ -132,8 +131,8 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
                 self.raise_bad_request(f"embed {attr}")
             total_embed_length += attr_length
 
-        for index, field in enumerate(embed.fields):  # FIXME: what happens when fields is None or [] or Embed.Empty?
-                                                      # i think !fortune might test this.
+        # When `fields` is not specified, it's an empty list.
+        for index, field in enumerate(embed.fields):
             for attr, max_attr_length in (
                 ("name",  self.MAX_EMBED_FIELD_NAME),
                 ("value", self.MAX_EMBED_FIELD_VALUE),
@@ -143,7 +142,10 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
                 except TypeError:
                     continue
                 if attr_length > max_attr_length:
-                    await self.raise_bad_request(f"embed field {index}: {attr}")
+                    await self.raise_bad_request(normalize_and_dedent(f"""\
+                        Attribute too big: embed.fields[{index}].{attr}:
+                        {attr_length} (MAX {max_attr_length})
+                    """))
                 total_embed_length += attr_length
 
         if author_name := getattr(embed.author, "name", None):

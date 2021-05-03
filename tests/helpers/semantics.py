@@ -9,7 +9,4 @@ def assert_not_raises():
     sugar for the reader to know that the purpose of a line is to ensure that
     the line does not raise an exception.
     """
-    try:
-        yield
-    except Exception as e:  # FIXME
-        pass
+    yield

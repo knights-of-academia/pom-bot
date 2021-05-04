@@ -144,13 +144,14 @@ async def do_poms(ctx: Context, *args):
     except HTTPException:
         for session in (current_session, banked_session):
             field = session.get_message_field()
-            if len(field.value) <= Limits.MAX_EMBED_FIELD_VALUE:
+
+            if len(field.value) <= Limits.MAX_CHARACTERS_PER_MESSAGE:
                 print("this one is good")  # FIXME
                 continue
 
             for message in session.iter_message_field(
-                    max_length=Limits.MAX_EMBED_FIELD_VALUE - 100):
-                print(message)
+                    max_length=Limits.MAX_CHARACTERS_PER_MESSAGE - 100):
+                await ctx.author.send(message)
 
         await ctx.message.add_reaction(Reactions.ROBOT)
     else:
@@ -261,27 +262,21 @@ class _Session:
         `max_length` characters.
         """
         pom_counts = Counter(pom.descript for pom in self.poms)
-        sorted_descripts = sorted(pom_counts, key=str.casefold)
-
         descripts_and_counts: List[str] = []
-        candidate: Optional[str] = None
 
-        for descript in sorted_descripts:
+        for descript in sorted(pom_counts, key=str.casefold):
             count = pom_counts[descript]
             descripts_and_counts += [f"{descript} ({count})"]
 
-            candidate = ", ".join(descripts_and_counts)
+            if len(", ".join(descripts_and_counts)) <= max_length:
+                continue
 
-            # if len(candidate) < max_length:
-            #    sorted_descript.pop?
+            # Last item put response candidate just over the limit.
+            last_item = descripts_and_counts.pop()
 
-            if len(candidate) > max_length:
-                last_item = descripts_and_counts.pop()
+            yield ", ".join(descripts_and_counts)
 
-                # ???
-
-
-            yield candidate # ??? FIXME
+            descripts_and_counts = [last_item]
 
 
 def _dynamic_duration(delta: timedelta) -> str:

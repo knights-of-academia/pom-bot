@@ -99,6 +99,8 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             self.ctx.invoked_with = "poms"
             await pombot.commands.do_poms(self.ctx)
 
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

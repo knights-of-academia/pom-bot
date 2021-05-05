@@ -276,10 +276,16 @@ class _Session:
         """Generate the list of poms in the field as a plain string of at most
         `max_length` characters.
         """
+        # FIXME add some text about "your poms went over some limit, rename a
+        # few. here they are"
         join_fix = lambda s, n="\n": f"```fix\n{n.join(s)}```"
         pom_counts = Counter(pom.descript for pom in self.poms)
         descripts_and_counts: List[str] = []
 
+        # FIXME should the be
+        # - alphabetized? (to make finding duplicates easier)
+        # - sorted by count (like in !poms)
+        # - unsorted (same order as when the first descript was added)
         for descript in sorted(pom_counts, key=str.casefold):
             count = pom_counts[descript]
             descripts_and_counts += [f"{descript} ({count})"]

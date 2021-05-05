@@ -1,3 +1,4 @@
+from dataclasses import fields
 import textwrap
 from collections import Counter
 from datetime import timedelta
@@ -142,11 +143,24 @@ async def do_poms(ctx: Context, *args):
             _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
         )
     except HTTPException:
+
+        # FIXME the formatting is dumb and also this code is mostly duplicated.
+        # maybe remove the try except and test for the cause of the exception
+        # instead of catching it.
+
         for session in (current_session, banked_session):
             field = session.get_message_field()
 
             if len(field.value) <= Limits.MAX_EMBED_FIELD_VALUE:
-                print("this one is good")  # FIXME
+                await send_embed_message(
+                    None,
+                    title="Your pom statistics",
+                    description=current_session.get_session_started_message(),
+                    thumbnail=ctx.author.avatar_url,
+                    fields=[session.get_message_field()],
+                    footer=footer,
+                    _func=ctx.author.send if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send,
+                )
                 continue
 
             for message in session.iter_message_field(
@@ -269,17 +283,19 @@ class _Session:
             count = pom_counts[descript]
             descripts_and_counts += [f"{descript} ({count})"]
 
-            if len(", ".join(descripts_and_counts)) <= max_length:
+            if len(candidate := ", ".join(descripts_and_counts)) < max_length:
                 continue
 
-            # FIXME what's going on here? why isn't the debugger breaking on
-            # line 278 when the user has this many poms?
             # Last item put response candidate just over the limit.
             last_item = descripts_and_counts.pop()
 
             yield ", ".join(descripts_and_counts)
 
             descripts_and_counts = [last_item]
+
+        # Finally, we need to yield the most recent candidate because the
+        # length of an embed field value is probably smaller than `max_length`.
+        yield candidate
 
 
 def _dynamic_duration(delta: timedelta) -> str:

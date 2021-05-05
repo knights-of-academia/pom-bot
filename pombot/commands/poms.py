@@ -145,13 +145,14 @@ async def do_poms(ctx: Context, *args):
         for session in (current_session, banked_session):
             field = session.get_message_field()
 
-            if len(field.value) <= Limits.MAX_CHARACTERS_PER_MESSAGE:
+            if len(field.value) <= Limits.MAX_EMBED_FIELD_VALUE:
                 print("this one is good")  # FIXME
                 continue
 
             for message in session.iter_message_field(
                     max_length=Limits.MAX_CHARACTERS_PER_MESSAGE - 100):
-                await ctx.author.send(message)
+                await (ctx.author.send(message)
+                       if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send(message))
 
         await ctx.message.add_reaction(Reactions.ROBOT)
     else:
@@ -271,6 +272,8 @@ class _Session:
             if len(", ".join(descripts_and_counts)) <= max_length:
                 continue
 
+            # FIXME what's going on here? why isn't the debugger breaking on
+            # line 278 when the user has this many poms?
             # Last item put response candidate just over the limit.
             last_item = descripts_and_counts.pop()
 

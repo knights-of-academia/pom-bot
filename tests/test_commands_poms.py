@@ -99,6 +99,12 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             self.ctx.invoked_with = "poms"
             await pombot.commands.do_poms(self.ctx)
 
+        # test that messages were DM'd to user
+
+        # test that DM'd messages included saying that the Bank was fine.
+
+        # test that all poms descripts are somewhere in the messages
+
         pass
 
 

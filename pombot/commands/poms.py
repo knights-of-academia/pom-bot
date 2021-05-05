@@ -276,6 +276,7 @@ class _Session:
         """Generate the list of poms in the field as a plain string of at most
         `max_length` characters.
         """
+        join_fix = lambda s, n="\n": f"```fix\n{n.join(s)}```"
         pom_counts = Counter(pom.descript for pom in self.poms)
         descripts_and_counts: List[str] = []
 
@@ -283,13 +284,13 @@ class _Session:
             count = pom_counts[descript]
             descripts_and_counts += [f"{descript} ({count})"]
 
-            if len(candidate := ", ".join(descripts_and_counts)) < max_length:
+            if len(candidate := join_fix(descripts_and_counts)) < max_length:
                 continue
 
             # Last item put response candidate just over the limit.
             last_item = descripts_and_counts.pop()
 
-            yield ", ".join(descripts_and_counts)
+            yield join_fix(descripts_and_counts)
 
             descripts_and_counts = [last_item]
 

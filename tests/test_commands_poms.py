@@ -7,7 +7,7 @@ from discord.embeds import Embed
 from parameterized import parameterized
 
 import pombot
-from pombot.config import Config
+from pombot.config import Config, Debug
 from pombot.lib.storage import Storage
 from tests.helpers.mock_discord import MockContext
 from tests.helpers.semantics import assert_not_raises
@@ -19,6 +19,7 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
         """Ensure database tables exist and create contexts for the tests."""
+        Debug.disable_all()
         self.ctx = MockContext()
         await Storage.create_tables_if_not_exists()
         await Storage.delete_all_rows_from_all_tables()
@@ -94,6 +95,9 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             random.choice(string.ascii_letters + string.digits)
             for _ in range(30)) for _ in range(201))
         await Storage.add_poms_to_user_session(self.ctx.author, descriptions, 1)
+
+        # Have at least one "Undesignated" pom.
+        await Storage.add_poms_to_user_session(self.ctx.author, None, 1)
 
         with assert_not_raises():
             self.ctx.invoked_with = "poms"

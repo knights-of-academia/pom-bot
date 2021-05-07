@@ -1,4 +1,3 @@
-from dataclasses import fields
 import textwrap
 from collections import Counter
 from datetime import timedelta

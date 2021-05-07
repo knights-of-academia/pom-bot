@@ -143,11 +143,6 @@ async def do_poms(ctx: Context, *args):
             _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
         )
     except HTTPException:
-
-        # FIXME the formatting is dumb and also this code is mostly duplicated.
-        # maybe remove the try except and test for the cause of the exception
-        # instead of catching it.
-
         for session in (current_session, banked_session):
             field = session.get_message_field()
 
@@ -162,6 +157,23 @@ async def do_poms(ctx: Context, *args):
                     _func=ctx.author.send if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send,
                 )
                 continue
+
+            message = normalize_and_dedent("""
+                ```fix
+
+                The combined length of all the pom descriptions in your
+                {session_type} is longer than the maximum embed message field
+                size for Discord embeds ({length}, Max is {max_length}). Please
+                rename a few with !poms.rename (see !help {cmd}).```
+            """.format(
+                session_type=session.type.value.lower(),
+                length=len(session.get_message_field().value),
+                max_length=Limits.MAX_EMBED_FIELD_VALUE,
+                cmd="poms" if session.type == SessionType.CURRENT else "bank",
+            ))
+
+            await (ctx.author.send(message)
+                    if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send(message))
 
             for message in session.iter_message_field(
                     max_length=Limits.MAX_CHARACTERS_PER_MESSAGE - 100):
@@ -276,27 +288,22 @@ class _Session:
         """Generate the list of poms in the field as a plain string of at most
         `max_length` characters.
         """
-        # FIXME add some text about "your poms went over some limit, rename a
         # few. here they are"
-        join_fix = lambda s, n="\n": f"```fix\n{n.join(s)}```"
-        pom_counts = Counter(pom.descript for pom in self.poms)
+        code_block_join = lambda s, n="\n": f"```{n.join(s)}```"
+        pom_counts = Counter(pom.descript for pom in self.poms if pom.descript is not None)
         descripts_and_counts: List[str] = []
 
-        # FIXME should the be
-        # - alphabetized? (to make finding duplicates easier)
-        # - sorted by count (like in !poms)
-        # - unsorted (same order as when the first descript was added)
         for descript in sorted(pom_counts, key=str.casefold):
             count = pom_counts[descript]
             descripts_and_counts += [f"{descript} ({count})"]
 
-            if len(candidate := join_fix(descripts_and_counts)) < max_length:
+            if len(candidate := code_block_join(descripts_and_counts)) < max_length:
                 continue
 
             # Last item put response candidate just over the limit.
             last_item = descripts_and_counts.pop()
 
-            yield join_fix(descripts_and_counts)
+            yield code_block_join(descripts_and_counts)
 
             descripts_and_counts = [last_item]
 

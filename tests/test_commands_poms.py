@@ -1,3 +1,4 @@
+import itertools
 import random
 import string
 import unittest
@@ -83,7 +84,7 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
             self.assertEqual(expected["value"], actual.value)
             self.assertEqual(expected["inline"], actual.inline)
 
-    async def test_embed_too_long_causes_normal_message(self):
+    async def test_too_many_pom_descripts_causes_detailed_direct_message(self):
         """Test the user typing `!poms` when the response of the message
         would exceed Discord limits.
         """
@@ -91,7 +92,7 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
         random.seed(42)
 
         # Make our combined pom descriptions over 6,000 characters.
-        descriptions = ("".join(
+        descriptions, expected_descriptions = itertools.tee("".join(
             random.choice(string.ascii_letters + string.digits)
             for _ in range(30)) for _ in range(201))
         await Storage.add_poms_to_user_session(self.ctx.author, descriptions, 1)
@@ -99,17 +100,23 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
         # Have at least one "Undesignated" pom.
         await Storage.add_poms_to_user_session(self.ctx.author, None, 1)
 
+        # The command succeeds.
         with assert_not_raises():
             self.ctx.invoked_with = "poms"
             await pombot.commands.do_poms(self.ctx)
 
-        # test that messages were DM'd to user
+        # The user was only DM'd.
+        self.assertTrue(self.ctx.author.send.called)
+        self.assertFalse(any((self.ctx.send.called, self.ctx.reply.called)))
 
-        # test that DM'd messages included saying that the Bank was fine.
+        # All of the user's poms descripts are displayed in the DM's.
+        # NOTE: The first element in Mock.called_args_list is the one that
+        # caused the exception. Also, this will turn `_Call`'s into strings.
+        actual_combined_response = "\n".join(
+            (str(a) for a, _ in self.ctx.author.send.call_args_list[1:]))
 
-        # test that all poms descripts are somewhere in the messages
-
-        pass
+        for expected_description in expected_descriptions:
+            self.assertIn(expected_description, actual_combined_response)
 
 
 if __name__ == "__main__":

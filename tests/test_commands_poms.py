@@ -19,7 +19,7 @@ class TestPomsCommand(IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
         """Ensure database tables exist and create contexts for the tests."""
-        Debug.disable_all()
+        Debug.disable()
         self.ctx = MockContext()
         await Storage.create_tables_if_not_exists()
         await Storage.delete_all_rows_from_all_tables()

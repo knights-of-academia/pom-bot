@@ -70,15 +70,14 @@ class Debug:
     POMS_COMMAND_IS_PUBLIC = str2bool(os.getenv("POMS_COMMAND_IS_PUBLIC", "no"))
 
     @classmethod
-    def disable_all(cls) -> None:
-        """Override settings from environment variables and set all Debug
-        boolean options to False. Useful for unit tests.
+    def disable(cls) -> None:
+        """Override settings from environment variables and set all boolean
+        debug options to false. Useful for unit tests.
         """
-        all_attrs = ((p, getattr(cls, p)) for p in dir(cls))
-        only_bools = lambda p: isinstance(p[1], bool)
-
-        for attr, _ in filter(only_bools, all_attrs):
+        for attr, _ in filter(lambda p: isinstance(p[1], bool),
+                              ((p, getattr(cls, p)) for p in dir(cls))):
             setattr(cls, attr, False)
+
 
 class IconUrls:
     """Locations of Pombot's custom reactions and icons."""

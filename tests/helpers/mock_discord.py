@@ -144,7 +144,7 @@ class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
             total_embed_length += len(author_name)
 
         if total_embed_length > Limits.MAX_CHARACTERS_PER_EMBED:
-            self.raise_bad_request("total embed length is OVER 6,0000!")
+            self.raise_bad_request("total embed length is OVER 6,000!")
 
     @staticmethod
     async def raise_bad_request(data_category: str):

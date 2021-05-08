@@ -197,9 +197,9 @@ class Storage:
             assert "unittest" in sys.modules, \
                 f"{type(descript)} not allowed for descript outside of unit tests"
 
-            poms = []
-            for desc in descript:
-                poms += [(user.id, desc, time_set, True) for _ in range(count)]
+            poms = [(user.id, desc, time_set, True)
+                    for desc in descript
+                    for _ in range(count)]
 
         async with _mysql_database_cursor() as cursor:
             await cursor.executemany(query, poms)

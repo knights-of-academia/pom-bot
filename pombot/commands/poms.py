@@ -287,7 +287,6 @@ class _Session:
         """Generate the list of poms in the field as a plain string of at most
         `max_length` characters.
         """
-        # few. here they are"
         code_block_join = lambda s, n="\n": f"```{n.join(s)}```"
         pom_counts = Counter(pom.descript for pom in self.poms if pom.descript is not None)
         descripts_and_counts: List[str] = []

@@ -1,8 +1,9 @@
 import logging
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime as dt
 from datetime import time, timezone
-from typing import List, Optional, Set
+from typing import Iterable, List, Optional, Set, Union
 
 import aiomysql
 from discord.user import User as DiscordUser
@@ -165,11 +166,18 @@ class Storage:
     @staticmethod
     async def add_poms_to_user_session(
         user: DiscordUser,
-        descript: str,
+        descript: Optional[Union[str, Iterable]],
         count: int,
         time_set: dt = None,
     ):
-        """Add a number of user poms."""
+        """Add a number of user poms.
+
+        If `descript` is specified as a non-string iterable, like a list or
+        generator, then this will check that we're in a unit test and fail if
+        not. This is because it is generally only possible to have one pom
+        description per user command specified, but this makes unit tests that
+        require many poms in the DB very slow.
+        """
         query = f"""
             INSERT INTO {Config.POMS_TABLE} (
                 userID,
@@ -182,7 +190,16 @@ class Storage:
 
         descript = descript or None
         time_set = time_set or dt.now()
-        poms = [(user.id, descript, time_set, True) for _ in range(count)]
+
+        if type(descript) in [str, type(None)]:
+            poms = [(user.id, descript, time_set, True) for _ in range(count)]
+        else:
+            assert "unittest" in sys.modules, \
+                f"{type(descript)} not allowed for descript outside of unit tests"
+
+            poms = [(user.id, desc, time_set, True)
+                    for desc in descript
+                    for _ in range(count)]
 
         async with _mysql_database_cursor() as cursor:
             await cursor.executemany(query, poms)

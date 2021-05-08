@@ -14,7 +14,9 @@ Modifications to the original work:
     - `pending` attribute removed from CustomMockMixin.
     - Default `discriminator` attribute added to MockMember
     - Default `message` attribute added to MockContext.
-    - AsyncMock `send` attribute added to MockContext.
+    - Subclass AsyncMock to API exceptions (AsyncCheckRaiseResponse)
+    - AsyncCheckRaiseResponse `send` attribute added to MockContext.
+    - AsyncCheckRaiseResponse `reply` attribute added to MockMessage.
     - Various Pylint warnings ignored.
 """
 # pylint: disable=access-member-before-definition
@@ -62,6 +64,8 @@ from discord.ext.commands import Bot, Context
 # from bot.async_stats import AsyncStatsClient
 # from bot.bot import Bot
 # from tests._autospec import autospec  # noqa: F401 other modules import it via this module
+from pombot.data import Limits
+from pombot.lib.tiny_tools import normalize_and_dedent
 
 
 for logger in logging.Logger.manager.loggerDict.values():
@@ -72,6 +76,82 @@ for logger in logging.Logger.manager.loggerDict.values():
         continue
 
     logger.setLevel(logging.CRITICAL)
+
+
+class AsyncCheckRaiseResponse(unittest.mock.AsyncMock):
+    """Mock what would be Discord API errors as Python exceptions in the same
+    way that Disocrd.py will at runtime.
+
+    See:
+    https://canary.discord.com/developers/docs/resources/channel#embed-limits
+    """
+    async def __await__(self, *args, **kwargs):
+        """Become awaitable."""
+
+    # `__call__` is only used in Discord mocking even though everything is
+    # awaited, so we need to ignore Pylint warnings and make the rest of the
+    # mock object awaitable.
+    async def __call__(self, *args, **kwargs):  # pylint: disable=invalid-overridden-method
+        """Inspect the passed arguements and raise HTTPException where the
+        Discord API would respond with HTTP 400 in the wild.
+        """
+        # Call super() first because it sets call counts and called args. We
+        # still want to investigate that stuff even if we raise.
+        super().__call__(*args, **kwargs)
+
+        if args and sum(len(a) for a in args) > Limits.MAX_CHARACTERS_PER_MESSAGE:
+            self.raise_bad_request("args")
+
+        if not (embed := kwargs.get("embed")):
+            return
+
+        total_embed_length = 0
+
+        for attr, max_attr_length in (
+            ("title",       Limits.MAX_EMBED_TITLE),
+            ("description", Limits.MAX_EMBED_DESCRIPTION),
+            ("fields",      Limits.MAX_NUM_EMBED_FIELDS),
+            ("footer",      Limits.MAX_EMBED_FOOTER_TEXT),
+        ):
+            try:
+                attr_length = len(getattr(embed, attr, None))
+            except TypeError:
+                continue
+            if attr_length > max_attr_length:
+                self.raise_bad_request(f"embed {attr}")
+            total_embed_length += attr_length
+
+        # When `fields` is not specified, it's an empty list.
+        for index, field in enumerate(embed.fields):
+            for attr, max_attr_length in (
+                ("name",  Limits.MAX_EMBED_FIELD_NAME),
+                ("value", Limits.MAX_EMBED_FIELD_VALUE),
+            ):
+                try:
+                    attr_length = len(getattr(field, attr, None))
+                except TypeError:
+                    continue
+                if attr_length > max_attr_length:
+                    await self.raise_bad_request(normalize_and_dedent(f"""\
+                        Attribute too big: embed.fields[{index}].{attr}:
+                        {attr_length} (MAX {max_attr_length})
+                    """))
+                total_embed_length += attr_length
+
+        if author_name := getattr(embed.author, "name", None):
+            if len(author_name) > Limits.MAX_EMBED_AUTHOR_NAME:
+                self.raise_bad_request("embed author name")
+            total_embed_length += len(author_name)
+
+        if total_embed_length > Limits.MAX_CHARACTERS_PER_EMBED:
+            self.raise_bad_request("total embed length is OVER 6,000!")
+
+    @staticmethod
+    async def raise_bad_request(data_category: str):
+        response = unittest.mock.MagicMock()
+        response.status = 400
+        message = f"Bad Request data too big: {data_category}"
+        raise discord.errors.HTTPException(response, message)
 
 
 class HashableMixin(discord.mixins.EqualityComparable):
@@ -292,6 +372,8 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
         if 'mention' not in kwargs:
             self.mention = f"@{self.name}"
 
+        self.send = AsyncCheckRaiseResponse()
+
 
 # Create a User instance to get a realistic Mock of `discord.User`
 user_instance = discord.User(data=unittest.mock.MagicMock(), state=unittest.mock.MagicMock())
@@ -455,7 +537,8 @@ class MockContext(CustomMockMixin, unittest.mock.AsyncMockMixin):
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
         self.message = kwargs.get('message', MockMessage())
-        self.send = unittest.mock.AsyncMock()
+        self.reply = AsyncCheckRaiseResponse()
+        self.send = AsyncCheckRaiseResponse()
 
 
 attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
@@ -485,6 +568,7 @@ class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+        self.reply = AsyncCheckRaiseResponse()
 
 
 emoji_data = {'require_colons': True, 'managed': True, 'id': 1, 'name': 'hyperlemon'}

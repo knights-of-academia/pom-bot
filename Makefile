@@ -9,7 +9,8 @@ lint:
 		bot.py \
 		pombot/*.py \
 		pombot/**/*.py \
-		tests/*.py
+		tests/*.py \
+		tests/**/*.py
 
 test:
 	@echo "Testing..."

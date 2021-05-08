@@ -2,11 +2,13 @@ import textwrap
 from collections import Counter
 from datetime import timedelta
 from functools import partial
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from discord.ext.commands import Context
+from discord.errors import HTTPException
 
 from pombot.config import Config, Debug, Reactions
+from pombot.data import Limits
 from pombot.lib.messages import EmbedField, send_embed_message
 from pombot.lib.rename_poms import rename_poms
 from pombot.lib.storage import Storage
@@ -94,15 +96,22 @@ async def do_poms(ctx: Context, *args):
     )
 
     if response_is_public:
-        await send_embed_message(
-            None,
-            title=f"Pom statistics for {ctx.author.display_name}",
-            description=current_session.get_session_started_message(),
-            thumbnail=ctx.author.avatar_url,
-            fields=[current_session.get_message_field()],
-            footer=current_session.get_duration_message(),
-            _func=ctx.message.reply)
-
+        try:
+            await send_embed_message(
+                None,
+                title=f"Pom statistics for {ctx.author.display_name}",
+                description=current_session.get_session_started_message(),
+                thumbnail=ctx.author.avatar_url,
+                fields=[current_session.get_message_field()],
+                footer=current_session.get_duration_message(),
+                _func=ctx.message.reply)
+        except HTTPException:
+            await ctx.author.send(normalize_and_dedent("""\
+                The combined length of the pom descriptions in your current
+                session are over Discord's embed character limit. Use !poms
+                (without `.show`) to see them and rename a few.
+            """))
+            await ctx.message.add_reaction(Reactions.ROBOT)
         return
 
     if description:
@@ -118,20 +127,61 @@ async def do_poms(ctx: Context, *args):
             current_session.get_duration_message(),
         ])
 
-    await send_embed_message(
-        None,
-        title=f"Your pom statistics",
-        description=current_session.get_session_started_message(),
-        thumbnail=ctx.author.avatar_url,
-        fields=[
-            banked_session.get_message_field(),
-            SPACER,
-            current_session.get_message_field(),
-        ],
-        footer=footer,
-        _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
-    )
-    await ctx.message.add_reaction(Reactions.CHECKMARK)
+    try:
+        await send_embed_message(
+            None,
+            title=f"Your pom statistics",
+            description=current_session.get_session_started_message(),
+            thumbnail=ctx.author.avatar_url,
+            fields=[
+                banked_session.get_message_field(),
+                SPACER,
+                current_session.get_message_field(),
+            ],
+            footer=footer,
+            _func=(ctx.send if Debug.POMS_COMMAND_IS_PUBLIC else ctx.author.send),
+        )
+    except HTTPException:
+        for session in (current_session, banked_session):
+            field = session.get_message_field()
+
+            if len(field.value) <= Limits.MAX_EMBED_FIELD_VALUE:
+                await send_embed_message(
+                    None,
+                    title="Your pom statistics",
+                    description=current_session.get_session_started_message(),
+                    thumbnail=ctx.author.avatar_url,
+                    fields=[session.get_message_field()],
+                    footer=footer,
+                    _func=ctx.author.send if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send,
+                )
+                continue
+
+            message = normalize_and_dedent("""
+                ```fix
+
+                The combined length of all the pom descriptions in your
+                {session_type} is longer than the maximum embed message field
+                size for Discord embeds ({length}, Max is {max_length}). Please
+                rename a few with !poms.rename (see !help {cmd}).```
+            """.format(
+                session_type=session.type.value.lower(),
+                length=len(session.get_message_field().value),
+                max_length=Limits.MAX_EMBED_FIELD_VALUE,
+                cmd="poms" if session.type == SessionType.CURRENT else "bank",
+            ))
+
+            await (ctx.author.send(message)
+                    if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send(message))
+
+            for message in session.iter_message_field(
+                    max_length=Limits.MAX_CHARACTERS_PER_MESSAGE - 100):
+                await (ctx.author.send(message)
+                       if not Debug.POMS_COMMAND_IS_PUBLIC else ctx.send(message))
+
+        await ctx.message.add_reaction(Reactions.ROBOT)
+    else:
+        await ctx.message.add_reaction(Reactions.CHECKMARK)
 
 
 class _Session:
@@ -232,6 +282,32 @@ class _Session:
 
         return "Current session started {}".format(
             self.poms[0].time_set.strftime("%B %d, %Y (%H:%M UTC)"))
+
+    def iter_message_field(self, max_length: int) -> Iterator[str]:
+        """Generate the list of poms in the field as a plain string of at most
+        `max_length` characters.
+        """
+        code_block_join = lambda s, n="\n": f"```{n.join(s)}```"
+        pom_counts = Counter(pom.descript for pom in self.poms if pom.descript is not None)
+        descripts_and_counts: List[str] = []
+
+        for descript in sorted(pom_counts, key=str.casefold):
+            count = pom_counts[descript]
+            descripts_and_counts += [f"{descript} ({count})"]
+
+            if len(candidate := code_block_join(descripts_and_counts)) < max_length:
+                continue
+
+            # Last item put response candidate just over the limit.
+            last_item = descripts_and_counts.pop()
+
+            yield code_block_join(descripts_and_counts)
+
+            descripts_and_counts = [last_item]
+
+        # Finally, we need to yield the most recent candidate because the
+        # length of an embed field value is probably smaller than `max_length`.
+        yield candidate
 
 
 def _dynamic_duration(delta: timedelta) -> str:

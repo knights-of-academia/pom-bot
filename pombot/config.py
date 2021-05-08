@@ -69,6 +69,16 @@ class Debug:
     BENCHMARK_POMWAR_ATTACK = str2bool(os.getenv("BENCHMARK_POMWAR_ATTACK", "no"))
     POMS_COMMAND_IS_PUBLIC = str2bool(os.getenv("POMS_COMMAND_IS_PUBLIC", "no"))
 
+    @classmethod
+    def disable(cls) -> None:
+        """Override settings from environment variables and set all boolean
+        debug options to false. Useful for unit tests.
+        """
+        for attr, _ in filter(lambda p: isinstance(p[1], bool),
+                              ((p, getattr(cls, p)) for p in dir(cls))):
+            setattr(cls, attr, False)
+
+
 class IconUrls:
     """Locations of Pombot's custom reactions and icons."""
     # The Pomato
